@@ -12,3 +12,7 @@ pom.xml.asc
 .lein-failures
 .nrepl-port
 .cpcache/
+/storage/
+config.env
+config.prod.env
+node_modules/

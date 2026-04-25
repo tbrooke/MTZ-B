@@ -1,0 +1,33 @@
+{:biff/base-url #or [#biff/env BASE_URL "http://localhost:8080"]
+ :biff/host #or [#biff/env HOST "localhost"]
+ :biff/port #long #or [#biff/env PORT "8080"]
+ :biff.sqlite/db-path #or [#biff/env SQLITE_DB_PATH "storage/sqlite/main.db"]
+ :biff.nrepl/port #long #or [#biff/env NREPL_PORT "7888"]
+ :biff.middleware/cookie-secret #biff/secret COOKIE_SECRET
+ :biff.middleware/secure #boolean #or [#biff/env SECURE "true"]
+ :biff.auth/app-name "Biff Starter App"
+
+ :biff.tasks/main-ns com.example
+ :biff.tasks/css-output "target/resources/public/css/main.css"
+ :biff.tasks/server #biff/env SERVER
+ :biff.tasks/deployment-name #or [#biff/env DEPLOYMENT_NAME "app"]
+ :biff.tasks/git-deploy-cmd
+ ["git" "push"
+  #join ["ssh://" #ref [:biff.tasks/deployment-name] "@"
+         #ref [:biff.tasks/server]
+         "/home/" #ref [:biff.tasks/deployment-name] "/repo.git"]
+  "HEAD:master"]
+ :biff.tasks/deploy-untracked-files
+ [#ref [:biff.tasks/css-output]
+  {:src "config.prod.env" :dest "config.env"}]
+
+ :mailersend/api-key #biff/secret MAILERSEND_API_KEY
+ :mailersend/from #biff/env MAILERSEND_FROM
+ :mailersend/from-name "Biff Starter App"
+ :mailersend/reply-to #biff/env MAILERSEND_REPLY_TO
+
+ :biff.auth/turnstile-site-key #biff/env TURNSTILE_SITE_KEY
+ :biff.auth/turnstile-secret #biff/secret TURNSTILE_SECRET_KEY
+
+ :biff.admin/user-id #biff/env BIFF_ADMIN_USER_ID
+ :biff.admin/alert-email #biff/env BIFF_ADMIN_ALERT_EMAIL}
