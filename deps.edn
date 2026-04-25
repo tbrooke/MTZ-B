@@ -25,7 +25,7 @@
                     "-XX:+CrashOnOutOfMemoryError"]
          :main-opts ["-m" "com.example"]}
   :run {:extra-paths ["test"]
-        :extra-deps {io.github.jacobobryant/biff-tasks {:git/sha "9e017c17438dac6a525557beb56f9cb15e6d9829"}
+        :extra-deps {io.github.jacobobryant/biff-tasks {:git/sha "3338df63d21a6443071e88aa11c095d4af605205"}
                      io.github.cognitect-labs/test-runner
                      {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
          :main-opts ["-m" "com.biffweb.cljrun" "com.biffweb.tasks/tasks" "--"]}}}
