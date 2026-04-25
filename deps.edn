@@ -14,7 +14,7 @@
         org.clojure/tools.logging {:mvn/version "1.3.0"}
         org.slf4j/slf4j-simple {:mvn/version "2.0.13"}
         tick/tick {:mvn/version "1.0"}
-        io.github.jacobobryant/biff.authenticate {:git/sha "0e66af2102ffc69a644aec43672675d2c2bdc3fc"}
+        io.github.jacobobryant/biff.authenticate {:git/sha "860e222da3740c8c2b95a58cd09c8f23d95d09ff"}
         io.github.jacobobryant/biff.sqlite {:git/sha "e82c43d41fc2fdc3f0fb06fc9580c51105117ab2"}
         io.github.jacobobryant/biff.fx {:git/sha "9cc18d0d656bdaf2c43247ad29ca4506e3521323"}
         io.github.jacobobryant/biff.graph {:git/sha "8e462c593d8dd90952fd85e05cc3a669454d33ce"}
@@ -25,5 +25,5 @@
                     "-XX:+CrashOnOutOfMemoryError"]
           :main-opts ["-m" "com.example"]}
    :run {:extra-paths ["test"]
-         :extra-deps {io.github.jacobobryant/biff-tasks {:git/sha "0d4f68144169b78d1993f603d00dcdb561ba255a"}}
+         :extra-deps {io.github.jacobobryant/biff-tasks {:git/sha "425f427eca84ba9f303f9f139d7feb0ed080b915"}}
          :main-opts ["-m" "com.biffweb.cljrun" "com.biffweb.tasks/tasks" "--"]}}}
