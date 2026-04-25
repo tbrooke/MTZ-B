@@ -9,12 +9,10 @@
 (defn- allowed-user-update?
   [uid {:keys [op before after]}]
   (and (= op :update)
-       (= uid (:user/id before) (:user/id after))
-       (= (:user/email before) (:user/email after))
-       (= (:user/joined-at before) (:user/joined-at after))
+       (= uid (:user/id after))
        (every? (fn [field]
-                 (= (get before field) (get after field)))
-               immutable-user-fields)))
+                  (= (get before field) (get after field)))
+                immutable-user-fields)))
 
 (defn authorize
   [ctx diff]

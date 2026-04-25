@@ -4,22 +4,23 @@ A minimal Biff starter app with SQLite-backed authentication, a tiny `/app` page
 
 ## Getting started
 
-1. Install Java, the Clojure CLI, and Node.js.
-2. Generate local secrets:
+1. Create a new repo from this template repo on GitHub.
+2. Install Java and the Clojure CLI.
+3. Generate local config files:
 
    ```bash
    clj -M:run generate-config
    ```
 
-3. Start the dev workflow:
+4. Start the dev workflow:
 
    ```bash
    clj -M:run dev
    ```
 
-4. Visit `http://localhost:8080`.
+5. Visit `http://localhost:8080`.
 
-The dev task starts the app, watches Clojure files, recompiles Tailwind CSS, and exposes nREPL on port `7888` by default.
+The dev task starts the app, recompiles Tailwind CSS with the standalone binary, and exposes nREPL on port `7888` by default.
 
 ## Project structure
 
@@ -38,7 +39,7 @@ Tailwind source lives in `resources/tailwind.css`, and the generated stylesheet 
 ## Useful commands
 
 ```bash
-clj -M:test
+clj -M:run test
 clj -M:prod
 clj -M:run css
 clj -M:run logs
@@ -48,21 +49,22 @@ clj -M:run soft-deploy
 
 ## Deploying to a fresh Ubuntu server
 
-1. Run the setup script as root:
+1. Copy the setup script to the server and run it there as root:
 
    ```bash
+   scp server-setup.sh root@your-server:
+   ssh root@your-server
    sudo ./server-setup.sh your-app-name
    ```
 
-2. SSH to the new box and copy in `config.env`.
-3. Set `DEPLOY_TO` in `config.env` (or your shell) to the git remote created by `server-setup.sh`.
-4. Deploy from your workstation with:
+2. Fill in `config.prod.env` with your production values, especially `BASE_URL`, `SERVER`, and any email/admin settings you need.
+3. Deploy from your workstation with:
 
    ```bash
    clj -M:run soft-deploy
    ```
 
-5. If you need a full push/restart cycle instead, use:
+4. If you need a full push/restart cycle instead, use:
 
    ```bash
    clj -M:run deploy
@@ -73,5 +75,5 @@ clj -M:run soft-deploy
 ## Biff-specific pointers
 
 - Modules contribute `:routes`, `:biff/init`, schema, and graph resolvers.
-- `com.example/ring-module` builds the Ring handler from the active module list.
+- `com.example.lib.ring/ring-module` builds the Ring handler from the active module list.
 - SQLite writes that should enforce ownership rules can go through `:biff.fx.sqlite/authorized-write`.

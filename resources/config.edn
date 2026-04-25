@@ -4,18 +4,26 @@
  :biff.sqlite/db-path #or [#biff/env SQLITE_DB_PATH "storage/sqlite/main.db"]
  :biff.nrepl/port #long #or [#biff/env NREPL_PORT "7888"]
  :biff.middleware/cookie-secret #biff/secret COOKIE_SECRET
- :biff.middleware/secure #boolean #or [#biff/env SECURE "false"]
+ :biff.middleware/secure #boolean #or [#biff/env SECURE "true"]
 
  :biff.tasks/main-ns com.example
  :biff.tasks/css-output "target/resources/public/css/main.css"
- :biff.tasks/server #biff/env APP_SERVER
- :biff.tasks/deploy-to #biff/env DEPLOY_TO
- :biff.tasks/deploy-from #or [#biff/env DEPLOY_FROM "HEAD"]
- :biff.tasks/deploy-untracked-files ["config.env"]
+ :biff.tasks/server #biff/env SERVER
+ :biff.tasks/prod-dir #or [#biff/env PROD_DIR "app"]
+ :biff.tasks/git-deploy-cmd
+ ["git" "push"
+  #join ["ssh://" #ref [:biff.tasks/prod-dir] "@"
+         #ref [:biff.tasks/server]
+         "/home/" #ref [:biff.tasks/prod-dir] "/repo.git"]
+  "HEAD:master"]
+ :biff.tasks/deploy-untracked-files
+ [#ref [:biff.tasks/css-output]
+  {:src "config.prod.env" :dest "config.env"}]
 
  :mailersend/api-key #biff/secret MAILERSEND_API_KEY
- :mailersend/from #or [#biff/env MAILERSEND_FROM "hello@example.com"]
- :mailersend/reply-to #or [#biff/env MAILERSEND_REPLY_TO "hello@example.com"]
+ :mailersend/from #biff/env MAILERSEND_FROM
+ :mailersend/from-name #biff/env MAILERSEND_FROM_NAME
+ :mailersend/reply-to #biff/env MAILERSEND_REPLY_TO
 
  :biff.auth/turnstile-site-key #biff/env TURNSTILE_SITE_KEY
  :biff.auth/turnstile-secret #biff/secret TURNSTILE_SECRET_KEY

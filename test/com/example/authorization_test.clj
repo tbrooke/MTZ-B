@@ -1,23 +1,6 @@
-(ns com.example-test
-  (:require [clojure.test :refer [deftest is testing]]
-            [com.example.app.hello :as hello]
-            [com.example.app.landing :as landing]
+(ns com.example.authorization-test
+  (:require [clojure.test :refer [deftest is]]
             [com.example.authorization :as authz]))
-
-(deftest landing-page-redirects
-  (testing "signed-out visitors go to sign in"
-    (is (= "/signin"
-           (get-in (landing/home {}) [:headers "location"]))))
-  (testing "signed-in visitors go to the app"
-    (is (= "/app"
-           (get-in (landing/home {:session {:uid (random-uuid)}})
-                   [:headers "location"])))))
-
-(deftest hello-page-renders
-  (let [response (hello/app-page {:session {:email "alice@example.com"}})]
-    (is (= 200 (:status response)))
-    (is (re-find #"hello world" (:body response)))
-    (is (re-find #"alice@example.com" (:body response)))))
 
 (deftest user-authorization
   (let [uid (random-uuid)

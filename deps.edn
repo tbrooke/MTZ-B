@@ -16,20 +16,16 @@
         tick/tick {:mvn/version "1.0"}
         io.github.jacobobryant/biff.authenticate {:git/sha "39ed378d90006dcd7de32cb34aabf4b1852d9b88"}
         io.github.jacobobryant/biff.sqlite {:git/sha "e82c43d41fc2fdc3f0fb06fc9580c51105117ab2"}
-        io.github.jacobobryant/biff.fx {:git/sha "796bd82acb232bf48fe70ea96ea4103e4df549eb"}
-        io.github.jacobobryant/biff.graph {:git/sha "bf162fbecf860dc27735937de0cd9a2271a92c15"}
+        io.github.jacobobryant/biff.fx {:git/sha "9cc18d0d656bdaf2c43247ad29ca4506e3521323"}
+        io.github.jacobobryant/biff.graph {:git/sha "8e462c593d8dd90952fd85e05cc3a669454d33ce"}
         io.github.jacobobryant/biff.admin {:git/sha "a5ee135ed339c7b7f7fb0258d1e1d2bf4825294b"}}
  :aliases
- {:test {:extra-paths ["test"]
-         :extra-deps {io.github.cognitect-labs/test-runner
-                      {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
-         :main-opts ["-m" "cognitect.test-runner"]
-         :exec-fn cognitect.test-runner.api/test}
-  :prod {:jvm-opts ["-Djdk.attach.allowAttachSelf"
-                    "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED"
-                    "--add-exports=java.base/sun.security.action=ALL-UNNAMED"
+ {:prod {:jvm-opts ["-Djdk.attach.allowAttachSelf"
                     "-XX:-OmitStackTraceInFastThrow"
                     "-XX:+CrashOnOutOfMemoryError"]
          :main-opts ["-m" "com.example"]}
-  :run {:extra-deps {io.github.biffweb/tasks {:git/sha "1125e409f10c475a41a9bc00a63e248ced001f36"}}
-        :main-opts ["-m" "com.biffweb.cljrun" "com.biffweb.tasks/tasks" "--"]}}}
+  :run {:extra-paths ["test"]
+        :extra-deps {io.github.biffweb/tasks {:git/sha "1125e409f10c475a41a9bc00a63e248ced001f36"}
+                     io.github.cognitect-labs/test-runner
+                     {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
+         :main-opts ["-m" "com.biffweb.cljrun" "com.biffweb.tasks/tasks" "--"]}}}

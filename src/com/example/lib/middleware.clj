@@ -8,6 +8,7 @@
             [ring.middleware.defaults :as rd]
             [ring.middleware.resource :as res]
             [ring.middleware.session :as session]
+            [ring.middleware.session.memory :as memory]
             [ring.middleware.session.cookie :as cookie]
             [ring.middleware.ssl :as ssl]))
 
@@ -18,17 +19,14 @@
       {:status 303
        :headers {"location" "/signin"}})))
 
-(defn- render-html [response]
-  (str/replace (hiccup/render response) #"^<!DOCTYPE html>\n?" ""))
-
 (defn wrap-render-hiccup [handler]
   (fn [ctx]
     (let [response (handler ctx)]
       (if (vector? response)
         {:status 200
          :headers {"content-type" "text/html; charset=utf-8"}
-         :body (str "<!DOCTYPE html>\n" (render-html response))}
-        response))))
+         :body (hiccup/render response)}
+         response))))
 
 (defn wrap-resource [handler]
   (fn [{:biff.middleware/keys [root index-files]
@@ -86,30 +84,24 @@
                (assoc ctx :scheme :https)
                ctx))))
 
-(def ^:private default-cookie-secret
-  "3dmK45UNmMjtCylorhUU5Q==")
+(defn- session-store [{:keys [biff/secret]}]
+  (if-some [cookie-secret (when secret
+                            (secret :biff.middleware/cookie-secret))]
+    (cookie/cookie-store
+     {:key (.decode (java.util.Base64/getDecoder) cookie-secret)})
+    (do
+      (log/warn "No cookie secret configured; using in-memory Ring sessions.")
+      (memory/memory-store))))
 
 (defn wrap-session [handler]
-  (let [wrapped-handler (atom nil)
-        prev-secret (atom ::unset)]
-    (fn [{:keys [biff/secret] :as ctx}]
-      (let [cookie-secret
-            (or (when secret
-                  (secret :biff.middleware/cookie-secret))
-                default-cookie-secret)]
-        (when (not= cookie-secret @prev-secret)
-          (let [store
-                (cookie/cookie-store
-                 {:key (.decode (java.util.Base64/getDecoder) cookie-secret)})]
-            (reset! prev-secret cookie-secret)
-            (reset! wrapped-handler
-                    (session/wrap-session
-                     handler
-                     {:cookie-attrs {:max-age (* 60 60 24 60)
-                                     :same-site :lax
-                                     :http-only true}
-                      :store store}))))
-        (@wrapped-handler ctx)))))
+  (fn [ctx]
+    ((session/wrap-session
+      handler
+      {:cookie-attrs {:max-age (* 60 60 24 60)
+                      :same-site :lax
+                      :http-only true}
+       :store (session-store ctx)})
+     ctx)))
 
 (defn wrap-ssl [handler]
   (fn [{:keys [biff.middleware/secure

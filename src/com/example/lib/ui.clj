@@ -39,9 +39,19 @@
         [:link {:rel "stylesheet"
                 :href (css-path)}]]
        [:body.mx-auto.my-12.max-w-3xl.px-4.font-sans.leading-relaxed
-        body]])
-     #"^<!DOCTYPE html>\n?"
-     ""))})
+         body]])
+      #"^<!DOCTYPE html>\n?"
+      ""))})
+
+(defn page-title [& children]
+  (into [:h1 {:class "text-3xl font-bold text-slate-950"}] children))
+
+(defn link
+  [{:as opts} & children]
+  (into
+   [:a (update opts :class #(str "text-blue-600 hover:text-blue-800"
+                                 (when % (str " " %))))]
+   children))
 
 (defn button
   [{:as opts} & children]

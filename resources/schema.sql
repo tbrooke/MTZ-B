@@ -13,7 +13,6 @@ CREATE TABLE biff_auth_signin (
 CREATE TABLE user (
   id BLOB PRIMARY KEY NOT NULL,
   email TEXT NOT NULL,
-  joined_at INT NOT NULL
+  joined_at INT NOT NULL,
+  UNIQUE(email)
 ) STRICT;
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_user_email ON user(email);
