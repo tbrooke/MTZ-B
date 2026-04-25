@@ -1,0 +1,8 @@
+{
+  "name": "biff-starter-sqlite",
+  "private": true,
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.2.4",
+    "tailwindcss": "^4.2.2"
+  }
+}
