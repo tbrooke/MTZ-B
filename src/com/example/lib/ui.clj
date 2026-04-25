@@ -1,6 +1,5 @@
 (ns com.example.lib.ui
   (:require [clojure.java.io :as io]
-            [clojure.string :as str]
             [lambdaisland.hiccup :as hiccup]
             [ring.middleware.anti-forgery :as csrf]
             [ring.util.response :as ring-response]))
@@ -25,23 +24,18 @@
   {:status 200
    :headers {"Content-Type" "text/html; charset=utf-8"}
    :body
-   (str
-    "<!DOCTYPE html>\n"
-    (str/replace
-     (hiccup/render
-      [:html {:lang "en"}
-       [:head
-        [:meta {:charset "utf-8"}]
-        [:meta {:name "viewport"
-                :content "width=device-width, initial-scale=1"}]
-        [:title title]
-        [:link {:rel "icon" :href "data:,"}]
-        [:link {:rel "stylesheet"
-                :href (css-path)}]]
-       [:body.mx-auto.my-12.max-w-3xl.px-4.font-sans.leading-relaxed
-         body]])
-      #"^<!DOCTYPE html>\n?"
-      ""))})
+   (hiccup/render
+    [:html {:lang "en"}
+     [:head
+      [:meta {:charset "utf-8"}]
+      [:meta {:name "viewport"
+              :content "width=device-width, initial-scale=1"}]
+      [:title title]
+      [:link {:rel "icon" :href "data:,"}]
+      [:link {:rel "stylesheet"
+              :href (css-path)}]]
+     [:body.mx-auto.my-12.max-w-3xl.px-4.font-sans.leading-relaxed
+      body]])})
 
 (defn page-title [& children]
   (into [:h1 {:class "text-3xl font-bold text-slate-950"}] children))

@@ -7,7 +7,7 @@
   (biff.sqlite/auth-module
    (merge
     {:biff.auth/app-path "/app"
-     :biff.auth/app-name "Biff Starter"
+     :biff.auth/app-name "Biff Starter App"
      :biff.auth/primary-color "#2563eb"
      :biff.auth/send-email email/send-email}
     biff.auth/turnstile-config)))

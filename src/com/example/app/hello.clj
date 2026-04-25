@@ -1,25 +1,30 @@
 (ns com.example.app.hello
-  (:require [com.example.lib.middleware :as mid]
+  (:require [com.biffweb.fx :as fx]
+            [com.example.lib.middleware :as mid]
             [com.example.lib.ui :as ui]))
 
-(defn app-page
-  [{:keys [session]}]
+(defn app-page-response
+  [{:session/keys [user]}]
   (ui/page
     "Hello world"
     [:div.space-y-6
      [:div
       [:p.text-sm.text-slate-500.uppercase.tracking-wide "Starter app"]
       (ui/page-title "hello world")]
-     [:p "You're signed in as " [:strong (:email session "unknown user")] "."]
+     [:p "You're signed in as " [:strong (:user/email user "unknown user")] "."]
      [:div.flex.items-center.gap-4
       (ui/link {:href "/"} "Home")
       [:form {:method "post"
               :action "/_biff/auth/signout"}
-       (ui/anti-forgery-field)
-       (ui/button {:type "submit"} "Log out")]]]))
+        (ui/anti-forgery-field)
+        (ui/button {:type "submit"} "Log out")]]]))
+
+(fx/defroute app-page ""
+  [:biff.fx/graph [{:session/user [:user/email]}]]
+  :get (fn [_ctx result]
+         (app-page-response result)))
 
 (def module
   {:routes
    ["/app" {:middleware [mid/wrap-signed-in]}
-    ["" {:get app-page
-         :name ::page}]]})
+    app-page]})

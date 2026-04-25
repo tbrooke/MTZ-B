@@ -5,6 +5,7 @@
  :biff.nrepl/port #long #or [#biff/env NREPL_PORT "7888"]
  :biff.middleware/cookie-secret #biff/secret COOKIE_SECRET
  :biff.middleware/secure #boolean #or [#biff/env SECURE "true"]
+ :biff.auth/app-name "Biff Starter App"
 
  :biff.tasks/main-ns com.example
  :biff.tasks/css-output "target/resources/public/css/main.css"
@@ -22,7 +23,7 @@
 
  :mailersend/api-key #biff/secret MAILERSEND_API_KEY
  :mailersend/from #biff/env MAILERSEND_FROM
- :mailersend/from-name #biff/env MAILERSEND_FROM_NAME
+ :mailersend/from-name "Biff Starter App"
  :mailersend/reply-to #biff/env MAILERSEND_REPLY_TO
 
  :biff.auth/turnstile-site-key #biff/env TURNSTILE_SITE_KEY

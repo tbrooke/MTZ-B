@@ -6,24 +6,12 @@
             [com.example.authorization :as authz]
             [com.example.fx :as fx]
             [com.example.lib.email :as email]
+            [com.example.lib.ring :as ring]
             [com.example.modules :as modules]
-            [nrepl.server :as nrepl]
-            [ring.adapter.jetty :as jetty])
+            [nrepl.server :as nrepl])
   (:gen-class))
 
 (defonce system (atom {}))
-
-(defn use-jetty
-  [{:biff/keys [host port handler]
-    :or {host "localhost" port 8080}
-    :as ctx}]
-  (let [server (jetty/run-jetty
-                (fn [req] (handler (merge ctx req)))
-                 {:host host
-                  :port port
-                  :join? false})]
-    (log/info "Jetty running on" (str "http://" host ":" port))
-    (update ctx :biff/stop conj #(.stop server))))
 
 (defn init
   [modules-var initial-system]
@@ -48,7 +36,7 @@
   [config/use-aero-config
    biff.admin/use-alerts
    biff.sqlite/use-sqlite
-   use-jetty])
+   ring/use-jetty])
 
 (defn start []
   (let [new-system
@@ -70,7 +58,8 @@
 
 (defn refresh []
   (stop)
-  (start))
+  (start)
+  :done)
 
 (defn -main [& _args]
   (let [{:biff.nrepl/keys [port]

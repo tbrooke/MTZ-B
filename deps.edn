@@ -23,9 +23,7 @@
  {:prod {:jvm-opts ["-Djdk.attach.allowAttachSelf"
                     "-XX:-OmitStackTraceInFastThrow"
                     "-XX:+CrashOnOutOfMemoryError"]
-         :main-opts ["-m" "com.example"]}
-  :run {:extra-paths ["test"]
-        :extra-deps {io.github.jacobobryant/biff-tasks {:git/sha "3338df63d21a6443071e88aa11c095d4af605205"}
-                     io.github.cognitect-labs/test-runner
-                     {:git/tag "v0.5.1" :git/sha "dfb30dd"}}
+          :main-opts ["-m" "com.example"]}
+   :run {:extra-paths ["test"]
+         :extra-deps {io.github.jacobobryant/biff-tasks {:git/sha "0d4f68144169b78d1993f603d00dcdb561ba255a"}}
          :main-opts ["-m" "com.biffweb.cljrun" "com.biffweb.tasks/tasks" "--"]}}}

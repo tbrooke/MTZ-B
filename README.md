@@ -22,6 +22,8 @@ A minimal Biff starter app with SQLite-backed authentication, a tiny `/app` page
 
 The dev task starts the app, recompiles Tailwind CSS with the standalone binary, and exposes nREPL on port `7888` by default.
 
+The config templates live in `resources/TEMPLATE.config.env` and `resources/TEMPLATE.config.prod.env`.
+
 ## Project structure
 
 - `src/com/example.clj` wires the system, components, and route handler.
