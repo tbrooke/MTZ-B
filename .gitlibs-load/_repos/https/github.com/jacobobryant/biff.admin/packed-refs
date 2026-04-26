@@ -1,7 +1,0 @@
-# pack-refs with: peeled fully-peeled sorted 
-6512611473f918d21cedd79486c3909297829178 refs/heads/admin-library
-1865ae4168e8a24c250c9b97504c1dfddf600f16 refs/heads/agent/issue-7-biff-admin
-f0e9f5b8cd12b8f2210b97809dc210be12c539a4 refs/heads/master
-a5ee135ed339c7b7f7fb0258d1e1d2bf4825294b refs/heads/more-admin-features
-6512611473f918d21cedd79486c3909297829178 refs/pull/1/head
-a5ee135ed339c7b7f7fb0258d1e1d2bf4825294b refs/pull/2/head
