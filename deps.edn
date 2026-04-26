@@ -13,7 +13,7 @@
         io.github.jacobobryant/biff.authenticate {:git/sha "2fbd39eb20fe48cc915020552e537debb6fa4ede"}
         io.github.jacobobryant/biff.sqlite {:git/sha "9059085cecd397ad83ec8f6c5aee81dbb23d9b6b"}
         io.github.jacobobryant/biff.fx {:git/sha "9cc18d0d656bdaf2c43247ad29ca4506e3521323"}
-        io.github.jacobobryant/biff.graph {:git/sha "b5097fdaf6fa2b2e3c87a352e56a09493cc6f3b8"}
+        io.github.jacobobryant/biff.graph {:git/sha "824ae1194fc0d2a41118d8c876acd495fb75c9b9"}
         io.github.jacobobryant/biff.admin {:git/sha "1865ae4168e8a24c250c9b97504c1dfddf600f16"}}
  :aliases
  {:prod {:jvm-opts ["-Djdk.attach.allowAttachSelf"
@@ -21,5 +21,5 @@
                     "-XX:+CrashOnOutOfMemoryError"]
           :main-opts ["-m" "com.example"]}
    :run {:extra-paths ["test"]
-         :extra-deps {io.github.jacobobryant/biff-tasks {:git/sha "accee0fa34b2ae172ea1766e7ac49df1fe838cd6"}}
+         :extra-deps {io.github.jacobobryant/biff-tasks {:git/sha "02d63d6d30e64714262fce15b2d725d24213dd24"}}
          :main-opts ["-m" "com.biffweb.cljrun" "com.biffweb.tasks/tasks" "--"]}}}
