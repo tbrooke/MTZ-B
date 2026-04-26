@@ -30,7 +30,7 @@ The config templates live in `resources/TEMPLATE.config.env` and `resources/TEMP
 - `src/com/example/modules.clj` lists the application modules.
 - `src/com/example/app/` contains the landing page, auth module, and `/app` page.
 - `src/com/example/lib/` contains app-specific middleware, HTML helpers, and email delivery.
-- `libs/biff-ring/` contains the local `com.biffweb.ring` library extracted from the starter app.
+- `com.biffweb.ring` comes from the extracted [`biff-ring`](https://github.com/jacobobryant/biff-ring) library.
 - `src/com/example/model/` contains the SQLite schema and graph resolvers.
 
 ## Frontend notes

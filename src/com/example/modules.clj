@@ -18,24 +18,16 @@
        vec))
 
 (def admin-module
-  (let [module
-        (biff.admin/module
-         {:biff.admin/get-user-events (constantly [])
-          :biff.admin/get-users get-users})]
-    (-> module
-        (assoc :biff.ring/routes (:routes module)
-               :biff.ring/base-middleware [biff.admin/wrap-profiling])
-        (dissoc :routes))))
-
-(def graph-middleware
-  [biff.admin/wrap-resolver-profiling])
+  (biff.admin/module
+   {:biff.admin/get-user-events (constantly [])
+    :biff.admin/get-users get-users}))
 
 (def modules
   [(biff.ring/module)
-     (biff.graph/module {:middleware-var #'graph-middleware})
-     model.user/module
-     schema/module
-    admin-module
-    landing/module
-    auth/module
-    hello/module])
+   (biff.graph/module)
+   model.user/module
+   schema/module
+   admin-module
+   landing/module
+   auth/module
+   hello/module])

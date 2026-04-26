@@ -1,0 +1,12 @@
+# pack-refs with: peeled fully-peeled sorted 
+9cc18d0d656bdaf2c43247ad29ca4506e3521323 refs/heads/agent/review-feedback
+796bd82acb232bf48fe70ea96ea4103e4df549eb refs/heads/biff-fx-return
+a6a9744eb57741422975af2e637f7041f4061304 refs/heads/feature/defresolver-and-default-handlers
+95a97467ef489ce2fb7871598e0df90e8b2f949c refs/heads/issue-1-biff-fx-library
+27c5d4631435f59750ccd32b2beed50a60902416 refs/heads/issue-3-redo-interface
+9bd5a862b24872c1c92bbd22833be77b6fc1888f refs/heads/master
+95a97467ef489ce2fb7871598e0df90e8b2f949c refs/pull/2/head
+27c5d4631435f59750ccd32b2beed50a60902416 refs/pull/4/head
+a6a9744eb57741422975af2e637f7041f4061304 refs/pull/6/head
+796bd82acb232bf48fe70ea96ea4103e4df549eb refs/pull/7/head
+9cc18d0d656bdaf2c43247ad29ca4506e3521323 refs/pull/8/head
