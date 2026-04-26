@@ -1,13 +1,10 @@
 -- Auto-generated; do not edit.
 
-CREATE TABLE biff_auth_signin (
-  id BLOB PRIMARY KEY NOT NULL,
-  code TEXT NOT NULL,
-  created_at INT NOT NULL,
-  email TEXT NOT NULL,
-  failed_attempts INT NOT NULL,
-  params TEXT,
-  UNIQUE(email)
+CREATE TABLE biff_sqlite_kv (
+  key_ TEXT NOT NULL,
+  namespace TEXT NOT NULL,
+  value_ BLOB NOT NULL,
+  PRIMARY KEY(namespace, key_)
 ) STRICT;
 
 CREATE TABLE user (

@@ -23,7 +23,7 @@
    (merge
     {:biff.auth/app-path "/app"
      :biff.auth/primary-color "#2563eb"
-     :biff.auth/send-email email/send-email
-     :biff.auth/get-user-id get-user-id
-     :biff.auth/create-user! create-user!}
+     :biff/send-email #'email/send-email
+     :biff.auth/get-user-id #'get-user-id
+     :biff.auth/create-user! #'create-user!}
      biff.auth/turnstile-config)))
