@@ -77,6 +77,10 @@
     (is (= 200 (:status response)))
     (is (= "site" (:body response)))))
 
+(deftest module-provides-fallback-session-store
+  (let [system ((:biff/init (biff.ring/module)) (atom []))]
+    (is (some? (:biff.ring/fallback-session-store system)))))
+
 (deftest wrap-anti-forgery-websockets-rejects-invalid-websocket-requests
   (let [handler (biff.ring/wrap-anti-forgery-websockets (constantly {:status 200}))]
     (testing "missing base URL rejects websocket requests"

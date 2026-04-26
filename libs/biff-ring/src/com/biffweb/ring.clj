@@ -22,17 +22,6 @@
    406 "Not Acceptable"
    500 "Internal Server Error"})
 
-(defn- option
-  ([ctx new-key default]
-   (if (contains? ctx new-key)
-     (get ctx new-key)
-     default))
-  ([ctx new-key old-key default]
-   (cond
-     (contains? ctx new-key) (get ctx new-key)
-     (contains? ctx old-key) (get ctx old-key)
-     :else default)))
-
 (defn- default-on-error [{:keys [status]}]
   {:status status
    :headers {"content-type" "text/html; charset=utf-8"}
@@ -40,7 +29,6 @@
 
 (defn- on-error-handler [ctx]
   (or (:biff.ring/on-error ctx)
-      (:biff.middleware/on-error ctx)
       default-on-error))
 
 (defn- websocket-request? [{:keys [headers]}]
@@ -72,8 +60,8 @@
 
 (defn wrap-resource [handler]
   (fn [{:as ctx}]
-    (let [root (option ctx :biff.ring/root :biff.middleware/root "public")
-          index-files (option ctx :biff.ring/index-files :biff.middleware/index-files ["index.html"])]
+    (let [root (:biff.ring/root ctx "public")
+          index-files (:biff.ring/index-files ctx ["index.html"])]
       (or (->> index-files
                (map #(update ctx :uri str/replace-first #"/?$" (str "/" %)))
                (into [ctx])
@@ -105,33 +93,29 @@
 
 (defn wrap-https-scheme [handler]
   (fn [ctx]
-    (let [secure? (option ctx :biff.ring/secure :biff.middleware/secure true)]
+    (let [secure? (:biff.ring/secure ctx true)]
       (handler (if (and secure? (= :http (:scheme ctx)))
                  (assoc ctx :scheme :https)
                  ctx)))))
 
-(defn- session-store [{:keys [biff/secret] :as ctx}]
-  (let [resolve-secret (fn [k]
-                         (when-some [value (get ctx k)]
-                           (if (ifn? value)
-                             (value)
-                             value)))]
-    (if-some [cookie-secret (or (resolve-secret :biff.ring/cookie-secret)
-                                (resolve-secret :biff.middleware/cookie-secret)
-                                (when secret
-                                  (or (secret :biff.ring/cookie-secret)
-                                      (secret :biff.middleware/cookie-secret))))]
-    (let [decoder (java.util.Base64/getDecoder)]
-      (cookie/cookie-store
-       {:key (.decode ^java.util.Base64$Decoder decoder ^String cookie-secret)}))
-    (do
-      (log/warn "No cookie secret configured; using in-memory Ring sessions.")
-      (memory/memory-store)))))
+(defn- session-store [{:as ctx}]
+  (let [cookie-secret (:biff.ring/cookie-secret ctx)
+        cookie-secret (if (ifn? cookie-secret)
+                        (cookie-secret)
+                        cookie-secret)]
+    (if-some [cookie-secret cookie-secret]
+      (let [decoder (java.util.Base64/getDecoder)]
+        (cookie/cookie-store
+         {:key (.decode ^java.util.Base64$Decoder decoder ^String cookie-secret)}))
+      (do
+        (log/warn "No cookie secret configured; using in-memory Ring sessions.")
+        (or (:biff.ring/fallback-session-store ctx)
+            (memory/memory-store))))))
 
 (defn wrap-session [handler]
   (fn [ctx]
-    (let [session-max-age (option ctx :biff.ring/session-max-age (* 60 60 24 60))
-          session-same-site (option ctx :biff.ring/session-same-site :lax)]
+    (let [session-max-age (:biff.ring/session-max-age ctx (* 60 60 24 60))
+          session-same-site (:biff.ring/session-same-site ctx :lax)]
       ((session/wrap-session
         handler
         {:cookie-attrs {:max-age session-max-age
@@ -142,9 +126,9 @@
 
 (defn wrap-ssl [handler]
   (fn [ctx]
-    (let [secure? (option ctx :biff.ring/secure :biff.middleware/secure true)
-          hsts? (option ctx :biff.ring/hsts :biff.middleware/hsts true)
-          ssl-redirect? (option ctx :biff.ring/ssl-redirect :biff.middleware/ssl-redirect false)
+    (let [secure? (:biff.ring/secure ctx true)
+          hsts? (:biff.ring/hsts ctx true)
+          ssl-redirect? (:biff.ring/ssl-redirect ctx false)
           handler (if secure?
                     (cond-> handler
                       hsts? ssl/wrap-hsts
@@ -184,9 +168,9 @@
   (fn [ctx]
     ((on-error-handler ctx) (assoc ctx :status status))))
 
-(defn- module-routes [modules new-key old-key]
+(defn- module-routes [modules key]
   (->> modules
-       (keep #(or (get % new-key) (get % old-key)))
+       (keep #(get % key))
        vec))
 
 (defn- module-middleware [modules key]
@@ -201,13 +185,13 @@
 
 (defn- routes [modules]
   (let [base-middleware (module-middleware modules :biff.ring/base-middleware)
-        site-middleware (module-middleware modules :biff.ring/site-middleware)
-        api-middleware (module-middleware modules :biff.ring/api-middleware)
-        site-routes (module-routes modules :biff.ring/routes :routes)
-        api-routes (module-routes modules :biff.ring/api-routes :api-routes)
-        children (cond-> []
-                   (seq site-routes)
-                   (conj (route-group (into [wrap-site-defaults] site-middleware) site-routes))
+         site-middleware (module-middleware modules :biff.ring/site-middleware)
+         api-middleware (module-middleware modules :biff.ring/api-middleware)
+         site-routes (module-routes modules :biff.ring/routes)
+         api-routes (module-routes modules :biff.ring/api-routes)
+         children (cond-> []
+                    (seq site-routes)
+                    (conj (route-group (into [wrap-site-defaults] site-middleware) site-routes))
 
                    (seq api-routes)
                    (conj (route-group (into [wrap-api-defaults] api-middleware) api-routes)))]
@@ -226,10 +210,9 @@
 
 (defn use-jetty
   [{:as ctx}]
-  (let [host (option ctx :biff.ring/host :biff/host "localhost")
-        port (option ctx :biff.ring/port :biff/port 8080)
-        handler (or (:biff.ring/handler ctx)
-                    (:biff/handler ctx))]
+  (let [host (:biff.ring/host ctx "localhost")
+        port (:biff.ring/port ctx 8080)
+        handler (:biff.ring/handler ctx)]
     (when-not handler
       (throw (ex-info "Missing Ring handler" {:required :biff.ring/handler})))
     (let [server (jetty/run-jetty
@@ -250,6 +233,7 @@
 (defn module []
   {:biff/init
    (fn [modules-var]
-     {:biff.ring/handler
+     {:biff.ring/fallback-session-store (memory/memory-store)
+      :biff.ring/handler
       (fn [request]
         ((handler-for-modules @modules-var) request))})})

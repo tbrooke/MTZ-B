@@ -1,6 +1,6 @@
 (ns com.example.modules
   (:require [com.biffweb.admin :as biff.admin]
-            [com.biffweb.ring :as ring]
+            [com.biffweb.ring :as biff.ring]
             [com.biffweb.graph :as biff.graph]
             [com.biffweb.sqlite :as biff.sqlite]
             [com.example.app.auth :as auth]
@@ -31,10 +31,10 @@
   [biff.admin/wrap-resolver-profiling])
 
 (def modules
-  [(ring/module)
-    (biff.graph/module {:middleware-var #'graph-middleware})
-    model.user/module
-    schema/module
+  [(biff.ring/module)
+     (biff.graph/module {:middleware-var #'graph-middleware})
+     model.user/module
+     schema/module
     admin-module
     landing/module
     auth/module

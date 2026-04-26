@@ -1,7 +1,6 @@
 {:paths ["src" "resources" "target/resources"]
  :deps {org.clojure/clojure {:mvn/version "1.12.0"}
         com.biffweb/biff-ring {:local/root "libs/biff-ring"}
-        ring/ring-core {:mvn/version "1.12.1"}
         com.lambdaisland/hiccup {:mvn/version "0.14.67"}
         metosin/malli {:mvn/version "0.16.3"}
         hato/hato {:mvn/version "1.0.0"}

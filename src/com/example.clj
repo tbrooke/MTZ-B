@@ -5,7 +5,7 @@
             [com.biffweb.sqlite :as biff.sqlite]
             [com.example.authorization :as authz]
             [com.example.fx :as fx]
-            [com.biffweb.ring :as ring]
+            [com.biffweb.ring :as biff.ring]
             [com.example.lib.email :as email]
             [com.example.modules :as modules]
             [nrepl.server :as nrepl])
@@ -33,10 +33,10 @@
      :biff.fx/get-handlers (fn [] fx/handlers)}))
 
 (def components
-  [config/use-aero-config
-   biff.admin/use-alerts
-   biff.sqlite/use-sqlite
-   ring/use-jetty])
+   [config/use-aero-config
+    biff.admin/use-alerts
+    biff.sqlite/use-sqlite
+    biff.ring/use-jetty])
 
 (defn start []
   (let [new-system
