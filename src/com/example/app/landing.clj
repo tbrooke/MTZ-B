@@ -6,6 +6,6 @@
    :headers {"location" (if (:uid session) "/app" "/signin")}})
 
 (def module
-  {:routes
+  {:biff.ring/routes
    ["/" {:get home
          :name ::home}]})

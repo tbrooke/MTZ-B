@@ -1,11 +1,11 @@
 (ns com.example.modules
   (:require [com.biffweb.admin :as biff.admin]
+            [com.biffweb.ring :as ring]
             [com.biffweb.graph :as biff.graph]
             [com.biffweb.sqlite :as biff.sqlite]
             [com.example.app.auth :as auth]
             [com.example.app.hello :as hello]
             [com.example.app.landing :as landing]
-            [com.example.lib.ring :as ring]
             [com.example.model.schema :as schema]
             [com.example.model.user :as model.user]))
 
@@ -18,19 +18,24 @@
        vec))
 
 (def admin-module
-  (biff.admin/module
-   {:biff.admin/get-user-events (constantly [])
-    :biff.admin/get-users get-users}))
+  (let [module
+        (biff.admin/module
+         {:biff.admin/get-user-events (constantly [])
+          :biff.admin/get-users get-users})]
+    (-> module
+        (assoc :biff.ring/routes (:routes module)
+               :biff.ring/base-middleware [biff.admin/wrap-profiling])
+        (dissoc :routes))))
 
 (def graph-middleware
   [biff.admin/wrap-resolver-profiling])
 
 (def modules
-  [(ring/ring-module)
-   (biff.graph/module {:middleware-var #'graph-middleware})
-   model.user/module
-   schema/module
-   admin-module
-   landing/module
-   auth/module
-   hello/module])
+  [(ring/module)
+    (biff.graph/module {:middleware-var #'graph-middleware})
+    model.user/module
+    schema/module
+    admin-module
+    landing/module
+    auth/module
+    hello/module])
