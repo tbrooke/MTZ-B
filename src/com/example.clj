@@ -64,7 +64,7 @@
 (defn -main [& _args]
   (let [{:biff.nrepl/keys [port]
          :or {port 7888}}
-        (config/use-aero-config {:biff.config/skip-validation true})]
+        (config/use-aero-config {})]
     (nrepl/start-server :port port)
     (spit ".nrepl-port" port)
     (log/info "nREPL server started on port" port))
