@@ -1,10 +1,11 @@
 -- Auto-generated; do not edit.
 
 CREATE TABLE biff_sqlite_kv (
+  id BLOB PRIMARY KEY NOT NULL,
   key_ TEXT NOT NULL,
   namespace TEXT NOT NULL,
   value_ BLOB NOT NULL,
-  PRIMARY KEY(namespace, key_)
+  UNIQUE(namespace, key_)
 ) STRICT;
 
 CREATE TABLE user (

@@ -15,7 +15,7 @@
         org.slf4j/slf4j-simple {:mvn/version "2.0.13"}
         tick/tick {:mvn/version "1.0"}
         io.github.jacobobryant/biff.authenticate {:git/sha "9ffc5a07f89eafdbc4b1dfb83e26d74375ce0da5"}
-        io.github.jacobobryant/biff.sqlite {:git/sha "fd65ba00263f98476691d52c6465c03386840461"}
+        io.github.jacobobryant/biff.sqlite {:git/sha "c2b26cdf14cbbe7d0c2c7c65a2cc7f891034f2f5"}
         io.github.jacobobryant/biff.fx {:git/sha "9cc18d0d656bdaf2c43247ad29ca4506e3521323"}
         io.github.jacobobryant/biff.graph {:git/sha "8e462c593d8dd90952fd85e05cc3a669454d33ce"}
         io.github.jacobobryant/biff.admin {:git/sha "a5ee135ed339c7b7f7fb0258d1e1d2bf4825294b"}}
