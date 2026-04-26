@@ -22,6 +22,6 @@
          (ui/button {:type "submit"} "Log out")]]])))
 
 (def module
-  {:routes
+  {:biff.ring/routes
    [["" {:middleware [mid/wrap-signed-in]}
      app-page]]})

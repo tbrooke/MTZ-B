@@ -29,7 +29,8 @@ The config templates live in `resources/TEMPLATE.config.env` and `resources/TEMP
 - `src/com/example.clj` wires the system, components, and route handler.
 - `src/com/example/modules.clj` lists the application modules.
 - `src/com/example/app/` contains the landing page, auth module, and `/app` page.
-- `src/com/example/lib/` contains middleware, HTML helpers, and email delivery.
+- `src/com/example/lib/` contains app-specific middleware, HTML helpers, and email delivery.
+- `libs/biff-ring/` contains the local `com.biffweb.ring` library extracted from the starter app.
 - `src/com/example/model/` contains the SQLite schema and graph resolvers.
 
 ## Frontend notes
@@ -76,6 +77,6 @@ clj -M:run soft-deploy
 
 ## Biff-specific pointers
 
-- Modules contribute `:routes`, `:biff/init`, schema, and graph resolvers.
-- `com.example.lib.ring/ring-module` builds the Ring handler from the active module list.
+- Modules contribute `:biff.ring/routes`, `:biff.ring/api-routes`, `:biff/init`, schema, and graph resolvers.
+- `com.biffweb.ring/module` builds the Ring handler from the active module list.
 - SQLite writes that should enforce ownership rules can go through `:biff.fx.sqlite/authorized-write`.
