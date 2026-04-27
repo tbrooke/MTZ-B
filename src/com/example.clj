@@ -6,7 +6,6 @@
             [com.biffweb.config :as config]
             [com.biffweb.sqlite :as biff.sqlite]
             [com.example.authorization :as authz]
-            [com.example.fx :as fx]
             [com.biffweb.ring :as biff.ring]
             [com.example.lib.email :as email]
             [com.example.modules :as modules]
@@ -19,8 +18,7 @@
   {:biff/send-email #'email/send-email
    :biff.sqlite/columns (apply merge (keep :biff.sqlite/columns modules/modules))
    :biff.sqlite/extra-sql (into [] (mapcat :biff.sqlite/extra-sql) modules/modules)
-   :biff.sqlite/authorize #'authz/authorize
-   :biff.fx/get-handlers (fn [] fx/handlers)})
+   :biff.sqlite/authorize #'authz/authorize})
 
 (def components
    [config/use-aero-config
