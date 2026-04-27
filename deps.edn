@@ -1,9 +1,10 @@
 {:paths ["src" "resources" "target/resources"]
  :deps {org.clojure/clojure {:mvn/version "1.12.0"}
-        io.github.jacobobryant/biff-core {:git/sha "96db6e23f4d3cd50e91d7efad8dc015ac103dce5"}
-        io.github.jacobobryant/biff-ring {:git/sha "6a6063f105e69bd94f37688577e7ed3e02e73abf"}
-        com.lambdaisland/hiccup {:mvn/version "0.14.67"}
-        metosin/malli {:mvn/version "0.16.3"}
+         io.github.jacobobryant/biff-core {:git/sha "96db6e23f4d3cd50e91d7efad8dc015ac103dce5"}
+         io.github.jacobobryant/biff-background {:git/sha "125b3accf5063a7a2af765dcb47a6ff487827a77"}
+         io.github.jacobobryant/biff-ring {:git/sha "6a6063f105e69bd94f37688577e7ed3e02e73abf"}
+         com.lambdaisland/hiccup {:mvn/version "0.14.67"}
+         metosin/malli {:mvn/version "0.16.3"}
         hato/hato {:mvn/version "1.0.0"}
         cheshire/cheshire {:mvn/version "5.13.0"}
         io.github.jacobobryant/biff-config {:git/sha "2bac210c9bd52f34d84cab515f2d9a0d19815808"}

@@ -1,10 +1,11 @@
 (ns com.example
   (:require [clojure.tools.logging :as log]
-            [clojure.tools.namespace.repl :as tn-repl]
-            [com.biffweb.admin :as biff.admin]
-            [com.biffweb.core :as biff.core]
-            [com.biffweb.config :as config]
-            [com.biffweb.sqlite :as biff.sqlite]
+             [clojure.tools.namespace.repl :as tn-repl]
+             [com.biffweb.admin :as biff.admin]
+             [com.biffweb.background :as biff.background]
+             [com.biffweb.core :as biff.core]
+             [com.biffweb.config :as config]
+             [com.biffweb.sqlite :as biff.sqlite]
             [com.biffweb.ring :as biff.ring]
             [com.example.lib.email :as email]
             [com.example.modules :as modules]
@@ -17,10 +18,12 @@
   {:biff/send-email #'email/send-email})
 
 (def components
-   [config/use-aero-config
-    biff.admin/use-alerts
-    biff.sqlite/use-sqlite
-    biff.ring/use-jetty])
+    [config/use-aero-config
+     biff.admin/use-alerts
+     biff.sqlite/use-sqlite
+     biff.background/use-scheduled-tasks
+     biff.background/use-queues
+     biff.ring/use-jetty])
 
 (defn start []
   (let [new-system (biff.core/start (initial-system) #'modules/modules components)]
