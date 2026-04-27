@@ -77,6 +77,6 @@ clj -M:run soft-deploy
 
 ## Biff-specific pointers
 
-- Modules contribute `:biff.ring/routes`, `:biff.ring/api-routes`, `:biff/init`, schema, and graph resolvers.
+- Modules contribute `:biff.ring/routes`, `:biff.ring/api-routes`, `:biff.core/init`, schema, and graph resolvers.
 - `com.biffweb.ring/module` builds the Ring handler from the active module list.
 - SQLite writes that should enforce ownership rules can go through `:biff.fx.sqlite/authorized-write`.
