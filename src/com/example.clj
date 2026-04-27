@@ -1,6 +1,8 @@
 (ns com.example
   (:require [clojure.tools.logging :as log]
+            [clojure.tools.namespace.repl :as tn-repl]
             [com.biffweb.admin :as biff.admin]
+            [com.biffweb.core :as biff.core]
             [com.biffweb.config :as config]
             [com.biffweb.sqlite :as biff.sqlite]
             [com.example.authorization :as authz]
@@ -13,24 +15,12 @@
 
 (defonce system (atom {}))
 
-(defn init
-  [modules-var initial-system]
-  (let [init-results
-        (->> @modules-var
-             (keep :biff/init)
-              (map (fn [init-fn] (init-fn modules-var)))
-              (apply merge))]
-     (merge init-results initial-system)))
-
 (defn initial-system []
-  (init
-   #'modules/modules
-    {:biff/stop []
-     :biff/send-email #'email/send-email
-     :biff.sqlite/columns (apply merge (keep :biff.sqlite/columns modules/modules))
-     :biff.sqlite/extra-sql (into [] (mapcat :biff.sqlite/extra-sql) modules/modules)
-     :biff.sqlite/authorize #'authz/authorize
-     :biff.fx/get-handlers (fn [] fx/handlers)}))
+  {:biff/send-email #'email/send-email
+   :biff.sqlite/columns (apply merge (keep :biff.sqlite/columns modules/modules))
+   :biff.sqlite/extra-sql (into [] (mapcat :biff.sqlite/extra-sql) modules/modules)
+   :biff.sqlite/authorize #'authz/authorize
+   :biff.fx/get-handlers (fn [] fx/handlers)})
 
 (def components
    [config/use-aero-config
@@ -39,26 +29,20 @@
     biff.ring/use-jetty])
 
 (defn start []
-  (let [new-system
-         (reduce (fn [ctx component]
-                   (log/info "starting:" (str component))
-                   (component ctx))
-                 (initial-system)
-                 components)]
+  (let [new-system (biff.core/start (initial-system) #'modules/modules components)]
     (reset! system new-system)
     (log/info "System started.")
     (log/info "Go to" (:biff/base-url new-system))
     new-system))
 
 (defn stop []
-  (doseq [stop-fn (reverse (:biff/stop @system))]
-    (stop-fn))
+  (biff.core/stop @system)
   (reset! system {})
   :stopped)
 
 (defn refresh []
   (stop)
-  (start)
+  (tn-repl/refresh :after `start)
   :done)
 
 (defn -main [& _args]
