@@ -1,9 +1,9 @@
 (ns com.example.app.hello
-  (:require [com.biffweb.ring :as biff.ring]
-             [com.example.lib.middleware :as mid]
-             [com.example.lib.ui :as ui]))
+  (:require [com.biffweb.ring :refer [defroute]]
+            [com.example.lib.middleware :as mid]
+            [com.example.lib.ui :as ui]))
 
-(biff.ring/defroute app-page "/app"
+(defroute app-page "/app"
   [:biff.graph.fx/query [{:session/user [:user/email]}]]
   :get
   (fn [_ctx {:keys [session/user]}]
