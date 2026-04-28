@@ -1,5 +1,6 @@
 (ns com.example.app.auth
   (:require [com.biffweb.authenticate :as biff.auth]
+             [com.biffweb.authenticate.impl.backend :as biff.auth.backend]
              [com.biffweb.sqlite :as biff.sqlite]
              [com.example.lib.email :as email]))
 
@@ -35,6 +36,18 @@
 (defn captcha-widget [ctx]
   (when (captcha-configured? ctx)
     ((:biff.auth/captcha-widget biff.auth/turnstile-config) ctx)))
+
+(def fx-overrides
+  {:biff.auth/verify-captcha #'verify-captcha
+   :biff.auth/send-email #'email/send-email
+   :biff.auth/get-user-id #'get-user-id
+   :biff.auth/create-user! #'create-user!
+   :biff.auth/new-code biff.auth.backend/new-code
+   :biff.auth/new-link-token biff.auth.backend/new-link-token
+   :biff.kv/get-value (fn [ctx & args]
+                        (apply (:biff.kv/get-value ctx) ctx args))
+   :biff.kv/set-value (fn [ctx & args]
+                        (apply (:biff.kv/set-value ctx) ctx args))})
 
 (def module
   (biff.auth/module

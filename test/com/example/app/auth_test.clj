@@ -1,5 +1,6 @@
 (ns com.example.app.auth-test
   (:require [clojure.test :refer [deftest is]]
+             [com.biffweb.authenticate.impl.backend :as biff.auth.backend]
              [com.biffweb.sqlite :as biff.sqlite]
              [com.example.app.auth :as auth]
              [com.example.lib.email :as email]
@@ -49,3 +50,20 @@
     (is (true? (auth/captcha-configured? ctx)))
     (is (vector? (auth/captcha-head ctx)))
     (is (vector? (auth/captcha-widget ctx)))))
+
+(deftest send-code-uses-fx-overrides-compatibly
+  (let [stored (atom nil)
+        result (biff.auth.backend/send-code-handler
+                {:params {:email "test@example.com"}
+                 :biff.auth/code-signin-path "/signin"
+                 :biff.auth/email-validator (fn [_ _] true)
+                 :biff.fx/overrides auth/fx-overrides
+                 :biff.kv/get-value (fn [_ _ _] nil)
+                 :biff.kv/set-value (fn [_ ns key value]
+                                      (reset! stored [ns key value]))
+                 :biff/secret (constantly nil)})]
+    (is (= 303 (:status result)))
+    (is (re-find #"verify=code&email=test%40example.com"
+                 (get-in result [:headers "location"])))
+    (is (= :biff.auth/signin (first @stored)))
+    (is (= "test@example.com" (second @stored)))))
