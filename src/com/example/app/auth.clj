@@ -2,6 +2,7 @@
   (:require [com.biffweb.authenticate :as biff.auth]
              [com.biffweb.authenticate.impl.backend :as biff.auth.backend]
              [com.biffweb.sqlite :as biff.sqlite]
+             [com.example.lib.middleware :as mid]
              [com.example.lib.email :as email]))
 
 (defn get-user-id [ctx email]
@@ -50,14 +51,16 @@
                         (apply (:biff.kv/set-value ctx) ctx args))})
 
 (def module
-  (biff.auth/module
-   {:biff.auth/app-path "/app"
-    :biff.auth/primary-color "#2563eb"
-    :biff.auth/send-email #'email/send-email
-    :biff.auth/get-user-id #'get-user-id
-    :biff.auth/create-user! #'create-user!
-    :biff.auth/verify-captcha #'verify-captcha
-    :biff.auth/captcha-head #'captcha-head
-    :biff.auth/captcha-widget #'captcha-widget
-    :biff.auth/captcha-param (:biff.auth/captcha-param biff.auth/turnstile-config)
-    :biff.auth/captcha-configured? #'captcha-configured?}))
+  (merge
+   {:biff.ring/site-middleware [mid/wrap-legacy-biff-now]}
+   (biff.auth/module
+    {:biff.auth/app-path "/app"
+     :biff.auth/primary-color "#2563eb"
+     :biff.auth/send-email #'email/send-email
+     :biff.auth/get-user-id #'get-user-id
+     :biff.auth/create-user! #'create-user!
+     :biff.auth/verify-captcha #'verify-captcha
+     :biff.auth/captcha-head #'captcha-head
+     :biff.auth/captcha-widget #'captcha-widget
+     :biff.auth/captcha-param (:biff.auth/captcha-param biff.auth/turnstile-config)
+     :biff.auth/captcha-configured? #'captcha-configured?})))

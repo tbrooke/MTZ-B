@@ -4,6 +4,7 @@
              [com.biffweb.sqlite :as biff.sqlite]
              [com.example.app.auth :as auth]
              [com.example.lib.email :as email]
+             [com.example.lib.middleware :as mid]
              [com.example.model.schema :as schema]))
 
 (deftest sqlite-user-functions-roundtrip
@@ -67,3 +68,7 @@
                  (get-in result [:headers "location"])))
     (is (= :biff.auth/signin (first @stored)))
     (is (= "test@example.com" (second @stored)))))
+
+(deftest legacy-biff-now-middleware-injects-request-time
+  (let [now ((mid/wrap-legacy-biff-now (fn [ctx] (:biff/now ctx))) {})]
+    (is (instance? java.time.Instant now))))
