@@ -1,6 +1,14 @@
 (ns com.example.lib.email
-  (:require [clojure.tools.logging :as log]
+  (:require [clojure.string :as str]
+            [clojure.tools.logging :as log]
             [hato.client :as hato]))
+
+(defn mailersend-enabled?
+  [{:keys [biff/secret mailersend/from]}]
+  (boolean
+   (and secret
+        (some-> (secret :mailersend/api-key) str/trim not-empty)
+        (some-> from str/trim not-empty))))
 
 (defn- send-mailersend
   [{:keys [mailersend/from mailersend/from-name mailersend/reply-to]}
@@ -28,8 +36,8 @@
 (defn send-email
   [{:keys [biff/secret] :as ctx}
    {:keys [to subject text html]}]
-  (let [api-key (when secret
-                  (secret :mailersend/api-key))]
+  (let [api-key (when (mailersend-enabled? ctx)
+                  (-> (secret :mailersend/api-key) str/trim not-empty))]
     (if api-key
       (send-mailersend ctx api-key {:to to
                                     :subject subject
