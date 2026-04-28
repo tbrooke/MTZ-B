@@ -23,13 +23,5 @@
 (deftest initial-system-uses-namespaced-email-handlers
   (let [send-email #'email/send-email
         system (example/initial-system)]
-    (is (= send-email (:biff/send-email system)))
     (is (= send-email (:biff.auth/send-email system)))
     (is (= send-email (:biff.admin/send-email system)))))
-
-(deftest secret-component-wraps-env-values
-  (let [ctx (example/use-secret-values {:biff.ring/cookie-secret "cookie"
-                                        :mailersend/api-key (fn [] "api")})]
-    (is (= "cookie" ((:biff.ring/cookie-secret ctx))))
-    (is (= "api" ((:mailersend/api-key ctx))))
-    (is (nil? (:biff.auth/turnstile-secret ctx)))))

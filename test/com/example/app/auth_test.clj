@@ -12,9 +12,8 @@
       (let [ctx (biff.sqlite/use-sqlite {:biff.core/stop []
                                          :biff.sqlite/db-path db-path
                                          :biff.sqlite/columns schema/columns})
-            user-id (auth/create-user! ctx {:email "test@example.com" :params {:foo "bar"}})
-            stop-fn (or (first (:biff.core/stop ctx))
-                        (first (:biff/stop ctx)))]
+             user-id (auth/create-user! ctx {:email "test@example.com" :params {:foo "bar"}})
+            stop-fn (first (:biff.core/stop ctx))]
         (is (uuid? user-id))
         (is (= user-id (auth/get-user-id ctx "test@example.com")))
         (stop-fn))
