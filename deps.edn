@@ -1,6 +1,6 @@
 {:paths ["src" "resources" "target/resources"]
  :deps {org.clojure/clojure {:mvn/version "1.12.0"}
-         io.github.jacobobryant/biff-core {:git/sha "4d0046bfba5b39c1c0ebed39e67aef8de1410859"}
+         io.github.jacobobryant/biff-core {:git/sha "d9630f7024ac0009206fa89dde0f03651fdda5ab"}
          io.github.jacobobryant/biff-background {:git/sha "fd1749df2e59ceb836bd09a24bca4bc980c05bd7"}
          io.github.jacobobryant/biff-ring {:git/sha "3a35c9c1a211174aed692b4934f1995d8cbf8423"}
          com.lambdaisland/hiccup {:mvn/version "0.14.67"}
@@ -14,7 +14,7 @@
         org.slf4j/slf4j-simple {:mvn/version "2.0.13"}
         tick/tick {:mvn/version "1.0"}
         io.github.jacobobryant/biff.authenticate {:git/sha "524f9cd866abb0984550b971ca712b837a2ba129"}
-        io.github.jacobobryant/biff.sqlite {:git/sha "581368f80288ab2035f5f3cbdb52fa718de57567"}
+         io.github.jacobobryant/biff.sqlite {:git/sha "c529e7d4818b4aaf7a6896e3c61f67e869c8db45"}
         io.github.jacobobryant/biff.fx {:git/sha "c44e8988b5d3b6f0839dd36dc5317385c89393a2"}
         io.github.jacobobryant/biff.graph {:git/sha "9e363e9c0fe4f8c010e5de29dd3a628d5b49b614"}
         io.github.jacobobryant/biff.admin {:git/sha "4b365d562ead728e6c11cd2602878871eb33cf5f"}}
