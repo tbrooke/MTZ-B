@@ -14,22 +14,41 @@
 
 (defonce system (atom {}))
 
+(def secret-keys
+  [:biff.ring/cookie-secret
+   :mailersend/api-key
+   :biff.auth/turnstile-secret])
+
+(defn use-secret-values [ctx]
+  (reduce (fn [ctx k]
+            (update ctx k
+                    (fn [value]
+                      (cond
+                        (nil? value) nil
+                        (fn? value) value
+                        :else (fn [] value)))))
+          ctx
+          secret-keys))
+
 (defn initial-system []
-  {:biff/send-email #'email/send-email})
+  (let [send-email #'email/send-email]
+    {:biff/send-email send-email
+     :biff.auth/send-email send-email
+     :biff.admin/send-email send-email}))
 
 (def components
-    [config/use-aero-config
-     biff.admin/use-alerts
-     biff.sqlite/use-sqlite
-     biff.background/use-scheduled-tasks
-     biff.background/use-queues
-     biff.ring/use-jetty])
+  [config/use-aero-config
+   use-secret-values
+   biff.admin/use-alerts
+   biff.sqlite/use-sqlite
+   biff.background/use-scheduled-tasks
+   biff.background/use-queues
+   biff.ring/use-jetty])
 
 (defn start []
   (let [new-system (biff.core/start (initial-system) #'modules/modules components)]
     (reset! system new-system)
     (log/info "System started.")
-    (log/info "Go to" (:biff/base-url new-system))
     new-system))
 
 (defn stop []

@@ -9,13 +9,15 @@
         db-path (.getAbsolutePath db-file)]
     (.delete db-file)
     (try
-      (let [ctx (biff.sqlite/use-sqlite {:biff/stop []
+      (let [ctx (biff.sqlite/use-sqlite {:biff.core/stop []
                                          :biff.sqlite/db-path db-path
                                          :biff.sqlite/columns schema/columns})
-            user-id (auth/create-user! ctx {:email "test@example.com" :params {:foo "bar"}})]
+            user-id (auth/create-user! ctx {:email "test@example.com" :params {:foo "bar"}})
+            stop-fn (or (first (:biff.core/stop ctx))
+                        (first (:biff/stop ctx)))]
         (is (uuid? user-id))
         (is (= user-id (auth/get-user-id ctx "test@example.com")))
-        ((first (:biff/stop ctx))))
+        (stop-fn))
       (finally
         (.delete (java.io.File. db-path))
         (.delete (java.io.File. (str db-path "-wal")))
