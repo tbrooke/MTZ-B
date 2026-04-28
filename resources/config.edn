@@ -1,4 +1,5 @@
-{:biff/base-url #or [#biff/env BASE_URL "http://localhost:8080"]
+{:biff.ring/base-url #or [#biff/env BASE_URL "http://localhost:8080"]
+ :biff.auth/base-url #ref [:biff.ring/base-url]
  :biff.ring/host #or [#biff/env HOST "localhost"]
  :biff.ring/port #long #or [#biff/env PORT "8080"]
  :biff.sqlite/db-path #or [#biff/env SQLITE_DB_PATH "storage/sqlite/main.db"]
