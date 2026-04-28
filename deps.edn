@@ -17,7 +17,7 @@
          io.github.jacobobryant/biff.sqlite {:git/sha "c529e7d4818b4aaf7a6896e3c61f67e869c8db45"}
         io.github.jacobobryant/biff.fx {:git/sha "c44e8988b5d3b6f0839dd36dc5317385c89393a2"}
         io.github.jacobobryant/biff.graph {:git/sha "9e363e9c0fe4f8c010e5de29dd3a628d5b49b614"}
-        io.github.jacobobryant/biff.admin {:git/sha "4b365d562ead728e6c11cd2602878871eb33cf5f"}}
+         io.github.jacobobryant/biff.admin {:git/sha "0d039c026c353d77ba3b1d16be3e14e5ff5eb0d7"}}
  :aliases
  {:prod {:jvm-opts ["-Djdk.attach.allowAttachSelf"
                     "-XX:-OmitStackTraceInFastThrow"

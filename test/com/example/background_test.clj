@@ -9,15 +9,17 @@
   (is (some #(= biff.background/use-scheduled-tasks %) example/components))
   (is (some #(= biff.background/use-queues %) example/components)))
 
-(deftest background-module-initializes-empty-config
+(deftest background-module-initializes-admin-pstats-task
   (let [init (some (fn [module]
                      (when-let [init-fn (:biff.core/init module)]
                        (let [result (init-fn #'modules/modules)]
                          (when (contains? result :biff.background/tasks)
-                           result))))
+                            result))))
                    modules/modules)]
     (is init)
-    (is (= [] (:biff.background/tasks init)))
+    (is (= 1 (count (:biff.background/tasks init))))
+    (is (fn? (get-in init [:biff.background/tasks 0 :schedule])))
+    (is (fn? (get-in init [:biff.background/tasks 0 :task])))
     (is (= {} (:biff.background/queues init)))))
 
 (deftest initial-system-uses-namespaced-email-handlers
