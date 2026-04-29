@@ -5,9 +5,8 @@
             [com.biffweb.background :as biff.background]
             [com.biffweb.core :as biff.core]
             [com.biffweb.config :as config]
-            [com.biffweb.sqlite :as biff.sqlite]
             [com.biffweb.ring :as biff.ring]
-            [com.example.app.auth :as auth]
+            [com.biffweb.sqlite :as biff.sqlite]
             [com.example.lib.email :as email]
             [com.example.modules :as modules]
             [nrepl.server :as nrepl])
@@ -18,8 +17,7 @@
 (defn initial-system []
   (let [send-email #'email/send-email]
     {:biff.auth/send-email send-email
-     :biff.admin/send-email send-email
-     :biff.fx/overrides auth/fx-overrides}))
+     :biff.admin/send-email send-email}))
 
 (def components
   [config/use-aero-config

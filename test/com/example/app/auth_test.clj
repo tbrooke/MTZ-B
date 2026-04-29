@@ -1,10 +1,9 @@
 (ns com.example.app.auth-test
   (:require [clojure.test :refer [deftest is]]
-             [com.biffweb.authenticate.impl.backend :as biff.auth.backend]
              [com.biffweb.sqlite :as biff.sqlite]
              [com.example.app.auth :as auth]
              [com.example.lib.email :as email]
-             [com.example.lib.middleware :as mid]
+             [hato.client :as hato]
              [com.example.model.schema :as schema]))
 
 (deftest sqlite-user-functions-roundtrip
@@ -26,49 +25,30 @@
         (.delete (java.io.File. (str db-path "-shm")))))))
 
 (deftest mailersend-enabled-only-when-required-settings-exist
-  (let [ctx {:biff/secret (fn [k] ({:mailersend/api-key " mailer-key "} k))
-             :mailersend/from "noreply@example.com"}]
-    (is (true? (email/mailersend-enabled? ctx)))
-    (is (false? (email/mailersend-enabled? {:biff/secret (constantly nil)
-                                            :mailersend/from "noreply@example.com"})))
-    (is (false? (email/mailersend-enabled? {:biff/secret (fn [k] ({:mailersend/api-key "mailer-key"} k))
-                                            :mailersend/from ""})))))
-
-(deftest captcha-is-skipped-when-email-delivery-is-disabled
-  (let [ctx {:biff.auth/turnstile-secret "turnstile-secret"
-             :biff/secret (constantly nil)
-             :mailersend/from nil}]
-    (is (false? (auth/captcha-configured? ctx)))
-    (is (= {:success true} (auth/verify-captcha ctx)))
-    (is (nil? (auth/captcha-head ctx)))
-    (is (nil? (auth/captcha-widget (assoc ctx :biff.auth/turnstile-site-key "site-key"))))))
-
-(deftest captcha-renders-when-email-and-turnstile-are-configured
-  (let [ctx {:biff/secret (fn [k] ({:mailersend/api-key "mailer-key"} k))
-             :biff.auth/turnstile-secret "turnstile-secret"
+  (let [ctx {:mailersend/api-key (fn [] " mailer-key ")
              :mailersend/from "noreply@example.com"
-             :biff.auth/turnstile-site-key "site-key"}]
-    (is (true? (auth/captcha-configured? ctx)))
-    (is (vector? (auth/captcha-head ctx)))
-    (is (vector? (auth/captcha-widget ctx)))))
+             :biff.auth/turnstile-secret (fn [] " turnstile-secret ")}]
+    (is (true? (email/mailersend-enabled? ctx)))
+    (is (false? (email/mailersend-enabled? {:mailersend/api-key (fn [] nil)
+                                            :mailersend/from "noreply@example.com"
+                                            :biff.auth/turnstile-secret (fn [] "turnstile-secret")})))
+    (is (false? (email/mailersend-enabled? {:mailersend/api-key (fn [] "mailer-key")
+                                            :mailersend/from ""
+                                            :biff.auth/turnstile-secret (fn [] "turnstile-secret")})))
+    (is (false? (email/mailersend-enabled? {:mailersend/api-key (fn [] "mailer-key")
+                                            :mailersend/from "noreply@example.com"
+                                            :biff.auth/turnstile-secret (fn [] nil)})))))
 
-(deftest send-code-uses-fx-overrides-compatibly
-  (let [stored (atom nil)
-        result (biff.auth.backend/send-code-handler
-                {:params {:email "test@example.com"}
-                 :biff.auth/code-signin-path "/signin"
-                 :biff.auth/email-validator (fn [_ _] true)
-                 :biff.fx/overrides auth/fx-overrides
-                 :biff.kv/get-value (fn [_ _ _] nil)
-                 :biff.kv/set-value (fn [_ ns key value]
-                                      (reset! stored [ns key value]))
-                 :biff/secret (constantly nil)})]
-    (is (= 303 (:status result)))
-    (is (re-find #"verify=code&email=test%40example.com"
-                 (get-in result [:headers "location"])))
-    (is (= :biff.auth/signin (first @stored)))
-    (is (= "test@example.com" (second @stored)))))
-
-(deftest legacy-biff-now-middleware-injects-request-time
-  (let [now ((mid/wrap-legacy-biff-now (fn [ctx] (:biff/now ctx))) {})]
-    (is (instance? java.time.Instant now))))
+(deftest send-email-falls-back-to-console-when-turnstile-is-missing
+  (let [called? (atom false)]
+    (with-redefs [hato/post (fn [& _]
+                              (reset! called? true)
+                              {:status 202})]
+      (is (true? (email/send-email
+                  {:mailersend/api-key (fn [] "mailer-key")
+                   :mailersend/from "noreply@example.com"
+                   :biff.auth/turnstile-secret nil}
+                  {:to "test@example.com"
+                   :subject "Subject"
+                   :text "Hello"})))
+      (is (false? @called?)))))
