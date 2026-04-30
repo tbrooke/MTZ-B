@@ -2,7 +2,7 @@
  :deps {org.clojure/clojure {:mvn/version "1.12.0"}
          io.github.jacobobryant/biff-core {:git/sha "d9630f7024ac0009206fa89dde0f03651fdda5ab"}
          io.github.jacobobryant/biff-background {:git/sha "0a963e3048b98828717d8e6c3db42cae0f1c749d"}
-         io.github.jacobobryant/biff-ring {:git/sha "3a35c9c1a211174aed692b4934f1995d8cbf8423"}
+         io.github.jacobobryant/biff-ring {:git/sha "939cf7be17e87bc708071bd6f2d4d9b9b33733b9"}
          com.lambdaisland/hiccup {:mvn/version "0.14.67"}
          metosin/malli {:mvn/version "0.16.3"}
         hato/hato {:mvn/version "1.0.0"}
