@@ -19,20 +19,12 @@
     {:biff.auth/send-email send-email
      :biff.admin/send-email send-email}))
 
-(defn wrap-static-resources
-  [{:as ctx}]
-  (let [handler (:biff.ring/handler ctx)]
-    (when-not handler
-      (throw (ex-info "Missing Ring handler" {:required :biff.ring/handler})))
-    (assoc ctx :biff.ring/handler (biff.ring/wrap-resource handler))))
-
 (def components
   [config/use-aero-config
    biff.admin/use-alerts
    biff.sqlite/use-sqlite
    biff.background/use-scheduled-tasks
    biff.background/use-queues
-   wrap-static-resources
    biff.ring/use-jetty])
 
 (defn start []
