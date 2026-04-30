@@ -37,7 +37,7 @@ The config templates live in `resources/TEMPLATE.config.env` and `resources/TEMP
 
 Use **htmx or Datastar** for frontend interactivity as the app grows. This starter keeps the initial UI simple and server-rendered.
 
-Tailwind source lives in `resources/tailwind.css`, and the generated stylesheet is written to `target/resources/public/css/main.css`.
+Tailwind source lives in `resources/tailwind.css`, and the generated stylesheet is written to `resources/public/css/main.css` so fresh deployments and sprite checkouts can serve it without an extra build step.
 
 ## Useful commands
 
