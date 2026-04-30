@@ -7,8 +7,8 @@
         response ((:get handler-map)
                   {:request-method :get
                    :biff.fx/handlers
-                   {:biff.fx/graph (fn [_ctx _query]
-                                     {:session/user {:user/email "alice@example.com"}})}})]
+                   {:biff.graph.fx/query (fn [_ctx _query]
+                                           {:session/user {:user/email "alice@example.com"}})}})]
     (is (= "/app" uri))
     (is (= 200 (:status response)))
     (is (re-find #"hello world" (:body response)))
