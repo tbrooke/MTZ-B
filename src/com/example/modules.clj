@@ -1,6 +1,7 @@
 (ns com.example.modules
   (:require [com.biffweb.admin :as biff.admin]
             [com.biffweb.background :as biff.background]
+            [com.biffweb.fx :as biff.fx]
             [com.biffweb.ring :as biff.ring]
             [com.biffweb.graph :as biff.graph]
             [com.biffweb.sqlite :as biff.sqlite]
@@ -26,6 +27,7 @@
 (def modules
   [(biff.ring/module)
    (biff.background/module)
+   (biff.fx/module)
    (biff.graph/module)
    model.user/module
    schema/module

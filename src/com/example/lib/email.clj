@@ -1,6 +1,21 @@
 (ns com.example.lib.email
-  (:require [clojure.tools.logging :as log]
-            [hato.client :as hato]))
+  (:require [clojure.string :as str]
+             [clojure.tools.logging :as log]
+             [hato.client :as hato]))
+
+(defn- configured-secret [secret]
+  (some-> (cond
+            (instance? clojure.lang.IFn secret) (.invoke ^clojure.lang.IFn secret)
+            :else secret)
+          str/trim
+          not-empty))
+
+(defn mailersend-enabled?
+  [{:keys [mailersend/api-key
+           mailersend/from]}]
+  (boolean
+   (and (configured-secret api-key)
+        (some-> from str/trim not-empty))))
 
 (defn- send-mailersend
   [{:keys [mailersend/from mailersend/from-name mailersend/reply-to]}
@@ -26,10 +41,10 @@
     (< (:status response) 400)))
 
 (defn send-email
-  [{:keys [biff/secret] :as ctx}
+  [ctx
    {:keys [to subject text html]}]
-  (let [api-key (when secret
-                  (secret :mailersend/api-key))]
+  (let [api-key (when (mailersend-enabled? ctx)
+                  (configured-secret (:mailersend/api-key ctx)))]
     (if api-key
       (send-mailersend ctx api-key {:to to
                                     :subject subject
@@ -37,5 +52,5 @@
                                     :text text})
       (do
         (log/info "MailerSend not configured, printing email to console")
-        (println (str "Email to " to ": " subject "\n" text))
-        true))))
+         (println (str "Email to " to ": " subject "\n" text))
+         true))))

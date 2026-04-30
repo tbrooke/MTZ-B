@@ -6,7 +6,7 @@
   (let [[uri handler-map] hello/app-page
         response ((:get handler-map)
                   {:request-method :get
-                   :biff.fx/overrides
+                   :biff.fx/handlers
                    {:biff.graph.fx/query (fn [_ctx _query]
                                            {:session/user {:user/email "alice@example.com"}})}})]
     (is (= "/app" uri))

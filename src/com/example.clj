@@ -1,12 +1,12 @@
 (ns com.example
   (:require [clojure.tools.logging :as log]
-            [clojure.tools.namespace.repl :as tn-repl]
+	        [clojure.tools.namespace.repl :as tn-repl]
             [com.biffweb.admin :as biff.admin]
             [com.biffweb.background :as biff.background]
             [com.biffweb.core :as biff.core]
             [com.biffweb.config :as config]
-            [com.biffweb.sqlite :as biff.sqlite]
             [com.biffweb.ring :as biff.ring]
+            [com.biffweb.sqlite :as biff.sqlite]
             [com.example.lib.email :as email]
             [com.example.modules :as modules]
             [nrepl.server :as nrepl])
