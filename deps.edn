@@ -15,8 +15,8 @@
         tick/tick {:mvn/version "1.0"}
          io.github.jacobobryant/biff.authenticate {:git/sha "5818e3c3501777fd72b0a81701daf0422e08f41b"}
          io.github.jacobobryant/biff.sqlite {:git/sha "ee9d1989c31f0d53c0df7492625e1e42afbe2f4b"}
-         io.github.jacobobryant/biff.fx {:git/sha "a944dc4f0d2db95b8a53e427533c645937dfc905"}
-        io.github.jacobobryant/biff.graph {:git/sha "7dabe15c79398ab4d3596928e6ae11f739c17c8e"}
+         io.github.jacobobryant/biff.fx {:git/sha "452e8aa332095a5d4f43e219fbd71fa5a39fb64f"}
+         io.github.jacobobryant/biff.graph {:git/sha "96f18019e2c235bca6835b0c9c274d89f53dc15a"}
          io.github.jacobobryant/biff.admin {:git/sha "0d039c026c353d77ba3b1d16be3e14e5ff5eb0d7"}}
  :aliases
  {:prod {:jvm-opts ["-Djdk.attach.allowAttachSelf"
