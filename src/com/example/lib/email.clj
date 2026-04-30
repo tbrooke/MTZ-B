@@ -12,12 +12,10 @@
 
 (defn mailersend-enabled?
   [{:keys [mailersend/api-key
-           mailersend/from
-           biff.auth/turnstile-secret]}]
+           mailersend/from]}]
   (boolean
    (and (configured-secret api-key)
-        (some-> from str/trim not-empty)
-        (configured-secret turnstile-secret))))
+        (some-> from str/trim not-empty))))
 
 (defn- send-mailersend
   [{:keys [mailersend/from mailersend/from-name mailersend/reply-to]}
@@ -54,5 +52,5 @@
                                     :text text})
       (do
         (log/info "MailerSend not configured, printing email to console")
-        (println (str "Email to " to ": " subject "\n" text))
-        true))))
+         (println (str "Email to " to ": " subject "\n" text))
+         true))))

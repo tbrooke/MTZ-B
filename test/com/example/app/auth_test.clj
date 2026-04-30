@@ -26,20 +26,14 @@
 
 (deftest mailersend-enabled-only-when-required-settings-exist
   (let [ctx {:mailersend/api-key (fn [] " mailer-key ")
-             :mailersend/from "noreply@example.com"
-             :biff.auth/turnstile-secret (fn [] " turnstile-secret ")}]
+             :mailersend/from "noreply@example.com"}]
     (is (true? (email/mailersend-enabled? ctx)))
     (is (false? (email/mailersend-enabled? {:mailersend/api-key (fn [] nil)
-                                            :mailersend/from "noreply@example.com"
-                                            :biff.auth/turnstile-secret (fn [] "turnstile-secret")})))
+                                            :mailersend/from "noreply@example.com"})))
     (is (false? (email/mailersend-enabled? {:mailersend/api-key (fn [] "mailer-key")
-                                            :mailersend/from ""
-                                            :biff.auth/turnstile-secret (fn [] "turnstile-secret")})))
-    (is (false? (email/mailersend-enabled? {:mailersend/api-key (fn [] "mailer-key")
-                                            :mailersend/from "noreply@example.com"
-                                            :biff.auth/turnstile-secret (fn [] nil)})))))
+                                            :mailersend/from ""})))))
 
-(deftest send-email-falls-back-to-console-when-turnstile-is-missing
+(deftest send-email-sends-when-mailersend-is-configured
   (let [called? (atom false)]
     (with-redefs [hato/post (fn [& _]
                               (reset! called? true)
@@ -48,7 +42,7 @@
                   {:mailersend/api-key (fn [] "mailer-key")
                    :mailersend/from "noreply@example.com"
                    :biff.auth/turnstile-secret nil}
-                  {:to "test@example.com"
-                   :subject "Subject"
-                   :text "Hello"})))
-      (is (false? @called?)))))
+                   {:to "test@example.com"
+                    :subject "Subject"
+                    :text "Hello"})))
+      (is (true? @called?)))))

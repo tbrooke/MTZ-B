@@ -13,8 +13,8 @@
         org.clojure/tools.namespace {:mvn/version "1.5.0"}
         org.slf4j/slf4j-simple {:mvn/version "2.0.13"}
         tick/tick {:mvn/version "1.0"}
-         io.github.jacobobryant/biff.authenticate {:git/sha "5818e3c3501777fd72b0a81701daf0422e08f41b"}
-         io.github.jacobobryant/biff.sqlite {:git/sha "f74c9d84a409a0849e1d8ca0bbaab5d7cbc2034f"}
+         io.github.jacobobryant/biff.authenticate {:git/sha "d922a8db10ffcfa3ae3cd1784d2487c4e32bf51c"}
+         io.github.jacobobryant/biff.sqlite {:git/sha "76f7314b035f658274b5d8066bf10d32015df671"}
          io.github.jacobobryant/biff.fx {:git/sha "452e8aa332095a5d4f43e219fbd71fa5a39fb64f"}
         io.github.jacobobryant/biff.graph {:git/sha "5984cf008d6ce69407ec3b9810a680af8e6cecf0"}
          io.github.jacobobryant/biff.admin {:git/sha "0d039c026c353d77ba3b1d16be3e14e5ff5eb0d7"}}
