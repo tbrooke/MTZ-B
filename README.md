@@ -1,4 +1,4 @@
-# biff-starter-sqlite (Alpha/WIP)
+# biff-starter-sqlite (Alpha/WIP/AI generated)
 
 A minimal Biff starter app with SQLite-backed authentication, a tiny `/app` page, and the same component/module shape used in larger Biff apps.
 
