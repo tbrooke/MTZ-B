@@ -5,4 +5,6 @@
 (deftest landing-page-renders
   (let [response (landing/home {})]
     (is (= 200 (:status response)))
-    (is (re-find #"Mount Zion" (:body response)))))
+    (is (re-find #"Mount Zion" (:body response)))
+    (is (re-find #"mtz-header" (:body response)))
+    (is (re-find #"mtz-footer" (:body response)))))
