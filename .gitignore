@@ -6,6 +6,7 @@ pom.xml.asc
 /classes/
 /target/
 /checkouts/
+bin/tailwindcss
 .lein-deps-sum
 .lein-repl-history
 .lein-plugins/

@@ -1,5 +1,6 @@
 (ns com.mtzion.app.landing
-  (:require [com.mtzion.ui.base :as base]))
+  (:require [com.mtzion.app.home-sections :as home-sections]
+            [com.mtzion.ui.base :as base]))
 
 (defn- photo-hero []
   [:section {:id "home"}
@@ -35,7 +36,7 @@
    [:hr {:class "mtz-rule"}]])
 
 (defn home [_ctx]
-  (base/page "Mount Zion UCC — Welcome" (photo-hero)))
+  (base/page "Mount Zion UCC — Welcome" (list (photo-hero) (home-sections/home-page))))
 
 (def module
   {:biff.ring/routes
