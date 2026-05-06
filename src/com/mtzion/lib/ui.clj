@@ -1,4 +1,4 @@
-(ns com.example.lib.ui
+(ns com.mtzion.lib.ui
   (:require [clojure.java.io :as io]
             [lambdaisland.hiccup :as hiccup]
             [ring.middleware.anti-forgery :as csrf]

@@ -1,9 +1,10 @@
-(ns com.example.model.schema
+(ns com.mtzion.model.schema
   (:require [com.biffweb.sqlite :as biff.sqlite]))
 
 (def columns
   {:user/id {:type :uuid :primary-key true}
    :user/email {:type :text :required true :unique true}
+   :user/password-hash {:type :text}
    :user/joined-at {:type :inst :required true}})
 
 (def ^:private immutable-user-fields

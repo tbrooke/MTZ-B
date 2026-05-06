@@ -1,7 +1,7 @@
-(ns com.example.app.hello
+(ns com.mtzion.app.hello
   (:require [com.biffweb.ring :refer [defroute]]
-            [com.example.lib.middleware :as mid]
-            [com.example.lib.ui :as ui]))
+            [com.mtzion.lib.middleware :as mid]
+            [com.mtzion.lib.ui :as ui]))
 
 (defroute app-page "/app"
   [:biff.graph.fx/query [{:session/user [:user/email]}]]

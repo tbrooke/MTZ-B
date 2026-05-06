@@ -12,5 +12,6 @@ CREATE TABLE user (
   id BLOB PRIMARY KEY NOT NULL,
   email TEXT NOT NULL,
   joined_at INT NOT NULL,
+  password_hash TEXT,
   UNIQUE(email)
 ) STRICT;

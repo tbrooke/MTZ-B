@@ -1,4 +1,4 @@
-(ns com.example.model.user)
+(ns com.mtzion.model.user)
 
 (defn session-user
   {:output [:session/user]}

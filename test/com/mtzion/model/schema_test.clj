@@ -1,6 +1,6 @@
-(ns com.example.model.schema-test
+(ns com.mtzion.model.schema-test
   (:require [clojure.test :refer [deftest is]]
-            [com.example.model.schema :as schema]))
+            [com.mtzion.model.schema :as schema]))
 
 (deftest schema-module-initializes-sqlite-config
   (is (= {:biff.sqlite/columns schema/columns

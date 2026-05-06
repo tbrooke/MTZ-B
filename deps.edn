@@ -1,10 +1,10 @@
 {:paths ["src" "resources" "target/resources"]
  :deps {org.clojure/clojure {:mvn/version "1.12.0"}
-         io.github.jacobobryant/biff-core {:git/sha "d9630f7024ac0009206fa89dde0f03651fdda5ab"}
-         io.github.jacobobryant/biff-background {:git/sha "0a963e3048b98828717d8e6c3db42cae0f1c749d"}
-         io.github.jacobobryant/biff-ring {:git/sha "939cf7be17e87bc708071bd6f2d4d9b9b33733b9"}
-         com.lambdaisland/hiccup {:mvn/version "0.14.67"}
-         metosin/malli {:mvn/version "0.16.3"}
+        io.github.jacobobryant/biff-core {:git/sha "d9630f7024ac0009206fa89dde0f03651fdda5ab"}
+        io.github.jacobobryant/biff-background {:git/sha "0a963e3048b98828717d8e6c3db42cae0f1c749d"}
+        io.github.jacobobryant/biff-ring {:git/sha "939cf7be17e87bc708071bd6f2d4d9b9b33733b9"}
+        com.lambdaisland/hiccup {:mvn/version "0.14.67"}
+        metosin/malli {:mvn/version "0.16.3"}
         hato/hato {:mvn/version "1.0.0"}
         cheshire/cheshire {:mvn/version "5.13.0"}
         io.github.jacobobryant/biff-config {:git/sha "f7289e16e0a0c257d4bcfaabc18d45251f1bc422"}
@@ -13,16 +13,16 @@
         org.clojure/tools.namespace {:mvn/version "1.5.0"}
         org.slf4j/slf4j-simple {:mvn/version "2.0.13"}
         tick/tick {:mvn/version "1.0"}
-         io.github.jacobobryant/biff.authenticate {:git/sha "d922a8db10ffcfa3ae3cd1784d2487c4e32bf51c"}
-         io.github.jacobobryant/biff.sqlite {:git/sha "76f7314b035f658274b5d8066bf10d32015df671"}
-         io.github.jacobobryant/biff.fx {:git/sha "452e8aa332095a5d4f43e219fbd71fa5a39fb64f"}
+        org.mindrot/jbcrypt {:mvn/version "0.4"}
+        io.github.jacobobryant/biff.sqlite {:git/sha "76f7314b035f658274b5d8066bf10d32015df671"}
+        io.github.jacobobryant/biff.fx {:git/sha "452e8aa332095a5d4f43e219fbd71fa5a39fb64f"}
         io.github.jacobobryant/biff.graph {:git/sha "5984cf008d6ce69407ec3b9810a680af8e6cecf0"}
-         io.github.jacobobryant/biff.admin {:git/sha "0d039c026c353d77ba3b1d16be3e14e5ff5eb0d7"}}
+        io.github.jacobobryant/biff.admin {:git/sha "0d039c026c353d77ba3b1d16be3e14e5ff5eb0d7"}}
  :aliases
  {:prod {:jvm-opts ["-Djdk.attach.allowAttachSelf"
                     "-XX:-OmitStackTraceInFastThrow"
                     "-XX:+CrashOnOutOfMemoryError"]
-          :main-opts ["-m" "com.example"]}
-   :run {:extra-paths ["test"]
-         :extra-deps {io.github.jacobobryant/biff-tasks {:git/sha "02d63d6d30e64714262fce15b2d725d24213dd24"}}
-         :main-opts ["-m" "com.biffweb.cljrun" "com.biffweb.tasks/tasks" "--"]}}}
+         :main-opts ["-m" "com.mtzion"]}
+  :run {:extra-paths ["test"]
+        :extra-deps {io.github.jacobobryant/biff-tasks {:git/sha "02d63d6d30e64714262fce15b2d725d24213dd24"}}
+        :main-opts ["-m" "com.biffweb.cljrun" "com.biffweb.tasks/tasks" "--"]}}}

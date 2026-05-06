@@ -1,15 +1,15 @@
-(ns com.example.modules
+(ns com.mtzion.modules
   (:require [com.biffweb.admin :as biff.admin]
             [com.biffweb.background :as biff.background]
             [com.biffweb.fx :as biff.fx]
             [com.biffweb.ring :as biff.ring]
             [com.biffweb.graph :as biff.graph]
             [com.biffweb.sqlite :as biff.sqlite]
-            [com.example.app.auth :as auth]
-            [com.example.app.hello :as hello]
-            [com.example.app.landing :as landing]
-            [com.example.model.schema :as schema]
-            [com.example.model.user :as model.user]))
+            [com.mtzion.app.auth :as auth]
+            [com.mtzion.app.hello :as hello]
+            [com.mtzion.app.landing :as landing]
+            [com.mtzion.model.schema :as schema]
+            [com.mtzion.model.user :as model.user]))
 
 (defn- get-users [ctx]
   (->> (biff.sqlite/execute ctx {:select [[:user/id :user-id]

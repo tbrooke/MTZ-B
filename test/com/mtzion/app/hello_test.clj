@@ -1,6 +1,6 @@
-(ns com.example.app.hello-test
+(ns com.mtzion.app.hello-test
   (:require [clojure.test :refer [deftest is]]
-             [com.example.app.hello :as hello]))
+             [com.mtzion.app.hello :as hello]))
 
 (deftest hello-page-renders
   (let [[uri handler-map] hello/app-page
