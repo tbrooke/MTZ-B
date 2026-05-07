@@ -8,21 +8,51 @@ import TableCell from '@tiptap/extension-table-cell'
 import TableHeader from '@tiptap/extension-table-header'
 import Typography from '@tiptap/extension-typography'
 
+function csrfToken() {
+  const el = document.querySelector('input[name="__anti-forgery-token"]')
+  return el ? el.value : ''
+}
+
+function uploadImage(editor) {
+  const picker = document.createElement('input')
+  picker.type = 'file'
+  picker.accept = 'image/*'
+  picker.addEventListener('change', async () => {
+    const file = picker.files[0]
+    if (!file) return
+    const fd = new FormData()
+    fd.append('file', file)
+    fd.append('__anti-forgery-token', csrfToken())
+    try {
+      const resp = await fetch('/admin/upload', { method: 'POST', body: fd })
+      const data = await resp.json()
+      if (data.url) {
+        editor.chain().focus().setImage({ src: data.url }).run()
+      } else {
+        alert('Upload failed: ' + (data.error || 'unknown error'))
+      }
+    } catch (e) {
+      alert('Image upload failed')
+    }
+  })
+  picker.click()
+}
+
 function createToolbar(editor) {
   const bar = document.createElement('div')
   bar.className = 'tiptap-toolbar'
   const btns = [
-    ['B',      'Bold',           () => editor.chain().focus().toggleBold().run(),                     () => editor.isActive('bold')],
-    ['I',      'Italic',         () => editor.chain().focus().toggleItalic().run(),                   () => editor.isActive('italic')],
-    ['H2',     'Heading 2',      () => editor.chain().focus().toggleHeading({level:2}).run(),         () => editor.isActive('heading',{level:2})],
-    ['H3',     'Heading 3',      () => editor.chain().focus().toggleHeading({level:3}).run(),         () => editor.isActive('heading',{level:3})],
-    ['• List', 'Bullet list',    () => editor.chain().focus().toggleBulletList().run(),               () => editor.isActive('bulletList')],
-    ['1. List','Ordered list',   () => editor.chain().focus().toggleOrderedList().run(),              () => editor.isActive('orderedList')],
-    ['❝',     'Blockquote',     () => editor.chain().focus().toggleBlockquote().run(),               () => editor.isActive('blockquote')],
-    ['—',      'Divider',        () => editor.chain().focus().setHorizontalRule().run(),              () => false],
-    ['Link',   'Add link',       () => { const u=prompt('URL'); if(u) editor.chain().focus().setLink({href:u}).run() }, () => editor.isActive('link')],
-    ['Unlink', 'Remove link',    () => editor.chain().focus().unsetLink().run(),                      () => false],
-    ['Image',  'Add image (URL)',() => { const u=prompt('Image URL'); if(u) editor.chain().focus().setImage({src:u}).run() }, () => false],
+    ['B',       'Bold',          () => editor.chain().focus().toggleBold().run(),             () => editor.isActive('bold')],
+    ['I',       'Italic',        () => editor.chain().focus().toggleItalic().run(),           () => editor.isActive('italic')],
+    ['H2',      'Heading 2',     () => editor.chain().focus().toggleHeading({level:2}).run(), () => editor.isActive('heading',{level:2})],
+    ['H3',      'Heading 3',     () => editor.chain().focus().toggleHeading({level:3}).run(), () => editor.isActive('heading',{level:3})],
+    ['• List',  'Bullet list',   () => editor.chain().focus().toggleBulletList().run(),       () => editor.isActive('bulletList')],
+    ['1. List', 'Ordered list',  () => editor.chain().focus().toggleOrderedList().run(),      () => editor.isActive('orderedList')],
+    ['❝',      'Blockquote',    () => editor.chain().focus().toggleBlockquote().run(),       () => editor.isActive('blockquote')],
+    ['—',       'Divider',       () => editor.chain().focus().setHorizontalRule().run(),      () => false],
+    ['Link',    'Add link',      () => { const u=prompt('URL'); if(u) editor.chain().focus().setLink({href:u}).run() }, () => editor.isActive('link')],
+    ['Unlink',  'Remove link',   () => editor.chain().focus().unsetLink().run(),              () => false],
+    ['↑ Image', 'Upload image',  () => uploadImage(editor),                                  () => false],
   ]
   btns.forEach(([label, title, action, isActive]) => {
     const btn = document.createElement('button')
