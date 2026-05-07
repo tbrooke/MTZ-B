@@ -9,7 +9,8 @@
             [com.biffweb.sqlite :as biff.sqlite]
             [com.mtzion.lib.email :as email]
             [com.mtzion.modules :as modules]
-            [nrepl.server :as nrepl])
+            [nrepl.server :as nrepl]
+            [cider.nrepl :refer [cider-middleware]])
   (:gen-class))
 
 (defonce system (atom {}))
@@ -45,7 +46,8 @@
   (let [{:biff.nrepl/keys [port]
          :or {port 7888}}
         (config/use-aero-config {})]
-    (nrepl/start-server :port port)
+    (nrepl/start-server :port port
+                        :handler (apply nrepl/default-handler cider-middleware))
     (spit ".nrepl-port" port)
     (log/info "nREPL server started on port" port))
   (start))
