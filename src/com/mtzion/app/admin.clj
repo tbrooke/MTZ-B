@@ -66,7 +66,8 @@
                     (dashboard-card "Blog Post"  "✍"  "Pastor Jim Reflects" "/admin/posts/new"    "/admin/posts")
                     (dashboard-card "Event"      "📅" "Events & calendar"   "/admin/events/new"   "/admin/events")
                     (dashboard-card "Page"       "📄" "Site pages"          "/admin/pages"        "/admin/pages")
-                    (dashboard-card "File"       "📎" "Bulletins & slides"  "/admin/files/new"    "/admin/files")]]))
+                    (dashboard-card "File"       "📎" "Bulletins & slides"  "/admin/files/new"    "/admin/files")
+                    (dashboard-card "Sermon"     "🎬" "Video sermons"       "/admin/sermons/new"  "/admin/sermons")]]))
 
 ;; ---------------------------------------------------------------------------
 ;; Features

@@ -8,6 +8,7 @@
             [com.mtzion.app.about :as about]
             [com.mtzion.app.activities :as activities]
             [com.mtzion.app.admin :as content-admin]
+            [com.mtzion.app.media :as media]
             [com.mtzion.app.auth :as auth]
             [com.mtzion.app.contact :as contact]
             [com.mtzion.app.events :as events-page]
@@ -42,6 +43,7 @@
    schema/module
    admin-module
    content-admin/module
+   media/module
    landing/module
    about/module
    worship/module

@@ -72,3 +72,13 @@ CREATE TABLE IF NOT EXISTS file (
       size_bytes INTEGER,
       uploaded_at INTEGER NOT NULL
     ) STRICT;
+CREATE TABLE IF NOT EXISTS sermon (
+      id TEXT PRIMARY KEY NOT NULL,
+      title TEXT NOT NULL,
+      sermon_date INTEGER,
+      scripture TEXT,
+      description TEXT NOT NULL DEFAULT '',
+      video_id TEXT,
+      published INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL
+    ) STRICT;
