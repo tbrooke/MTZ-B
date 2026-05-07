@@ -63,3 +63,12 @@ CREATE TABLE IF NOT EXISTS page (
       updated_at INTEGER NOT NULL,
       UNIQUE(slug)
     ) STRICT;
+CREATE TABLE IF NOT EXISTS file (
+      id TEXT PRIMARY KEY NOT NULL,
+      filename TEXT NOT NULL,
+      label TEXT NOT NULL DEFAULT '',
+      category TEXT NOT NULL DEFAULT 'other',
+      url TEXT NOT NULL,
+      size_bytes INTEGER,
+      uploaded_at INTEGER NOT NULL
+    ) STRICT;

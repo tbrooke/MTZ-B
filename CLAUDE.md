@@ -80,8 +80,28 @@ clj -M:test         # run tests
 To trigger a namespace reload without restarting (if the file watcher misses a change):
 connect to nREPL on port 7888 and call `(clojure.tools.namespace.repl/refresh)`.
 
+## File uploads
+
+Bulletins, slide decks, and other documents are uploaded via `/admin/files` and stored on disk.
+
+- Upload directory is configured via `UPLOAD_DIR` env var (default: `storage/uploads`)
+- Files are served publicly at `/uploads/:filename`
+- SQLite `file` table stores label, category, url, size, uploaded_at
+
+**On the VPS**: set `UPLOAD_DIR=/home/app/storage/uploads` (or wherever persistent storage lives)
+in `config.prod.env`. Make sure nginx also has a location block if you want to serve uploads
+directly without proxying through the app:
+```nginx
+location /uploads/ {
+    alias /home/app/storage/uploads/;
+}
+```
+
 ## Deployment
 
 Single Biff uberjar + systemd + nginx on VPS. No Docker needed (Docker was only
 required in mtz-cms for Alfresco). Set `BASE_URL=https://mtzcg.com` in `config.prod.env`
 (gitignored — contains secrets).
+
+Target deployment workflow: push to GitHub → pull on server → restart systemd service.
+The `storage/` directory (SQLite DB + uploads) lives outside the repo and persists across deploys.

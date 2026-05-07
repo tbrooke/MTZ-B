@@ -1,5 +1,6 @@
 (ns com.mtzion.app.admin
-  (:require [clojure.string :as str]
+  (:require [clojure.java.io :as io]
+            [clojure.string :as str]
             [com.biffweb.sqlite :as biff.sqlite]
             [com.mtzion.lib.middleware :refer [wrap-signed-in]]
             [com.mtzion.lib.ui :as ui]
@@ -64,7 +65,8 @@
                     (dashboard-card "Feature"    "🖼"  "Home page slots"     "/admin/features/new" "/admin/features")
                     (dashboard-card "Blog Post"  "✍"  "Pastor Jim Reflects" "/admin/posts/new"    "/admin/posts")
                     (dashboard-card "Event"      "📅" "Events & calendar"   "/admin/events/new"   "/admin/events")
-                    (dashboard-card "Page"       "📄" "Site pages"          "/admin/pages"        "/admin/pages")]]))
+                    (dashboard-card "Page"       "📄" "Site pages"          "/admin/pages"        "/admin/pages")
+                    (dashboard-card "File"       "📎" "Bulletins & slides"  "/admin/files/new"    "/admin/files")]]))
 
 ;; ---------------------------------------------------------------------------
 ;; Features
@@ -469,12 +471,130 @@
   {:status 303 :headers {"location" "/admin/pages"}})
 
 ;; ---------------------------------------------------------------------------
+;; Files (bulletins, slides, documents)
+;; ---------------------------------------------------------------------------
+
+(defn- upload-dir [ctx]
+  (get ctx :mtz/upload-dir "storage/uploads"))
+
+(defn- ensure-upload-dir! [ctx]
+  (.mkdirs (java.io.File. (upload-dir ctx))))
+
+(defn- sanitize-filename [s]
+  (-> s str/trim (str/replace #"[^a-zA-Z0-9._\-]" "_")))
+
+(defn- format-bytes [n]
+  (cond
+    (>= n 1048576) (format "%.1f MB" (/ (double n) 1048576))
+    (>= n 1024)    (format "%.1f KB" (/ (double n) 1024))
+    :else          (str n " B")))
+
+(def ^:private file-category-options
+  [["bulletin"   "Sunday Bulletin"]
+   ["slides"     "Presentation Slides"]
+   ["newsletter" "Newsletter"]
+   ["other"      "Other"]])
+
+(defn- file-category-label [v]
+  (or (some (fn [[k l]] (when (= k v) l)) file-category-options) v))
+
+(defn files-list [ctx]
+  (let [rows (biff.sqlite/execute ctx {:select :* :from :file
+                                       :order-by [[:uploaded_at :desc]]})]
+    (adm/admin-page "Files"
+                    (adm/top-bar)
+                    [:div {:class "adm-content"}
+                     (adm/page-header "Files" "/admin")
+                     [:div {:style "margin-bottom:20px;"}
+                      [:a {:href "/admin/files/new" :class "mtz-btn mtz-btn--primary"} "↑ Upload File"]]
+                     (if (empty? rows)
+                       [:p {:class "adm-hint"} "No files uploaded yet."]
+                       [:table {:class "adm-table"}
+                        [:thead
+                         [:tr [:th "Label"] [:th "Category"] [:th "Size"] [:th "Uploaded"] [:th ""]]]
+                        [:tbody
+                         (for [r rows]
+                           [:tr
+                            [:td [:a {:href (:url r) :class "adm-link" :target "_blank"} (:label r)]]
+                            [:td (file-category-label (:category r))]
+                            [:td (when (:size_bytes r) (format-bytes (:size_bytes r)))]
+                            [:td (epoch->date (:uploaded_at r))]
+                            [:td
+                             [:div {:class "adm-actions"}
+                              [:a {:href (:url r) :class "adm-link" :target "_blank"} "View"]
+                              (adm/delete-form (str "/admin/files/" (:id r) "/delete")
+                                               (ui/anti-forgery-field))]]])]])])))
+
+(defn files-new [_ctx]
+  (adm/admin-page "Upload File"
+                  (adm/top-bar)
+                  [:div {:class "adm-content"}
+                   (adm/page-header "Upload File" "/admin/files")
+                   [:form {:method "post" :action "/admin/files"
+                           :class "adm-form" :enctype "multipart/form-data"}
+                    (ui/anti-forgery-field)
+                    (adm/field {:label "File" :hint "PDF, PPTX, or other document"}
+                               [:input {:type "file" :name "file" :class "adm-input"
+                                        :required "true"
+                                        :accept ".pdf,.pptx,.ppt,.doc,.docx,.xls,.xlsx"}])
+                    (adm/field {:label "Label" :hint "e.g. Bulletin · May 4, 2026"}
+                               (adm/text-input {:name "label" :placeholder "Bulletin · May 4, 2026"}))
+                    (adm/field {:label "Category"}
+                               (adm/select-input {:name "category"} file-category-options "bulletin"))
+                    (adm/submit-row {:label "Upload" :cancel-href "/admin/files"})]]))
+
+(defn files-upload [{:keys [params] :as ctx}]
+  (ensure-upload-dir! ctx)
+  (let [dir      (upload-dir ctx)
+        upload   (:file params)
+        original (sanitize-filename (or (:filename upload) "file"))
+        stored   (str (new-id) "-" original)
+        dest     (java.io.File. (str dir "/" stored))
+        label    (let [l (str/trim (or (:label params) ""))]
+                   (if (seq l) l original))
+        url      (str "/uploads/" stored)]
+    (when (:tempfile upload)
+      (io/copy (:tempfile upload) dest))
+    (biff.sqlite/execute ctx
+                         {:insert-into :file
+                          :values [{:id (new-id)
+                                    :filename original
+                                    :label label
+                                    :category (or (:category params) "other")
+                                    :url url
+                                    :size_bytes (:size upload)
+                                    :uploaded_at (now-epoch)}]}))
+  {:status 303 :headers {"location" "/admin/files"}})
+
+(defn files-delete [{:keys [path-params] :as ctx}]
+  (let [row (first (biff.sqlite/execute ctx {:select :* :from :file
+                                             :where [:= :id (:id path-params)]}))]
+    (when row
+      (let [filename (last (str/split (:url row) #"/"))
+            f        (java.io.File. (str (upload-dir ctx) "/" filename))]
+        (.delete f))
+      (biff.sqlite/execute ctx {:delete-from :file :where [:= :id (:id path-params)]})))
+  {:status 303 :headers {"location" "/admin/files"}})
+
+(defn serve-upload [{:keys [path-params] :as ctx}]
+  (let [filename (str/replace (:filename path-params) #"\.\.|/" "")
+        f        (java.io.File. (str (upload-dir ctx) "/" filename))]
+    (if (.exists f)
+      {:status  200
+       :headers {"Content-Type"        (or (java.nio.file.Files/probeContentType (.toPath f))
+                                           "application/octet-stream")
+                 "Content-Disposition" (str "inline; filename=\"" filename "\"")}
+       :body    f}
+      {:status 404 :body "Not found"})))
+
+;; ---------------------------------------------------------------------------
 ;; Module
 ;; ---------------------------------------------------------------------------
 
 (def module
   {:biff.ring/routes
-   [["/admin" {:middleware [[wrap-signed-in]]}
+   [["/uploads/:filename" {:get serve-upload :name ::serve-upload}]
+    ["/admin" {:middleware [[wrap-signed-in]]}
      ["" {:get dashboard :name ::dashboard}]
      ["/features"
       ["" {:get features-list :post features-create :name ::features}]
@@ -497,4 +617,8 @@
      ["/pages"
       ["" {:get pages-list :name ::pages}]
       ["/:slug/edit" {:get pages-edit :name ::pages-edit}]
-      ["/:slug" {:post pages-update :name ::pages-update}]]]]})
+      ["/:slug" {:post pages-update :name ::pages-update}]]
+     ["/files"
+      ["" {:get files-list :post files-upload :name ::files}]
+      ["/new" {:get files-new :name ::files-new}]
+      ["/:id/delete" {:post files-delete :name ::files-delete}]]]]})
