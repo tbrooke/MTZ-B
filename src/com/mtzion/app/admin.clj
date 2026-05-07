@@ -478,20 +478,20 @@
      ["" {:get dashboard :name ::dashboard}]
      ["/features"
       ["" {:get features-list :post features-create :name ::features}]
-      ["/new" {:get features-new :name ::features-new}]
-      ["/:id" {:post features-update :name ::features-update}]
+      ["/new" {:get features-new :name ::features-new :conflicting true}]
+      ["/:id" {:post features-update :name ::features-update :conflicting true}]
       ["/:id/edit" {:get features-edit :name ::features-edit}]
       ["/:id/delete" {:post features-delete :name ::features-delete}]]
      ["/posts"
       ["" {:get posts-list :post posts-create :name ::posts}]
-      ["/new" {:get posts-new :name ::posts-new}]
-      ["/:id" {:post posts-update :name ::posts-update}]
+      ["/new" {:get posts-new :name ::posts-new :conflicting true}]
+      ["/:id" {:post posts-update :name ::posts-update :conflicting true}]
       ["/:id/edit" {:get posts-edit :name ::posts-edit}]
       ["/:id/delete" {:post posts-delete :name ::posts-delete}]]
      ["/events"
       ["" {:get events-list :post events-create :name ::events}]
-      ["/new" {:get events-new :name ::events-new}]
-      ["/:id" {:post events-update :name ::events-update}]
+      ["/new" {:get events-new :name ::events-new :conflicting true}]
+      ["/:id" {:post events-update :name ::events-update :conflicting true}]
       ["/:id/edit" {:get events-edit :name ::events-edit}]
       ["/:id/delete" {:post events-delete :name ::events-delete}]]
      ["/pages"

@@ -15,3 +15,51 @@ CREATE TABLE user (
   password_hash TEXT,
   UNIQUE(email)
 ) STRICT;
+
+CREATE TABLE IF NOT EXISTS feature (
+      id TEXT PRIMARY KEY NOT NULL,
+      placement TEXT NOT NULL,
+      title TEXT NOT NULL,
+      subtitle TEXT,
+      body TEXT NOT NULL DEFAULT '',
+      image_id TEXT,
+      cta_label TEXT,
+      cta_url TEXT,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      published INTEGER NOT NULL DEFAULT 1,
+      updated_at INTEGER NOT NULL,
+      created_at INTEGER NOT NULL
+    ) STRICT;
+CREATE TABLE IF NOT EXISTS post (
+      id TEXT PRIMARY KEY NOT NULL,
+      slug TEXT NOT NULL,
+      title TEXT NOT NULL,
+      excerpt TEXT,
+      body TEXT NOT NULL DEFAULT '',
+      image_id TEXT,
+      published_at INTEGER,
+      created_at INTEGER NOT NULL,
+      UNIQUE(slug)
+    ) STRICT;
+CREATE TABLE IF NOT EXISTS event (
+      id TEXT PRIMARY KEY NOT NULL,
+      title TEXT NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      location TEXT,
+      start_at INTEGER NOT NULL,
+      end_at INTEGER,
+      all_day INTEGER NOT NULL DEFAULT 0,
+      recurrence TEXT NOT NULL DEFAULT 'none',
+      recur_until INTEGER,
+      image_id TEXT,
+      published INTEGER NOT NULL DEFAULT 1,
+      created_at INTEGER NOT NULL
+    ) STRICT;
+CREATE TABLE IF NOT EXISTS page (
+      id TEXT PRIMARY KEY NOT NULL,
+      slug TEXT NOT NULL,
+      title TEXT,
+      body TEXT NOT NULL DEFAULT '',
+      updated_at INTEGER NOT NULL,
+      UNIQUE(slug)
+    ) STRICT;
