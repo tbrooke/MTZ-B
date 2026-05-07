@@ -7,6 +7,7 @@
             [com.biffweb.sqlite :as biff.sqlite]
             [com.mtzion.app.about :as about]
             [com.mtzion.app.activities :as activities]
+            [com.mtzion.app.admin :as content-admin]
             [com.mtzion.app.auth :as auth]
             [com.mtzion.app.contact :as contact]
             [com.mtzion.app.events :as events-page]
@@ -40,6 +41,7 @@
    model.user/module
    schema/module
    admin-module
+   content-admin/module
    landing/module
    about/module
    worship/module
