@@ -16,7 +16,7 @@
        (:cf/account-id ctx) path))
 
 (defn- cf-headers [ctx]
-  {"Authorization" (str "Bearer " (:cf/api-token ctx))})
+  {"Authorization" (str "Bearer " ((:cf/api-token ctx)))})
 
 (defn- image-delivery-url [ctx image-id variant]
   (str "https://imagedelivery.net/" (:cf/images-hash ctx) "/" image-id "/" variant))

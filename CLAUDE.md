@@ -96,7 +96,7 @@ All stored in `config.env` (dev) / `config.prod.env` (prod). Keys in `config.edn
 | config.edn key | env var | notes |
 |---|---|---|
 | `:cf/account-id` | `CLOUDFLARE_ACCOUNT_ID` | same for Images + Stream |
-| `:cf/api-token` | `CLOUDFLARE_IMAGES_TOKEN` | token with Images + Stream permissions |
+| `:cf/api-token` | `CLOUDFLARE_IMAGES_TOKEN` | token with Images + Stream permissions — `#biff/secret` returns a thunk; call it: `((:cf/api-token ctx))` |
 | `:cf/images-hash` | `CLOUDFLARE_IMAGES_HASH` | hash from `imagedelivery.net/HASH/...` |
 
 Cloudflare Stream URLs are fixed patterns using the video UID returned from upload — no extra hash needed:
