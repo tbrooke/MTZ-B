@@ -202,6 +202,74 @@
   {:status 303 :headers {"location" "/admin/sermons"}})
 
 ;; ---------------------------------------------------------------------------
+;; Image library (Cloudflare Images browser)
+;; ---------------------------------------------------------------------------
+
+(defn- cf-images-list [ctx page]
+  (let [resp (http/get (cf-url ctx "/images/v1")
+                       {:headers      (cf-headers ctx)
+                        :query-params {"per_page" 100 "page" page "sort_order" "desc"}
+                        :as           :string})
+        body (json/parse-string (:body resp) true)]
+    (get-in body [:result :images])))
+
+(defn- image-card [ctx img insert-mode?]
+  (let [thumb-url  (image-delivery-url ctx (:id img) "thumbnail")
+        public-url (image-delivery-url ctx (:id img) "public")
+        uploaded   (some-> (:uploaded img) (subs 0 10))]
+    (if insert-mode?
+      [:button {:type          "button"
+                :class         "img-browser-item"
+                :data-img-url  public-url
+                :title         (str (:filename img) " · " uploaded)}
+       [:img {:src thumb-url :alt (:filename img) :class "img-browser-thumb" :loading "lazy"}]
+       [:span {:class "img-browser-name"} (:filename img)]]
+      [:div {:class "img-browser-item"}
+       [:img {:src thumb-url :alt (:filename img) :class "img-browser-thumb" :loading "lazy"}]
+       [:span {:class "img-browser-name"} (:filename img)]
+       [:span {:class "img-browser-date"} uploaded]])))
+
+(defn images-browse [{:keys [query-params] :as ctx}]
+  (let [page   (Integer/parseInt (get query-params "page" "1"))
+        images (cf-images-list ctx page)
+        insert? (= "1" (get query-params "insert"))]
+    {:status  200
+     :headers {"Content-Type" "text/html; charset=utf-8"}
+     :body
+     (com.lambdaisland.hiccup/render
+      [:div {:class "img-browser-wrap"}
+       (when insert?
+         [:div {:class "img-browser-header"}
+          [:span {:class "img-browser-title"} "Image Library"]
+          [:button {:type "button" :class "img-browser-close" :onclick "document.getElementById('mtz-img-browser').close()"} "✕"]])
+       (if (empty? images)
+         [:p {:style "padding: 24px; color: var(--mtz-ink-soft);"} "No images uploaded yet."]
+         [:div {:class "img-browser-grid"}
+          (map #(image-card ctx % insert?) images)])
+       (when (= (count images) 100)
+         [:div {:style "padding: 16px; text-align: center;"}
+          [:button {:type          "button"
+                    :class         "adm-link"
+                    :hx-get        (str "/admin/images/browse?page=" (inc page) (when insert? "&insert=1"))
+                    :hx-target     ".img-browser-grid"
+                    :hx-swap       "beforeend"}
+           "Load more"]])])}))
+
+(defn images-page [ctx]
+  (adm/admin-page "Image Library"
+                  (adm/top-bar)
+                  [:div {:class "adm-content"}
+                   (adm/page-header "Image Library" "/admin")
+                   [:p {:class "adm-hint" :style "margin-bottom:20px;"}
+                    "Images hosted on Cloudflare. Upload new images via the Tiptap editor or the Files section."]
+                   [:div {:style "overflow:auto;"}
+                    (let [images (cf-images-list ctx 1)]
+                      (if (empty? images)
+                        [:p {:class "adm-hint"} "No images yet."]
+                        [:div {:class "img-browser-grid img-browser-grid--admin"}
+                         (map #(image-card ctx % false) images)]))]]))
+
+;; ---------------------------------------------------------------------------
 ;; Module
 ;; ---------------------------------------------------------------------------
 
@@ -209,6 +277,9 @@
   {:biff.ring/routes
    [["/admin" {:middleware [[wrap-signed-in]]}
      ["/upload" {:post upload-image :name ::upload-image}]
+     ["/images"
+      ["" {:get images-page :name ::images}]
+      ["/browse" {:get images-browse :name ::images-browse}]]
      ["/sermons"
       ["" {:get sermons-list :post sermons-create :name ::sermons}]
       ["/new" {:get sermons-new :name ::sermons-new :conflicting true}]

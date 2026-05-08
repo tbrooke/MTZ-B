@@ -38,6 +38,34 @@ function uploadImage(editor) {
   picker.click()
 }
 
+let imgBrowserEditor = null
+
+function openImageBrowser(editor) {
+  imgBrowserEditor = editor
+  let dialog = document.getElementById('mtz-img-browser')
+  if (!dialog) {
+    dialog = document.createElement('dialog')
+    dialog.id = 'mtz-img-browser'
+    dialog.innerHTML = '<div class="img-browser-wrap"><p style="padding:24px;color:var(--mtz-ink-mute)">Loading…</p></div>'
+    document.body.appendChild(dialog)
+    dialog.addEventListener('click', e => {
+      const btn = e.target.closest('[data-img-url]')
+      if (btn) {
+        imgBrowserEditor.chain().focus().setImage({ src: btn.dataset.imgUrl }).run()
+        dialog.close()
+      }
+    })
+  }
+  dialog.showModal()
+  fetch('/admin/images/browse?insert=1')
+    .then(r => r.text())
+    .then(html => {
+      dialog.querySelector('.img-browser-wrap').outerHTML = html
+      if (window.htmx) htmx.process(dialog)
+    })
+    .catch(() => { dialog.querySelector('.img-browser-wrap').innerHTML = '<p style="padding:24px">Failed to load images.</p>' })
+}
+
 function createToolbar(editor) {
   const bar = document.createElement('div')
   bar.className = 'tiptap-toolbar'
@@ -53,6 +81,7 @@ function createToolbar(editor) {
     ['Link',    'Add link',      () => { const u=prompt('URL'); if(u) editor.chain().focus().setLink({href:u}).run() }, () => editor.isActive('link')],
     ['Unlink',  'Remove link',   () => editor.chain().focus().unsetLink().run(),              () => false],
     ['↑ Image', 'Upload image',  () => uploadImage(editor),                                  () => false],
+    ['⊞ Browse','Browse library',() => openImageBrowser(editor),                             () => false],
   ]
   btns.forEach(([label, title, action, isActive]) => {
     const btn = document.createElement('button')
