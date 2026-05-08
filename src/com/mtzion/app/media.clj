@@ -34,7 +34,9 @@
                              :multipart [{:name    "file"
                                           :content (:tempfile upload)
                                           :filename (:filename upload)
-                                          :content-type (:content-type upload)}]
+                                          :content-type (:content-type upload)}
+                                         {:name    "metadata"
+                                          :content (json/generate-string {:category "content"})}]
                              :as        :string})
             body (json/parse-string (:body resp) true)]
         (if (get-in body [:result :id])
@@ -229,31 +231,58 @@
        [:span {:class "img-browser-name"} (:filename img)]
        [:span {:class "img-browser-date"} uploaded]])))
 
+(defn- browse-url [page insert? category partial?]
+  (str "/admin/images/browse?page=" page
+       (when insert?  "&insert=1")
+       (when partial? "&partial=1")
+       (when (seq category) (str "&category=" category))))
+
+(defn- browse-grid [ctx page insert? category]
+  (let [all-imgs (cf-images-list ctx page)
+        images   (if (seq category)
+                   (filter #(= category (get-in % [:meta :category])) all-imgs)
+                   all-imgs)]
+    (list
+     [:div {:class "img-browser-grid"}
+      (if (empty? images)
+        [:p {:style "padding: 24px; color: var(--mtz-ink-soft);"} "No images found."]
+        (map #(image-card ctx % insert?) images))]
+     (when (= (count all-imgs) 100)
+       [:div {:style "padding: 16px; text-align: center;"}
+        [:button {:type      "button"
+                  :class     "adm-link"
+                  :hx-get    (browse-url (inc page) insert? category true)
+                  :hx-target ".img-browser-grid"
+                  :hx-swap   "beforeend"}
+         "Load more"]]))))
+
 (defn images-browse [{:keys [query-params] :as ctx}]
-  (let [page   (Integer/parseInt (get query-params "page" "1"))
-        images (cf-images-list ctx page)
-        insert? (= "1" (get query-params "insert"))]
+  (let [page     (Integer/parseInt (get query-params "page" "1"))
+        insert?  (= "1" (get query-params "insert"))
+        partial? (= "1" (get query-params "partial"))
+        category (get query-params "category" "")]
     {:status  200
      :headers {"Content-Type" "text/html; charset=utf-8"}
      :body
      (com.lambdaisland.hiccup/render
-      [:div {:class "img-browser-wrap"}
-       (when insert?
-         [:div {:class "img-browser-header"}
-          [:span {:class "img-browser-title"} "Image Library"]
-          [:button {:type "button" :class "img-browser-close" :onclick "document.getElementById('mtz-img-browser').close()"} "✕"]])
-       (if (empty? images)
-         [:p {:style "padding: 24px; color: var(--mtz-ink-soft);"} "No images uploaded yet."]
-         [:div {:class "img-browser-grid"}
-          (map #(image-card ctx % insert?) images)])
-       (when (= (count images) 100)
-         [:div {:style "padding: 16px; text-align: center;"}
-          [:button {:type          "button"
-                    :class         "adm-link"
-                    :hx-get        (str "/admin/images/browse?page=" (inc page) (when insert? "&insert=1"))
-                    :hx-target     ".img-browser-grid"
-                    :hx-swap       "beforeend"}
-           "Load more"]])])}))
+      (if partial?
+        (browse-grid ctx page insert? category)
+        [:div {:class "img-browser-wrap"}
+         (when insert?
+           [:div {:class "img-browser-header"}
+            [:span {:class "img-browser-title"} "Image Library"]
+            [:select {:class     "img-browser-filter adm-select"
+                      :name      "category"
+                      :hx-get    (browse-url 1 insert? nil true)
+                      :hx-target ".img-browser-grid"
+                      :hx-swap   "outerHTML"
+                      :hx-include "this"}
+             [:option {:value ""} "All images"]
+             [:option {:value "content"} "Content"]
+             [:option {:value "gallery"} "Gallery"]]
+            [:button {:type "button" :class "img-browser-close"
+                      :onclick "document.getElementById('mtz-img-browser').close()"} "✕"]])
+         (browse-grid ctx page insert? category)]))}))
 
 (defn images-page [ctx]
   (adm/admin-page "Image Library"
