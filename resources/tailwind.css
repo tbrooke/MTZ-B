@@ -636,3 +636,99 @@ body {
 .img-browser-thumb { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
 .img-browser-name { font-size: 11px; color: var(--mtz-ink-mute); padding: 0 8px 4px; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .img-browser-date { font-size: 10px; color: var(--mtz-ink-soft); padding: 0 8px 6px; }
+
+/* ---------- Bento dashboard -------------------------------------- */
+:root { --adm-serif: 'Fraunces', 'EB Garamond', Georgia, serif; --adm-mono: 'JetBrains Mono', 'IBM Plex Mono', monospace; }
+
+/* Bento top bar */
+.btb-bar { display:flex; align-items:center; justify-content:space-between; padding:20px 48px; border-bottom:1px solid #E5DFD2; }
+.btb-brand { display:flex; align-items:baseline; gap:12px; }
+.btb-brand-name { font-family:var(--adm-serif); font-size:20px; font-weight:600; letter-spacing:-0.01em; color:#1C1A17; }
+.btb-brand-cms { font-family:var(--adm-mono); font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(28,26,23,0.55); }
+.btb-actions { display:flex; align-items:center; gap:28px; font-size:13px; }
+.btb-link { color:#1C1A17; text-decoration:none; border-bottom:1px solid currentColor; padding-bottom:1px; }
+.btb-signout { background:none; border:none; cursor:pointer; padding:0; font:inherit; font-size:13px; color:rgba(28,26,23,0.7); }
+.btb-signout:hover { color:#1C1A17; }
+
+/* Bento page header */
+.bento-header { padding:32px 40px 0; display:flex; align-items:baseline; justify-content:space-between; }
+.bento-h1 { font-family:var(--adm-serif); font-size:36px; font-weight:500; letter-spacing:-0.02em; margin:0; color:#1C1A17; }
+.bento-date { font-family:var(--adm-mono); font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:#8A8478; }
+
+/* Bento grid regions */
+.bento-grid-primary { padding:24px 40px 14px; display:grid; grid-template-columns:1fr 1fr 1fr 0.66fr; gap:14px; }
+.bento-grid-secondary { padding:0 40px 14px; display:grid; grid-template-columns:1.5fr 1.5fr 0.66fr; gap:14px; }
+.bento-upload-row { margin:0 40px 28px; display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+
+/* Tile base */
+.bento-tile { border-radius:6px; background:#FBF9F4; border:1px solid #E5DFD2; padding:20px; display:flex; flex-direction:column; }
+.bento-tile--sq { aspect-ratio:1/1; justify-content:space-between; }
+.bento-tile--events { background:#FBE9DF; border:none; aspect-ratio:0.66/1; }
+.bento-tile-top { display:flex; align-items:center; justify-content:space-between; }
+.bento-tile-graphic { flex:1; display:flex; align-items:center; justify-content:center; padding:12px 0; }
+.bento-tile-title { font-family:var(--adm-serif); font-size:26px; font-weight:500; letter-spacing:-0.01em; }
+.bento-tile-recent { font-size:11.5px; color:#8A8478; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+/* Shared caption + count labels */
+.bento-caption { font-family:var(--adm-mono); font-size:10px; letter-spacing:0.18em; text-transform:uppercase; }
+.bento-count { font-family:var(--adm-mono); font-size:10px; color:#8A8478; }
+
+/* Bento buttons */
+.bento-btn-row { display:flex; gap:6px; margin-top:12px; }
+.bento-btn { display:inline-flex; align-items:center; justify-content:center; padding:7px 12px; border-radius:3px; font-size:12px; font-weight:500; font-family:var(--mtz-sans-menu); text-decoration:none; cursor:pointer; border:none; white-space:nowrap; transition:filter 120ms ease; }
+.bento-btn:hover { filter:brightness(0.90); }
+.bento-btn--primary { color:#fff; }
+.bento-btn--ghost { background:transparent; border:1px solid #C9C2B2; color:#1C1A17; padding:6px 12px; }
+
+/* Events tile */
+.bento-event-list { margin-top:14px; display:flex; flex-direction:column; gap:10px; flex:1; }
+.bento-event-row { display:flex; align-items:center; gap:12px; }
+.bento-date-chip { width:38px; height:38px; border-radius:4px; background:#FBF9F4; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; }
+.bento-date-chip-m { font-family:var(--adm-mono); font-size:8px; letter-spacing:0.1em; text-transform:uppercase; }
+.bento-date-chip-d { font-family:var(--adm-serif); font-size:15px; font-weight:600; line-height:1; }
+.bento-event-name { font-size:12.5px; color:#1C1A17; }
+
+/* Photos tile */
+.bento-photos-header { display:flex; justify-content:space-between; align-items:flex-start; }
+.bento-photos-count { text-align:right; }
+.bento-photos-grid { margin-top:14px; flex:1; display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+.bento-photo-cell { aspect-ratio:1; border-radius:2px; }
+
+/* Calendar tile */
+.bento-cal-header { display:flex; justify-content:space-between; align-items:center; }
+.bento-cal-month { font-family:var(--adm-serif); font-size:22px; font-weight:500; letter-spacing:-0.01em; margin-top:4px; }
+.bento-cal-year { color:#8A8478; }
+.bento-cal-chevrons { display:flex; gap:4px; }
+.bento-chev { width:22px; height:22px; border-radius:3px; border:1px solid #E5DFD2; background:#FBF9F4; color:#4A463F; cursor:pointer; font-size:13px; line-height:1; padding:0; font-family:inherit; display:flex; align-items:center; justify-content:center; }
+.bento-cal-grid { margin-top:14px; display:grid; grid-template-columns:repeat(7,1fr); gap:2px; flex:1; }
+.bento-cal-dow { font-family:var(--adm-mono); font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:#8A8478; text-align:center; padding:4px 0; }
+.bento-cal-day { aspect-ratio:1.1/1; display:flex; align-items:center; justify-content:center; font-size:12px; font-variant-numeric:tabular-nums; border-radius:3px; position:relative; color:#1C1A17; }
+.bento-cal-day--today { background:#C24A1F; color:#FBF9F4; font-weight:600; }
+.bento-cal-day--event { color:#C24A1F; font-weight:600; }
+.bento-cal-dot { position:absolute; bottom:3px; left:50%; transform:translateX(-50%); width:4px; height:4px; border-radius:4px; background:#C24A1F; }
+.bento-cal-footer { margin-top:10px; padding-top:10px; border-top:1px dashed #E5DFD2; font-size:11.5px; color:#4A463F; display:flex; justify-content:space-between; }
+.bento-cal-events-count { color:#C24A1F; font-weight:600; }
+.bento-cal-link { color:#8A8478; text-decoration:none; }
+
+/* Upload bar */
+.bento-upload-panel { border-radius:6px; padding:18px 20px; }
+.bento-upload-panel--light { background:#FBF9F4; border:1px solid #E5DFD2; }
+.bento-upload-panel--dark { background:#1C1A17; color:#F7F4EE; }
+.bento-upload-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+.bento-upload-brand { display:flex; align-items:center; gap:10px; }
+.bento-upload-brand-label { font-family:var(--adm-mono); font-size:10px; letter-spacing:0.18em; text-transform:uppercase; }
+.bento-upload-lib-link { font-size:11px; text-decoration:none; }
+.bento-upload-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+.bento-upload-card { background:#F7F4EE; border:1px solid #E5DFD2; border-radius:4px; padding:14px 12px; display:flex; flex-direction:column; align-items:flex-start; cursor:pointer; text-decoration:none; color:inherit; transition:border-color 140ms ease; }
+.bento-upload-card:hover { border-color:#1C1A17; }
+.bento-upload-doc { width:28px; height:36px; border:1.5px solid #1C1A17; border-radius:2px; margin-bottom:8px; position:relative; flex-shrink:0; }
+.bento-upload-doc-fold { position:absolute; top:0; right:0; width:8px; height:8px; background:#F7F4EE; border-left:1.5px solid #1C1A17; border-bottom:1.5px solid #1C1A17; }
+.bento-upload-card-label { font-family:var(--adm-serif); font-size:14px; font-weight:500; line-height:1.1; }
+.bento-upload-card-hint { font-family:var(--adm-mono); font-size:9.5px; color:#8A8478; margin-top:3px; letter-spacing:0.06em; text-transform:uppercase; }
+.bento-sermon-drop { display:flex; align-items:center; gap:16px; }
+.bento-drop-area { flex:1; border:1.5px dashed rgba(247,244,238,0.35); border-radius:4px; padding:18px 16px; display:flex; align-items:center; gap:14px; }
+.bento-drop-disc { width:44px; height:44px; border-radius:22px; background:rgba(247,244,238,0.95); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.bento-drop-title { font-family:var(--adm-serif); font-size:17px; font-weight:500; }
+.bento-drop-hint { font-size:11.5px; opacity:0.6; margin-top:2px; }
+.bento-choose-btn { background:#F7F4EE; color:#1C1A17; border:none; padding:10px 16px; border-radius:4px; font-size:13px; font-weight:500; white-space:nowrap; cursor:pointer; font-family:var(--mtz-sans-menu); text-decoration:none; display:inline-block; }
+.bento-choose-btn:hover { background:#EDE8DF; }

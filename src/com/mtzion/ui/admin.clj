@@ -2,6 +2,12 @@
   (:require [lambdaisland.hiccup :as hiccup]
             [com.mtzion.lib.ui :as ui]))
 
+(defn- cms-fonts []
+  [[:link {:rel "preconnect" :href "https://fonts.googleapis.com"}]
+   [:link {:rel "preconnect" :href "https://fonts.gstatic.com" :crossorigin "anonymous"}]
+   [:link {:rel "stylesheet"
+           :href "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=JetBrains+Mono:wght@400;500&display=swap"}]])
+
 (defn admin-page [title & body]
   {:status  200
    :headers {"Content-Type" "text/html; charset=utf-8"}
@@ -13,10 +19,40 @@
       [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
       [:title (str title " — Mt Zion CMS")]
       [:link {:rel "icon" :href "data:,"}]
+      (cms-fonts)
       [:link {:rel "stylesheet" :href (ui/css-path)}]
-      [:script {:src "/js/admin.js" :defer "true"}]]
+      [:script {:src "/js/admin.js" :defer "true"}]
+      [:script {:src "/js/htmx.min.js" :defer "true"}]]
      [:body {:style "margin:0; background:#fafaf8;"}
       body]])})
+
+(defn bento-page [title & body]
+  {:status  200
+   :headers {"Content-Type" "text/html; charset=utf-8"}
+   :body
+   (hiccup/render
+    [:html {:lang "en"}
+     [:head
+      [:meta {:charset "utf-8"}]
+      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
+      [:title (str title " — Mt Zion CMS")]
+      [:link {:rel "icon" :href "data:,"}]
+      (cms-fonts)
+      [:link {:rel "stylesheet" :href (ui/css-path)}]
+      [:script {:src "/js/htmx.min.js" :defer "true"}]]
+     [:body {:style "margin:0; background:#F7F4EE; min-height:100vh;"}
+      body]])})
+
+(defn bento-top-bar [csrf]
+  [:div {:class "btb-bar"}
+   [:div {:class "btb-brand"}
+    [:span {:class "btb-brand-name"} "Mt Zion"]
+    [:span {:class "btb-brand-cms"} "CMS"]]
+   [:div {:class "btb-actions"}
+    [:a {:href "/" :class "btb-link" :target "_blank"} "View site →"]
+    [:form {:method "post" :action "/admin/signout" :style "margin:0;"}
+     csrf
+     [:button {:type "submit" :class "btb-signout"} "Sign out"]]]])
 
 (defn top-bar []
   [:div {:class "adm-bar"}
