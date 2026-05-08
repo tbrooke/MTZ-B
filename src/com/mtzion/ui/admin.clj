@@ -3,10 +3,11 @@
             [com.mtzion.lib.ui :as ui]))
 
 (defn- cms-fonts []
-  [[:link {:rel "preconnect" :href "https://fonts.googleapis.com"}]
+  (list
+   [:link {:rel "preconnect" :href "https://fonts.googleapis.com"}]
    [:link {:rel "preconnect" :href "https://fonts.gstatic.com" :crossorigin "anonymous"}]
    [:link {:rel "stylesheet"
-           :href "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=JetBrains+Mono:wght@400;500&display=swap"}]])
+           :href "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=JetBrains+Mono:wght@400;500&display=swap"}]))
 
 (defn admin-page [title & body]
   {:status  200
