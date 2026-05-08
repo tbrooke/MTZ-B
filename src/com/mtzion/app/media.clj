@@ -5,7 +5,8 @@
             [com.mtzion.lib.middleware :refer [wrap-signed-in]]
             [com.mtzion.lib.ui :as ui]
             [com.mtzion.ui.admin :as adm]
-            [hato.client :as http]))
+            [hato.client :as http]
+            [lambdaisland.hiccup :as hiccup]))
 
 ;; ---------------------------------------------------------------------------
 ;; Cloudflare helpers
@@ -264,7 +265,7 @@
     {:status  200
      :headers {"Content-Type" "text/html; charset=utf-8"}
      :body
-     (com.lambdaisland.hiccup/render
+     (hiccup/render
       (if partial?
         (browse-grid ctx page insert? category)
         [:div {:class "img-browser-wrap"}
