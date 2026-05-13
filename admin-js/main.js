@@ -89,6 +89,7 @@ function createToolbar(editor) {
     btn.title = title
     btn.textContent = label
     btn.className = 'tiptap-btn' + (isActive() ? ' is-active' : '')
+    btn.addEventListener('mousedown', e => e.preventDefault())
     btn.addEventListener('click', action)
     bar.appendChild(btn)
   })
