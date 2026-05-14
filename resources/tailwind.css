@@ -641,7 +641,7 @@ body {
 :root { --adm-serif: 'Fraunces', 'EB Garamond', Georgia, serif; --adm-mono: 'JetBrains Mono', 'IBM Plex Mono', monospace; }
 
 /* Bento top bar */
-.btb-bar { display:flex; align-items:center; justify-content:space-between; padding:20px 48px; border-bottom:1px solid #E5DFD2; }
+.btb-bar { display:flex; align-items:center; justify-content:space-between; padding:14px 28px; border-bottom:1px solid #E5DFD2; }
 .btb-brand { display:flex; align-items:baseline; gap:12px; }
 .btb-brand-name { font-family:var(--adm-serif); font-size:20px; font-weight:600; letter-spacing:-0.01em; color:#1C1A17; }
 .btb-brand-cms { font-family:var(--adm-mono); font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:rgba(28,26,23,0.55); }
@@ -650,43 +650,78 @@ body {
 .btb-signout { background:none; border:none; cursor:pointer; padding:0; font:inherit; font-size:13px; color:rgba(28,26,23,0.7); }
 .btb-signout:hover { color:#1C1A17; }
 
+/* Bento constrained inner wrapper */
+.bento-inner { max-width:1160px; margin:0 auto; }
+
 /* Bento page header */
-.bento-header { padding:32px 40px 0; display:flex; align-items:baseline; justify-content:space-between; }
-.bento-h1 { font-family:var(--adm-serif); font-size:36px; font-weight:500; letter-spacing:-0.02em; margin:0; color:#1C1A17; }
+.bento-header { padding:20px 24px 0; display:flex; align-items:baseline; justify-content:space-between; }
+.bento-h1 { font-family:var(--adm-serif); font-size:30px; font-weight:500; letter-spacing:-0.02em; margin:0; color:#1C1A17; }
 .bento-date { font-family:var(--adm-mono); font-size:11px; letter-spacing:0.18em; text-transform:uppercase; color:#8A8478; }
 
 /* Bento grid regions */
-.bento-grid-primary { padding:24px 40px 14px; display:grid; grid-template-columns:1fr 1fr 1fr 0.66fr; gap:14px; }
-.bento-grid-secondary { padding:0 40px 14px; display:grid; grid-template-columns:1.5fr 1.5fr 0.66fr; gap:14px; }
-.bento-upload-row { margin:0 40px 28px; display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.bento-grid-primary { padding:14px 24px 12px; display:grid; grid-template-columns:1fr 1fr 1fr 0.65fr; gap:11px; }
+.bento-grid-secondary { padding:0 24px 12px; display:grid; grid-template-columns:1.5fr 1.5fr 0.65fr; gap:11px; }
+.bento-upload-row { margin:0 24px 20px; display:grid; grid-template-columns:1fr 1fr; gap:11px; }
+
+/* Quick-action upload row */
+.bento-qa-row { padding:0 24px 24px; display:grid; grid-template-columns:repeat(4,1fr); gap:11px; }
+.bento-qa-tile { border-radius:6px; padding:14px 18px; display:flex; flex-direction:row; align-items:center; gap:14px; text-decoration:none; border:1px solid; transition:filter 100ms ease,transform 60ms ease; min-width:0; }
+.bento-qa-tile:hover { filter:brightness(0.93); transform:translateY(-1px); }
+.bento-qa-tile:active { transform:translateY(0); }
+.bento-qa-tile--slate { background:#EDF0F5; border-color:#D5DCE6; }
+.bento-qa-tile--sage  { background:#ECF0EA; border-color:#DCE2D6; }
+.bento-qa-tile--terra { background:#FAE9E2; border-color:#F4D9CC; }
+.bento-qa-text { display:flex; flex-direction:column; gap:3px; min-width:0; }
+.bento-qa-word { font-family:var(--adm-serif); font-size:20px; font-weight:500; letter-spacing:-0.02em; line-height:1; }
+.bento-qa-word--slate { color:#3D4A60; }
+.bento-qa-word--sage  { color:#5A7257; }
+.bento-qa-word--terra { color:#C24A1F; }
+.bento-qa-hint { font-family:var(--adm-mono); font-size:9px; letter-spacing:0.12em; text-transform:uppercase; color:#8A8478; }
+
+/* Events admin calendar view */
+.adm-cal-wrap { overflow-x:auto; }
+.adm-cal-nav { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+.adm-cal-nav-month { font-family:var(--adm-serif); font-size:20px; font-weight:500; letter-spacing:-0.01em; }
+.adm-cal-nav-arrows { display:flex; align-items:center; gap:8px; }
+.adm-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:1px; background:#E5DFD2; border:1px solid #E5DFD2; border-radius:6px; overflow:hidden; }
+.adm-cal-dow { background:#F7F4EE; font-family:var(--adm-mono); font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:#8A8478; text-align:center; padding:8px 0; }
+.adm-cal-cell { background:#FBF9F4; min-height:80px; padding:6px; display:flex; flex-direction:column; gap:3px; }
+.adm-cal-cell--today { background:#FBE9DF; }
+.adm-cal-cell--empty { background:#F7F4EE; }
+.adm-cal-day-num { font-size:12px; font-family:var(--adm-mono); color:#4A463F; font-variant-numeric:tabular-nums; margin-bottom:2px; }
+.adm-cal-day-num--today { color:#C24A1F; font-weight:700; }
+.adm-cal-ev { font-size:11px; background:#C24A1F; color:#FBF9F4; border-radius:2px; padding:1px 5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-decoration:none; display:block; }
+.adm-cal-ev:hover { background:#A83D17; }
 
 /* Tile base */
-.bento-tile { border-radius:6px; background:#FBF9F4; border:1px solid #E5DFD2; padding:20px; display:flex; flex-direction:column; }
+.bento-tile { border-radius:6px; background:#FBF9F4; border:1px solid #E5DFD2; padding:18px; display:flex; flex-direction:column; min-width:0; overflow:hidden; position:relative; }
 .bento-tile--sq { aspect-ratio:1/1; justify-content:space-between; }
-.bento-tile--events { background:#FBE9DF; border:none; aspect-ratio:0.66/1; }
-.bento-tile-top { display:flex; align-items:center; justify-content:space-between; }
-.bento-tile-graphic { flex:1; display:flex; align-items:center; justify-content:center; padding:12px 0; }
-.bento-tile-title { font-family:var(--adm-serif); font-size:26px; font-weight:500; letter-spacing:-0.01em; }
-.bento-tile-recent { font-size:11.5px; color:#8A8478; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.bento-tile--events { background:#FBE9DF; border:none; }
+.bento-tile-top { display:flex; align-items:center; justify-content:space-between; min-width:0; }
+.bento-tile-graphic { flex:1; display:flex; align-items:center; justify-content:center; padding:10px 0; overflow:hidden; }
+.bento-tile-title { font-family:var(--adm-serif); font-size:24px; font-weight:500; letter-spacing:-0.01em; }
+.bento-tile-recent { font-size:11px; color:#8A8478; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+/* stretched link: covers the whole tile; buttons sit on top via z-index */
+.bento-tile-link { position:absolute; inset:0; z-index:0; }
 
 /* Shared caption + count labels */
 .bento-caption { font-family:var(--adm-mono); font-size:10px; letter-spacing:0.18em; text-transform:uppercase; }
 .bento-count { font-family:var(--adm-mono); font-size:10px; color:#8A8478; }
 
 /* Bento buttons */
-.bento-btn-row { display:flex; gap:6px; margin-top:12px; }
-.bento-btn { display:inline-flex; align-items:center; justify-content:center; padding:7px 12px; border-radius:3px; font-size:12px; font-weight:500; font-family:var(--mtz-sans-menu); text-decoration:none; cursor:pointer; border:none; white-space:nowrap; transition:filter 120ms ease; }
+.bento-btn-row { display:flex; gap:5px; margin-top:10px; position:relative; z-index:1; }
+.bento-btn { display:inline-flex; align-items:center; justify-content:center; padding:5px 10px; border-radius:3px; font-size:11px; font-weight:500; font-family:var(--mtz-sans-menu); text-decoration:none; cursor:pointer; border:none; white-space:nowrap; transition:filter 120ms ease; min-width:0; overflow:hidden; }
 .bento-btn:hover { filter:brightness(0.90); }
 .bento-btn--primary { color:#fff; }
-.bento-btn--ghost { background:transparent; border:1px solid #C9C2B2; color:#1C1A17; padding:6px 12px; }
+.bento-btn--ghost { background:transparent; border:1px solid #C9C2B2; color:#1C1A17; padding:4px 10px; }
 
 /* Events tile */
-.bento-event-list { margin-top:14px; display:flex; flex-direction:column; gap:10px; flex:1; }
-.bento-event-row { display:flex; align-items:center; gap:12px; }
-.bento-date-chip { width:38px; height:38px; border-radius:4px; background:#FBF9F4; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; }
-.bento-date-chip-m { font-family:var(--adm-mono); font-size:8px; letter-spacing:0.1em; text-transform:uppercase; }
-.bento-date-chip-d { font-family:var(--adm-serif); font-size:15px; font-weight:600; line-height:1; }
-.bento-event-name { font-size:12.5px; color:#1C1A17; }
+.bento-event-list { margin-top:10px; display:flex; flex-direction:column; gap:8px; flex:1; }
+.bento-event-row { display:flex; align-items:center; gap:8px; min-width:0; }
+.bento-date-chip { width:34px; height:34px; border-radius:4px; background:#FBF9F4; display:flex; flex-direction:column; align-items:center; justify-content:center; flex-shrink:0; }
+.bento-date-chip-m { font-family:var(--adm-mono); font-size:7px; letter-spacing:0.1em; text-transform:uppercase; }
+.bento-date-chip-d { font-family:var(--adm-serif); font-size:13px; font-weight:600; line-height:1; }
+.bento-event-name { font-size:11.5px; color:#1C1A17; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; min-width:0; }
 
 /* Photos tile */
 .bento-photos-header { display:flex; justify-content:space-between; align-items:flex-start; }

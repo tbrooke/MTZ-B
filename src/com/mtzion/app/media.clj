@@ -33,7 +33,7 @@
       (let [resp (http/post (cf-url ctx "/images/v1")
                             {:headers   (cf-headers ctx)
                              :multipart [{:name    "file"
-                                          :content (:tempfile upload)
+                                          :content (java.io.FileInputStream. (:tempfile upload))
                                           :filename (:filename upload)
                                           :content-type (:content-type upload)}
                                          {:name    "metadata"
@@ -55,6 +55,16 @@
 ;; ---------------------------------------------------------------------------
 
 (defn- now-epoch [] (.getEpochSecond (java.time.Instant/now)))
+
+(defn- exec
+  "Wrapper around biff.sqlite/execute that returns rows with unqualified
+  snake_case keys, matching the DB column names used throughout this file."
+  [ctx honey]
+  (mapv (fn [row]
+          (into {} (map (fn [[k v]]
+                          [(keyword (str/replace (name k) "-" "_")) v])
+                        row)))
+        (biff.sqlite/execute ctx honey)))
 (defn- new-id [] (str (random-uuid)))
 
 (defn- epoch->date [epoch]
@@ -73,8 +83,8 @@
   (str "https://videodelivery.net/" video-id "/thumbnails/thumbnail.jpg"))
 
 (defn sermons-list [ctx]
-  (let [rows (biff.sqlite/execute ctx {:select :* :from :sermon
-                                       :order-by [[:sermon_date :desc]]})]
+  (let [rows (exec ctx {:select :* :from :sermon
+                        :order-by [[:sermon_date :desc]]})]
     (adm/admin-page "Sermons"
                     (adm/top-bar)
                     [:div {:class "adm-content"}
@@ -133,12 +143,14 @@
   (adm/admin-page "New Sermon"
                   (adm/top-bar)
                   [:div {:class "adm-content"}
-                   (adm/page-header "New Sermon" "/admin/sermons")
+                   [:div {:class "adm-section-header"}
+                    [:h1 {:class "adm-page-title" :style "margin:0;"} "New Sermon"]
+                    [:a {:href "/admin/sermons" :class "adm-link"} "View all sermons →"]]
                    (sermon-form "/admin/sermons" nil (ui/anti-forgery-field))]))
 
 (defn sermons-edit [{:keys [path-params] :as ctx}]
-  (let [s (first (biff.sqlite/execute ctx {:select :* :from :sermon
-                                           :where [:= :id (:id path-params)]}))]
+  (let [s (first (exec ctx {:select :* :from :sermon
+                            :where [:= :id (:id path-params)]}))]
     (if s
       (adm/admin-page "Edit Sermon"
                       (adm/top-bar)
@@ -159,7 +171,7 @@
     (let [resp (http/post (cf-url ctx "/stream")
                           {:headers   (cf-headers ctx)
                            :multipart [{:name         "file"
-                                        :content      (:tempfile video-upload)
+                                        :content      (java.io.FileInputStream. (:tempfile video-upload))
                                         :filename     (:filename video-upload)
                                         :content-type (:content-type video-upload)}
                                        {:name    "meta"
@@ -172,36 +184,36 @@
 (defn sermons-create [{:keys [params] :as ctx}]
   (let [title    (or (:title params) "")
         video-id (upload-to-stream ctx (:video params) title)]
-    (biff.sqlite/execute ctx
-                         {:insert-into :sermon
-                          :values [{:id          (new-id)
-                                    :title       title
-                                    :sermon_date (parse-date-epoch (:sermon_date params))
-                                    :scripture   (or (:scripture params) "")
-                                    :description (or (:description params) "")
-                                    :video_id    video-id
-                                    :published   (if (:published params) 1 0)
-                                    :created_at  (now-epoch)}]}))
+    (exec ctx
+          {:insert-into :sermon
+           :values [{:id          (new-id)
+                     :title       title
+                     :sermon_date (parse-date-epoch (:sermon_date params))
+                     :scripture   (or (:scripture params) "")
+                     :description (or (:description params) "")
+                     :video_id    video-id
+                     :published   (if (:published params) 1 0)
+                     :created_at  (now-epoch)}]}))
   {:status 303 :headers {"location" "/admin/sermons"}})
 
 (defn sermons-update [{:keys [params path-params] :as ctx}]
   (let [title    (or (:title params) "")
         new-vid  (upload-to-stream ctx (:video params) title)
-        existing (first (biff.sqlite/execute ctx {:select [:video_id] :from :sermon
-                                                  :where [:= :id (:id path-params)]}))]
-    (biff.sqlite/execute ctx
-                         {:update :sermon
-                          :set    {:title       title
-                                   :sermon_date (parse-date-epoch (:sermon_date params))
-                                   :scripture   (or (:scripture params) "")
-                                   :description (or (:description params) "")
-                                   :video_id    (or new-vid (:video_id existing))
-                                   :published   (if (:published params) 1 0)}
-                          :where  [:= :id (:id path-params)]}))
+        existing (first (exec ctx {:select [:video_id] :from :sermon
+                                   :where [:= :id (:id path-params)]}))]
+    (exec ctx
+          {:update :sermon
+           :set    {:title       title
+                    :sermon_date (parse-date-epoch (:sermon_date params))
+                    :scripture   (or (:scripture params) "")
+                    :description (or (:description params) "")
+                    :video_id    (or new-vid (:video_id existing))
+                    :published   (if (:published params) 1 0)}
+           :where  [:= :id (:id path-params)]}))
   {:status 303 :headers {"location" "/admin/sermons"}})
 
 (defn sermons-delete [{:keys [path-params] :as ctx}]
-  (biff.sqlite/execute ctx {:delete-from :sermon :where [:= :id (:id path-params)]})
+  (exec ctx {:delete-from :sermon :where [:= :id (:id path-params)]})
   {:status 303 :headers {"location" "/admin/sermons"}})
 
 ;; ---------------------------------------------------------------------------
@@ -216,21 +228,40 @@
         body (json/parse-string (:body resp) true)]
     (get-in body [:result :images])))
 
+(defn- variant-url [img suffix fallback]
+  (or (some #(when (str/ends-with? % (str "/" suffix)) %) (:variants img))
+      fallback))
+
+(defn- img-meta [img]
+  (let [m (:meta img)]
+    (cond
+      (map? m)    m
+      (string? m) (try (json/parse-string m true) (catch Exception _ {}))
+      :else       {})))
+
 (defn- image-card [ctx img insert-mode?]
-  (let [thumb-url  (image-delivery-url ctx (:id img) "thumbnail")
-        public-url (image-delivery-url ctx (:id img) "public")
-        uploaded   (some-> (:uploaded img) (subs 0 10))]
+  (let [meta         (img-meta img)
+        any-url      (first (:variants img))
+        fallback-url (or any-url (image-delivery-url ctx (:id img) "public"))
+        thumb-url    (variant-url img "thumbnail" fallback-url)
+        public-url   (variant-url img "public" fallback-url)
+        uploaded     (some-> (:uploaded img) (subs 0 10))
+        display-name (or (:label meta)
+                         (let [f (:filename img)]
+                           (when-not (str/starts-with? (or f "") "ring-multipart") f))
+                         "Untitled")
+        display-date (or (:date meta) uploaded)]
     (if insert-mode?
       [:button {:type          "button"
                 :class         "img-browser-item"
                 :data-img-url  public-url
-                :title         (str (:filename img) " · " uploaded)}
-       [:img {:src thumb-url :alt (:filename img) :class "img-browser-thumb" :loading "lazy"}]
-       [:span {:class "img-browser-name"} (:filename img)]]
+                :title         (str display-name " · " display-date)}
+       [:img {:src thumb-url :alt display-name :class "img-browser-thumb" :loading "lazy"}]
+       [:span {:class "img-browser-name"} display-name]]
       [:div {:class "img-browser-item"}
-       [:img {:src thumb-url :alt (:filename img) :class "img-browser-thumb" :loading "lazy"}]
-       [:span {:class "img-browser-name"} (:filename img)]
-       [:span {:class "img-browser-date"} uploaded]])))
+       [:img {:src thumb-url :alt display-name :class "img-browser-thumb" :loading "lazy"}]
+       [:span {:class "img-browser-name"} display-name]
+       [:span {:class "img-browser-date"} display-date]])))
 
 (defn- browse-url [page insert? category partial?]
   (str "/admin/images/browse?page=" page
@@ -303,12 +334,70 @@
 ;; Module
 ;; ---------------------------------------------------------------------------
 
+;; ---------------------------------------------------------------------------
+;; Image upload (standalone, from dashboard)
+;; ---------------------------------------------------------------------------
+
+(defn images-new [{:keys [query-params]}]
+  (let [category  (get query-params "category" "photo")
+        cat-label (if (= category "graphic") "Graphic" "Photo")
+        uploaded? (= "1" (get query-params "uploaded"))]
+    (adm/admin-page (str "Upload " cat-label)
+                    (adm/top-bar)
+                    [:div {:class "adm-content"}
+                     [:div {:class "adm-section-header"}
+                      [:h1 {:class "adm-page-title" :style "margin:0;"}
+                       (str "Upload " cat-label)]
+                      [:a {:href "/admin/images" :class "adm-link"} "View library →"]]
+                     (when uploaded?
+                       [:p {:class "adm-hint" :style "color:#5A7257;margin-bottom:16px;"}
+                        "✓ Image uploaded successfully."])
+                     [:form {:method "post" :action "/admin/images/upload"
+                             :class "adm-form" :enctype "multipart/form-data"}
+                      (ui/anti-forgery-field)
+                      [:input {:type "hidden" :name "category" :value category}]
+                      (adm/field {:label "Image File"}
+                                 [:input {:type "file" :name "file" :class "adm-input"
+                                          :required "true" :accept "image/*"}])
+                      (adm/field {:label "Label" :hint "Short description, e.g. Easter Sunday 2026"}
+                                 (adm/text-input {:name "label"
+                                                  :placeholder "Easter Sunday 2026"}))
+                      (adm/field {:label "Date" :hint "When the photo was taken"}
+                                 [:input {:type "date" :name "photo_date" :class "adm-input"}])
+                      (adm/submit-row {:label "Upload" :cancel-href "/admin/images"})]])))
+
+(defn images-upload [{:keys [params] :as ctx}]
+  (let [upload   (:file params)
+        category (or (:category params) "photo")
+        label    (str/trim (or (:label params) ""))
+        date     (or (:photo_date params) "")]
+    (if-not (:tempfile upload)
+      {:status 303 :headers {"location" (str "/admin/images/new?category=" category)}}
+      (let [metadata (cond-> {:category category}
+                       (seq label) (assoc :label label)
+                       (seq date)  (assoc :date date))
+            resp     (http/post (cf-url ctx "/images/v1")
+                                {:headers   (cf-headers ctx)
+                                 :multipart [{:name         "file"
+                                              :content      (java.io.FileInputStream. (:tempfile upload))
+                                              :filename     (:filename upload)
+                                              :content-type (:content-type upload)}
+                                             {:name    "metadata"
+                                              :content (json/generate-string metadata)}]
+                                 :as        :string})
+            body     (json/parse-string (:body resp) true)]
+        (if (get-in body [:result :id])
+          {:status 303 :headers {"location" (str "/admin/images/new?category=" category "&uploaded=1")}}
+          {:status 303 :headers {"location" (str "/admin/images/new?category=" category)}})))))
+
 (def module
   {:biff.ring/routes
    [["/admin" {:middleware [[wrap-signed-in]]}
      ["/upload" {:post upload-image :name ::upload-image}]
      ["/images"
       ["" {:get images-page :name ::images}]
+      ["/new" {:get images-new :name ::images-new}]
+      ["/upload" {:post images-upload :name ::images-upload}]
       ["/browse" {:get images-browse :name ::images-browse}]]
      ["/sermons"
       ["" {:get sermons-list :post sermons-create :name ::sermons}]

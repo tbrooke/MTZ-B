@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mt Zion CMS — Dashboard explorations</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" />
+  <style>
+    :root {
+      --cream: #F7F4EE;
+      --paper: #FBF9F4;
+      --ink: #1C1A17;
+      --ink-2: #4A463F;
+      --ink-3: #8A8478;
+      --rule: #E5DFD2;
+      --terra: #C24A1F;
+      --terra-soft: #F4D9CC;
+      --sage: #6B8268;
+      --sage-soft: #DCE2D6;
+      --gold: #C8923A;
+      --gold-soft: #F1E2BD;
+      --slate: #364154;
+      --slate-soft: #D5DCE6;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: 'Inter', system-ui, sans-serif; color: var(--ink); }
+    .serif { font-family: 'Fraunces', Georgia, serif; font-optical-sizing: auto; }
+    .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; }
+  </style>
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+  <script type="text/babel" src="design-canvas.jsx"></script>
+  <script type="text/babel" src="dashboard-variations.jsx"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="text/babel">
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(
+      <DesignCanvas title="Mt Zion CMS — Dashboard">
+        <DCSection id="explorations" title="Three directions">
+          <DCArtboard id="bento" label="A — Bento, asymmetric" width={1280} height={1000}>
+            <BentoVariant />
+          </DCArtboard>
+          <DCArtboard id="editorial" label="B — Editorial list" width={1280} height={900}>
+            <EditorialVariant />
+          </DCArtboard>
+          <DCArtboard id="cards" label="C — Color-coded cards" width={1280} height={900}>
+            <ColorCardsVariant />
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+    );
+  </script>
+</body>
+</html>

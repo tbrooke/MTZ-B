@@ -11,6 +11,16 @@
 ;; ---------------------------------------------------------------------------
 
 (defn- now-epoch [] (.getEpochSecond (java.time.Instant/now)))
+
+(defn- exec
+  "Wrapper around biff.sqlite/execute that returns rows with unqualified
+  snake_case keys, matching the DB column names used throughout this file."
+  [ctx honey]
+  (mapv (fn [row]
+          (into {} (map (fn [[k v]]
+                          [(keyword (str/replace (name k) "-" "_")) v])
+                        row)))
+        (biff.sqlite/execute ctx honey)))
 (defn- new-id [] (str (random-uuid)))
 
 (defn- parse-epoch
@@ -120,6 +130,7 @@
 (defn- big-tile [accent-k label count recent new-href list-href graphic]
   (let [ink (ac accent-k :ink)]
     [:div {:class "bento-tile bento-tile--sq"}
+     [:a {:href list-href :class "bento-tile-link" :aria-label (str "View " label)}]
      [:div {:class "bento-tile-top"}
       [:span {:class "bento-caption" :style (str "color:" ink ";")} label]
       [:span {:class "bento-count"} (str count)]]
@@ -158,26 +169,6 @@
       [:a {:href "/admin/events/new" :class "bento-btn bento-btn--primary" :style (str "background:" ink ";flex:1;")} "+ New event"]
       [:a {:href "/admin/events" :class "bento-btn bento-btn--ghost" :style (str "border-color:" ink ";color:" ink ";")} "All"]]]))
 
-(defn- photos-tile [count]
-  [:div {:class "bento-tile"}
-   [:div {:class "bento-photos-header"}
-    [:div
-     [:span {:class "bento-caption" :style "color:#5A7257;"} "Photos"]
-     [:div {:class "bento-tile-title" :style "font-size:24px;margin-top:6px;"} "Gallery"]]
-    [:div {:class "bento-photos-count"}
-     [:div {:style "font-family:var(--adm-serif);font-size:26px;font-weight:500;color:#5A7257;line-height:1;"} (str count)]
-     [:div {:style "font-family:var(--adm-mono);font-size:9px;letter-spacing:0.14em;text-transform:uppercase;color:#8A8478;margin-top:2px;"} "images"]]]
-   [:div {:class "bento-photos-grid"}
-    (for [i (range 8)]
-      [:div {:class "bento-photo-cell"
-             :style (str "background:" (case (mod i 3)
-                                         0 "rgba(90,114,87,0.85)"
-                                         1 "#EAEEE4"
-                                         2 "repeating-linear-gradient(135deg,#EAEEE4 0 8px,#DCE2D6 8px 16px)") ";")}])]
-   [:div {:class "bento-btn-row" :style "margin-top:auto;padding-top:14px;"}
-    [:a {:href "/admin/images" :class "bento-btn bento-btn--primary" :style "background:#5A7257;flex:1;"} "Browse Images"]
-    [:a {:href "/admin/images" :class "bento-btn bento-btn--ghost"} "All"]]])
-
 (defn- calendar-tile [ctx]
   (let [today      (java.time.LocalDate/now java.time.ZoneOffset/UTC)
         first-day  (java.time.LocalDate/of (.getYear today) (.getMonthValue today) 1)
@@ -187,9 +178,9 @@
         month-name (.format first-day (java.time.format.DateTimeFormatter/ofPattern "MMMM"))
         ms         (.toEpochSecond (.atStartOfDay first-day java.time.ZoneOffset/UTC))
         me         (.toEpochSecond (.atStartOfDay (.plusMonths first-day 1) java.time.ZoneOffset/UTC))
-        evs        (biff.sqlite/execute ctx
-                                        {:select [:start_at] :from :event
-                                         :where  [:and [:>= :start_at ms] [:< :start_at me] [:= :published 1]]})
+        evs        (exec ctx
+                         {:select [:start_at] :from :event
+                          :where  [:and [:>= :start_at ms] [:< :start_at me] [:= :published 1]]})
         event-days (into #{} (map #(-> (java.time.Instant/ofEpochSecond (:start_at %))
                                        (java.time.LocalDate/ofInstant java.time.ZoneOffset/UTC)
                                        .getDayOfMonth) evs))
@@ -227,46 +218,26 @@
        " event" (when (not= 1 (count evs)) "s") " in " month-name]
       [:a {:href "/admin/events" :class "bento-cal-link"} "Open calendar →"]]]))
 
-(defn- upload-bar [file-count sermon-count]
-  [:div {:class "bento-upload-row"}
-   [:div {:class "bento-upload-panel bento-upload-panel--light"}
-    [:div {:class "bento-upload-header"}
-     [:div {:class "bento-upload-brand"}
-      (mk :files 20 "#1C1A17")
-      [:span {:class "bento-upload-brand-label"} "Files · upload"]]
-     [:a {:href "/admin/files" :class "bento-upload-lib-link" :style "color:#8A8478;"}
-      (str file-count " in library →")]]
-    [:div {:class "bento-upload-cards"}
-     (for [[label hint] [["Bulletin" "PDF · weekly"]
-                         ["Newsletter" "PDF · monthly"]
-                         ["Presentation" "PPT · slides"]]]
-       [:a {:href "/admin/files/new" :class "bento-upload-card"}
-        [:div {:class "bento-upload-doc"} [:div {:class "bento-upload-doc-fold"}]]
-        [:div {:class "bento-upload-card-label"} (str "+ " label)]
-        [:div {:class "bento-upload-card-hint"} hint]])]]
-   [:div {:class "bento-upload-panel bento-upload-panel--dark"}
-    [:div {:class "bento-upload-header"}
-     [:div {:class "bento-upload-brand"}
-      (mk :sermons 20 "#F7F4EE")
-      [:span {:class "bento-upload-brand-label" :style "opacity:0.7;"} "Sermon · upload"]]
-     [:a {:href "/admin/sermons" :class "bento-upload-lib-link" :style "color:rgba(247,244,238,0.55);"}
-      (str sermon-count " archived →")]]
-    [:div {:class "bento-sermon-drop"}
-     [:div {:class "bento-drop-area"}
-      [:div {:class "bento-drop-disc"}
-       [:svg {:width "14" :height "14" :viewBox "0 0 16 16"}
-        [:path {:d "M5 3 L13 8 L5 13 Z" :fill "#1C1A17"}]]]
-      [:div {:style "flex:1;"}
-       [:div {:class "bento-drop-title"} "+ Upload sermon video"]
-       [:div {:class "bento-drop-hint"} "Drop a .mp4 here, or click Choose file"]]]
-     [:a {:href "/admin/sermons/new" :class "bento-choose-btn"} "Choose file"]]]])
+(defn- qa-tile [color href icon-kw word hint]
+  [:a {:href href :class (str "bento-qa-tile bento-qa-tile--" (name color))}
+   (mk icon-kw 22 (ac color :ink))
+   [:div {:class "bento-qa-text"}
+    [:span {:class (str "bento-qa-word bento-qa-word--" (name color))} word]
+    [:span {:class "bento-qa-hint"} hint]]])
+
+(defn- quick-actions-row []
+  [:div {:class "bento-qa-row"}
+   (qa-tile :slate "/admin/files/new"                    :files   "File"    "documents")
+   (qa-tile :sage  "/admin/images/new?category=photo"    :photos  "Photo"   "images")
+   (qa-tile :sage  "/admin/images/new?category=graphic"  :pages   "Graphic" "design assets")
+   (qa-tile :terra "/admin/sermons/new"                  :sermons "Video"   "sermons")])
 
 (defn- count-table [ctx table]
-  (or (:n (first (biff.sqlite/execute ctx {:select [[:%count.id :n]] :from table}))) 0))
+  (or (:n (first (exec ctx {:select [[:%count.id :n]] :from table}))) 0))
 
 (defn- latest-title [ctx table order-col]
-  (:title (first (biff.sqlite/execute ctx {:select [:title] :from table
-                                           :order-by [[order-col :desc]] :limit 1}))))
+  (:title (first (exec ctx {:select [:title] :from table
+                            :order-by [[order-col :desc]] :limit 1}))))
 
 (defn- format-day-header []
   (let [d (java.time.LocalDate/now java.time.ZoneOffset/UTC)]
@@ -275,37 +246,32 @@
          (.format d (java.time.format.DateTimeFormatter/ofPattern "MMM d")))))
 
 (defn dashboard [ctx]
-  (let [n-ep      (now-epoch)
-        n-posts   (count-table ctx :post)
-        n-events  (or (:n (first (biff.sqlite/execute ctx
-                                                      {:select [[:%count.id :n]] :from :event
-                                                       :where  [:and [:= :published 1] [:>= :start_at n-ep]]}))) 0)
-        n-pages   (count-table ctx :page)
-        n-feats   (count-table ctx :feature)
-        n-files   (count-table ctx :file)
-        n-sermons (count-table ctx :sermon)
-        upcoming  (biff.sqlite/execute ctx
-                                       {:select   [:title :start_at] :from :event
-                                        :where    [:and [:= :published 1] [:>= :start_at n-ep]]
-                                        :order-by [[:start_at :asc]] :limit 3})
-        r-post    (latest-title ctx :post :created_at)
-        r-feat    (latest-title ctx :feature :updated_at)]
+  (let [n-ep     (now-epoch)
+        n-posts  (count-table ctx :post)
+        n-events (or (:n (first (exec ctx
+                                      {:select [[:%count.id :n]] :from :event
+                                       :where  [:and [:= :published 1] [:>= :start_at n-ep]]}))) 0)
+        n-pages  (count-table ctx :page)
+        n-feats  (count-table ctx :feature)
+        upcoming (exec ctx
+                       {:select   [:title :start_at] :from :event
+                        :where    [:and [:= :published 1] [:>= :start_at n-ep]]
+                        :order-by [[:start_at :asc]] :limit 3})
+        r-post   (latest-title ctx :post :created_at)
+        r-feat   (latest-title ctx :feature :updated_at)]
     (adm/bento-page "Dashboard"
                     [:div
                      (adm/bento-top-bar (ui/anti-forgery-field))
-                     [:div {:class "bento-header"}
-                      [:h1 {:class "bento-h1"} "Mt Zion Dashboard"]
-                      [:div {:class "bento-date"} (format-day-header)]]
-                     [:div {:class "bento-grid-primary"}
-                      (big-tile :terra "Blog Posts" n-posts r-post  "/admin/posts/new"    "/admin/posts"    (blog-graphic))
-                      (big-tile :slate "Pages"      n-pages nil     "/admin/pages"        "/admin/pages"    (pages-graphic))
-                      (big-tile :gold  "Features"   n-feats r-feat  "/admin/features/new" "/admin/features" (features-graphic))
-                      (events-tile n-events upcoming)]
-                     [:div {:class "bento-grid-secondary"}
-                      (photos-tile 0)
-                      (calendar-tile ctx)
-                      [:div]]
-                     (upload-bar n-files n-sermons)])))
+                     [:div {:class "bento-inner"}
+                      [:div {:class "bento-header"}
+                       [:h1 {:class "bento-h1"} "Mt Zion Dashboard"]
+                       [:div {:class "bento-date"} (format-day-header)]]
+                      [:div {:class "bento-grid-primary"}
+                       (big-tile :terra "Blog Posts" n-posts r-post  "/admin/posts/new"    "/admin/posts"    (blog-graphic))
+                       (big-tile :slate "Pages"      n-pages nil     "/admin/pages"        "/admin/pages"    (pages-graphic))
+                       (big-tile :gold  "Features"   n-feats r-feat  "/admin/features/new" "/admin/features" (features-graphic))
+                       (events-tile n-events upcoming)]
+                      (quick-actions-row)]])))
 
 ;; ---------------------------------------------------------------------------
 ;; Features
@@ -344,8 +310,8 @@
    (adm/submit-row {:cancel-href "/admin/features"})])
 
 (defn features-list [ctx]
-  (let [rows (biff.sqlite/execute ctx {:select :* :from :feature
-                                       :order-by [[:sort_order :asc] [:created_at :desc]]})]
+  (let [rows (exec ctx {:select :* :from :feature
+                        :order-by [[:sort_order :asc] [:created_at :desc]]})]
     (adm/admin-page "Features"
                     (adm/top-bar)
                     [:div {:class "adm-content"}
@@ -378,24 +344,24 @@
                    (feature-form "/admin/features" nil (ui/anti-forgery-field))]))
 
 (defn features-create [{:keys [params] :as ctx}]
-  (biff.sqlite/execute ctx
-                       {:insert-into :feature
-                        :values [{:id (new-id)
-                                  :placement (or (:placement params) "home_main")
-                                  :title (or (:title params) "")
-                                  :subtitle (or (:subtitle params) "")
-                                  :body (or (:body params) "")
-                                  :cta_label (or (:cta_label params) "")
-                                  :cta_url (or (:cta_url params) "")
-                                  :published (if (:published params) 1 0)
-                                  :sort_order 0
-                                  :updated_at (now-epoch)
-                                  :created_at (now-epoch)}]})
+  (exec ctx
+        {:insert-into :feature
+         :values [{:id (new-id)
+                   :placement (or (:placement params) "home_main")
+                   :title (or (:title params) "")
+                   :subtitle (or (:subtitle params) "")
+                   :body (or (:body params) "")
+                   :cta_label (or (:cta_label params) "")
+                   :cta_url (or (:cta_url params) "")
+                   :published (if (:published params) 1 0)
+                   :sort_order 0
+                   :updated_at (now-epoch)
+                   :created_at (now-epoch)}]})
   {:status 303 :headers {"location" "/admin/features"}})
 
 (defn features-edit [{:keys [path-params] :as ctx}]
-  (let [f (first (biff.sqlite/execute ctx {:select :* :from :feature
-                                           :where [:= :id (:id path-params)]}))]
+  (let [f (first (exec ctx {:select :* :from :feature
+                            :where [:= :id (:id path-params)]}))]
     (if f
       (adm/admin-page "Edit Feature"
                       (adm/top-bar)
@@ -405,21 +371,21 @@
       {:status 404 :body "Not found"})))
 
 (defn features-update [{:keys [params path-params] :as ctx}]
-  (biff.sqlite/execute ctx
-                       {:update :feature
-                        :set {:placement (or (:placement params) "home_main")
-                              :title (or (:title params) "")
-                              :subtitle (or (:subtitle params) "")
-                              :body (or (:body params) "")
-                              :cta_label (or (:cta_label params) "")
-                              :cta_url (or (:cta_url params) "")
-                              :published (if (:published params) 1 0)
-                              :updated_at (now-epoch)}
-                        :where [:= :id (:id path-params)]})
+  (exec ctx
+        {:update :feature
+         :set {:placement (or (:placement params) "home_main")
+               :title (or (:title params) "")
+               :subtitle (or (:subtitle params) "")
+               :body (or (:body params) "")
+               :cta_label (or (:cta_label params) "")
+               :cta_url (or (:cta_url params) "")
+               :published (if (:published params) 1 0)
+               :updated_at (now-epoch)}
+         :where [:= :id (:id path-params)]})
   {:status 303 :headers {"location" "/admin/features"}})
 
 (defn features-delete [{:keys [path-params] :as ctx}]
-  (biff.sqlite/execute ctx {:delete-from :feature :where [:= :id (:id path-params)]})
+  (exec ctx {:delete-from :feature :where [:= :id (:id path-params)]})
   {:status 303 :headers {"location" "/admin/features"}})
 
 ;; ---------------------------------------------------------------------------
@@ -443,7 +409,7 @@
    (adm/submit-row {:cancel-href "/admin/posts"})])
 
 (defn posts-list [ctx]
-  (let [rows (biff.sqlite/execute ctx {:select :* :from :post :order-by [[:created_at :desc]]})]
+  (let [rows (exec ctx {:select :* :from :post :order-by [[:created_at :desc]]})]
     (adm/admin-page "Blog Posts"
                     (adm/top-bar)
                     [:div {:class "adm-content"}
@@ -478,20 +444,20 @@
   (let [title (or (:title params) "")
         slug  (let [s (str/trim (or (:slug params) ""))]
                 (if (seq s) s (slugify title)))]
-    (biff.sqlite/execute ctx
-                         {:insert-into :post
-                          :values [{:id (new-id)
-                                    :slug slug
-                                    :title title
-                                    :excerpt (or (:excerpt params) "")
-                                    :body (or (:body params) "")
-                                    :published_at (parse-date-epoch (:published_at params))
-                                    :created_at (now-epoch)}]}))
+    (exec ctx
+          {:insert-into :post
+           :values [{:id (new-id)
+                     :slug slug
+                     :title title
+                     :excerpt (or (:excerpt params) "")
+                     :body (or (:body params) "")
+                     :published_at (parse-date-epoch (:published_at params))
+                     :created_at (now-epoch)}]}))
   {:status 303 :headers {"location" "/admin/posts"}})
 
 (defn posts-edit [{:keys [path-params] :as ctx}]
-  (let [p (first (biff.sqlite/execute ctx {:select :* :from :post
-                                           :where [:= :id (:id path-params)]}))]
+  (let [p (first (exec ctx {:select :* :from :post
+                            :where [:= :id (:id path-params)]}))]
     (if p
       (adm/admin-page "Edit Post"
                       (adm/top-bar)
@@ -504,18 +470,18 @@
   (let [title (or (:title params) "")
         slug  (let [s (str/trim (or (:slug params) ""))]
                 (if (seq s) s (slugify title)))]
-    (biff.sqlite/execute ctx
-                         {:update :post
-                          :set {:slug slug
-                                :title title
-                                :excerpt (or (:excerpt params) "")
-                                :body (or (:body params) "")
-                                :published_at (parse-date-epoch (:published_at params))}
-                          :where [:= :id (:id path-params)]}))
+    (exec ctx
+          {:update :post
+           :set {:slug slug
+                 :title title
+                 :excerpt (or (:excerpt params) "")
+                 :body (or (:body params) "")
+                 :published_at (parse-date-epoch (:published_at params))}
+           :where [:= :id (:id path-params)]}))
   {:status 303 :headers {"location" "/admin/posts"}})
 
 (defn posts-delete [{:keys [path-params] :as ctx}]
-  (biff.sqlite/execute ctx {:delete-from :post :where [:= :id (:id path-params)]})
+  (exec ctx {:delete-from :post :where [:= :id (:id path-params)]})
   {:status 303 :headers {"location" "/admin/posts"}})
 
 ;; ---------------------------------------------------------------------------
@@ -562,31 +528,90 @@
                "Published"])
    (adm/submit-row {:cancel-href "/admin/events"})])
 
-(defn events-list [ctx]
-  (let [rows (biff.sqlite/execute ctx {:select :* :from :event :order-by [[:start_at :asc]]})]
+(defn- events-calendar-view [ctx query-params]
+  (let [today     (java.time.LocalDate/now java.time.ZoneOffset/UTC)
+        month-str (get query-params "month" "")
+        first-day (if (seq month-str)
+                    (try (java.time.LocalDate/parse (str month-str "-01"))
+                         (catch Exception _ (java.time.LocalDate/of (.getYear today) (.getMonthValue today) 1)))
+                    (java.time.LocalDate/of (.getYear today) (.getMonthValue today) 1))
+        dow       (.getValue (.getDayOfWeek first-day))
+        offset    (mod dow 7)
+        days-in   (.lengthOfMonth first-day)
+        month-fmt (java.time.format.DateTimeFormatter/ofPattern "MMMM yyyy")
+        ym-fmt    (java.time.format.DateTimeFormatter/ofPattern "yyyy-MM")
+        ms        (.toEpochSecond (.atStartOfDay first-day java.time.ZoneOffset/UTC))
+        me        (.toEpochSecond (.atStartOfDay (.plusMonths first-day 1) java.time.ZoneOffset/UTC))
+        evs       (exec ctx {:select [:start_at :title :id] :from :event
+                             :where  [:and [:>= :start_at ms] [:< :start_at me]]
+                             :order-by [[:start_at :asc]]})
+        ev-map    (group-by #(-> (java.time.Instant/ofEpochSecond (:start_at %))
+                                 (java.time.LocalDate/ofInstant java.time.ZoneOffset/UTC)
+                                 .getDayOfMonth) evs)
+        today-day (when (and (= (.getYear today) (.getYear first-day))
+                             (= (.getMonthValue today) (.getMonthValue first-day)))
+                    (.getDayOfMonth today))
+        raw-cells (concat (repeat offset nil) (range 1 (inc days-in)))
+        rem       (mod (count raw-cells) 7)
+        cells     (if (zero? rem) raw-cells (concat raw-cells (repeat (- 7 rem) nil)))
+        prev-m    (.format (.minusMonths first-day 1) ym-fmt)
+        next-m    (.format (.plusMonths first-day 1) ym-fmt)]
+    (list
+     [:div {:class "adm-cal-nav"}
+      [:div {:class "adm-cal-nav-arrows"}
+       [:a {:href (str "/admin/events?view=calendar&month=" prev-m) :class "adm-link"} "‹"]
+       [:span {:class "adm-cal-nav-month"} (.format first-day month-fmt)]
+       [:a {:href (str "/admin/events?view=calendar&month=" next-m) :class "adm-link"} "›"]]
+      [:a {:href "/admin/events" :class "adm-link"} "← List"]]
+     [:div {:class "adm-cal-wrap"}
+      [:div {:class "adm-cal-grid"}
+       (for [d ["Sun" "Mon" "Tue" "Wed" "Thu" "Fri" "Sat"]]
+         [:div {:class "adm-cal-dow"} d])
+       (for [d cells]
+         (if (nil? d)
+           [:div {:class "adm-cal-cell adm-cal-cell--empty"}]
+           (let [day-evs (get ev-map d [])]
+             [:div {:class (str "adm-cal-cell" (when (= d today-day) " adm-cal-cell--today"))}
+              [:span {:class (str "adm-cal-day-num" (when (= d today-day) " adm-cal-day-num--today"))} (str d)]
+              (for [ev day-evs]
+                [:a {:href (str "/admin/events/" (:id ev) "/edit") :class "adm-cal-ev"} (:title ev)])])))]])))
+
+(defn events-list [{:keys [query-params] :as ctx}]
+  (let [view     (get query-params "view" "list")
+        n-ep     (now-epoch)
+        calendar? (= view "calendar")]
     (adm/admin-page "Events"
                     (adm/top-bar)
                     [:div {:class "adm-content"}
                      (adm/page-header "Events" "/admin")
-                     [:div {:style "margin-bottom:20px;"}
-                      [:a {:href "/admin/events/new" :class "mtz-btn mtz-btn--primary"} "+ New Event"]]
-                     (if (empty? rows)
-                       [:p {:class "adm-empty"} "No events yet."]
-                       [:table {:class "adm-table"}
-                        [:thead [:tr [:th "Title"] [:th "Start"] [:th "Location"] [:th "Repeats"] [:th "Status"] [:th ""]]]
-                        [:tbody
-                         (for [r rows]
-                           [:tr
-                            [:td (:title r)]
-                            [:td (or (epoch->dt (:start_at r)) "—")]
-                            [:td (or (:location r) "—")]
-                            [:td (:recurrence r "none")]
-                            [:td (adm/badge (= 1 (:published r)))]
-                            [:td
-                             [:div {:class "adm-actions"}
-                              [:a {:href (str "/admin/events/" (:id r) "/edit") :class "adm-link"} "Edit"]
-                              (adm/delete-form (str "/admin/events/" (:id r) "/delete")
-                                               (ui/anti-forgery-field))]]])]])])))
+                     [:div {:style "display:flex; gap:12px; margin-bottom:20px; align-items:center;"}
+                      [:a {:href "/admin/events/new" :class "mtz-btn mtz-btn--primary"} "+ New Event"]
+                      (if calendar?
+                        [:a {:href "/admin/events" :class "adm-link"} "List view"]
+                        [:a {:href "/admin/events?view=calendar" :class "adm-link"} "Calendar view"])]
+                     (if calendar?
+                       (events-calendar-view ctx query-params)
+                       (let [rows (exec ctx {:select :* :from :event
+                                             :where  [:>= :start_at n-ep]
+                                             :order-by [[:start_at :asc]]})]
+                         (if (empty? rows)
+                           [:p {:class "adm-empty"} "No upcoming events. "
+                            [:a {:href "/admin/events?view=all" :class "adm-link"} "View all past events"]]
+                           [:table {:class "adm-table"}
+                            [:thead [:tr [:th "Title"] [:th "Start"] [:th "Location"] [:th "Repeats"] [:th "Status"] [:th ""]]]
+                            [:tbody
+                             (for [r rows]
+                               [:tr
+                                [:td (:title r)]
+                                [:td (or (epoch->dt (:start_at r)) "—")]
+                                [:td (or (:location r) "—")]
+                                [:td (:recurrence r "none")]
+                                [:td (adm/badge (= 1 (:published r)))]
+                                [:td
+                                 [:div {:class "adm-actions"}
+                                  [:a {:href (str "/admin/events/" (:id r) "/edit") :class "adm-link"} "Edit"]
+                                  (adm/delete-form (str "/admin/events/" (:id r) "/delete")
+                                                   (ui/anti-forgery-field))]]])]])))])))
 
 (defn events-new [_ctx]
   (adm/admin-page "New Event"
@@ -596,24 +621,24 @@
                    (event-form "/admin/events" nil (ui/anti-forgery-field))]))
 
 (defn events-create [{:keys [params] :as ctx}]
-  (biff.sqlite/execute ctx
-                       {:insert-into :event
-                        :values [{:id (new-id)
-                                  :title (or (:title params) "")
-                                  :description (or (:description params) "")
-                                  :location (or (:location params) "")
-                                  :start_at (or (parse-epoch (:start_at params)) (now-epoch))
-                                  :end_at (parse-epoch (:end_at params))
-                                  :all_day (if (:all_day params) 1 0)
-                                  :recurrence (or (:recurrence params) "none")
-                                  :recur_until (parse-date-epoch (:recur_until params))
-                                  :published (if (:published params) 1 0)
-                                  :created_at (now-epoch)}]})
+  (exec ctx
+        {:insert-into :event
+         :values [{:id (new-id)
+                   :title (or (:title params) "")
+                   :description (or (:description params) "")
+                   :location (or (:location params) "")
+                   :start_at (or (parse-epoch (:start_at params)) (now-epoch))
+                   :end_at (parse-epoch (:end_at params))
+                   :all_day (if (:all_day params) 1 0)
+                   :recurrence (or (:recurrence params) "none")
+                   :recur_until (parse-date-epoch (:recur_until params))
+                   :published (if (:published params) 1 0)
+                   :created_at (now-epoch)}]})
   {:status 303 :headers {"location" "/admin/events"}})
 
 (defn events-edit [{:keys [path-params] :as ctx}]
-  (let [e (first (biff.sqlite/execute ctx {:select :* :from :event
-                                           :where [:= :id (:id path-params)]}))]
+  (let [e (first (exec ctx {:select :* :from :event
+                            :where [:= :id (:id path-params)]}))]
     (if e
       (adm/admin-page "Edit Event"
                       (adm/top-bar)
@@ -623,22 +648,22 @@
       {:status 404 :body "Not found"})))
 
 (defn events-update [{:keys [params path-params] :as ctx}]
-  (biff.sqlite/execute ctx
-                       {:update :event
-                        :set {:title (or (:title params) "")
-                              :description (or (:description params) "")
-                              :location (or (:location params) "")
-                              :start_at (or (parse-epoch (:start_at params)) (now-epoch))
-                              :end_at (parse-epoch (:end_at params))
-                              :all_day (if (:all_day params) 1 0)
-                              :recurrence (or (:recurrence params) "none")
-                              :recur_until (parse-date-epoch (:recur_until params))
-                              :published (if (:published params) 1 0)}
-                        :where [:= :id (:id path-params)]})
+  (exec ctx
+        {:update :event
+         :set {:title (or (:title params) "")
+               :description (or (:description params) "")
+               :location (or (:location params) "")
+               :start_at (or (parse-epoch (:start_at params)) (now-epoch))
+               :end_at (parse-epoch (:end_at params))
+               :all_day (if (:all_day params) 1 0)
+               :recurrence (or (:recurrence params) "none")
+               :recur_until (parse-date-epoch (:recur_until params))
+               :published (if (:published params) 1 0)}
+         :where [:= :id (:id path-params)]})
   {:status 303 :headers {"location" "/admin/events"}})
 
 (defn events-delete [{:keys [path-params] :as ctx}]
-  (biff.sqlite/execute ctx {:delete-from :event :where [:= :id (:id path-params)]})
+  (exec ctx {:delete-from :event :where [:= :id (:id path-params)]})
   {:status 303 :headers {"location" "/admin/events"}})
 
 ;; ---------------------------------------------------------------------------
@@ -669,7 +694,7 @@
    (adm/submit-row {:cancel-href "/admin/pages"})])
 
 (defn pages-list [ctx]
-  (let [rows (biff.sqlite/execute ctx {:select :* :from :page :order-by [[:slug :asc]]})]
+  (let [rows (exec ctx {:select :* :from :page :order-by [[:slug :asc]]})]
     (adm/admin-page "Pages"
                     (adm/top-bar)
                     [:div {:class "adm-content"}
@@ -688,8 +713,8 @@
 
 (defn pages-edit [{:keys [path-params] :as ctx}]
   (let [slug (:slug path-params)
-        p    (first (biff.sqlite/execute ctx {:select :* :from :page
-                                              :where [:= :slug slug]}))]
+        p    (first (exec ctx {:select :* :from :page
+                               :where [:= :slug slug]}))]
     (adm/admin-page (str "Edit — " (page-slug-label slug))
                     (adm/top-bar)
                     [:div {:class "adm-content"}
@@ -698,15 +723,15 @@
 
 (defn pages-update [{:keys [params path-params] :as ctx}]
   (let [slug (str/trim (:slug path-params))]
-    (biff.sqlite/execute ctx
-                         {:insert-into :page
-                          :values [{:id (new-id)
-                                    :slug slug
-                                    :title (or (:title params) "")
-                                    :body (or (:body params) "")
-                                    :updated_at (now-epoch)}]
-                          :on-conflict {:on [:slug]
-                                        :do-update-set [:title :body :updated_at]}}))
+    (exec ctx
+          {:insert-into :page
+           :values [{:id (new-id)
+                     :slug slug
+                     :title (or (:title params) "")
+                     :body (or (:body params) "")
+                     :updated_at (now-epoch)}]
+           :on-conflict {:on [:slug]
+                         :do-update-set [:title :body :updated_at]}}))
   {:status 303 :headers {"location" "/admin/pages"}})
 
 ;; ---------------------------------------------------------------------------
@@ -729,7 +754,8 @@
     :else          (str n " B")))
 
 (def ^:private file-category-options
-  [["bulletin"   "Sunday Bulletin"]
+  [["" "— Select type —"]
+   ["bulletin"   "Sunday Bulletin"]
    ["slides"     "Presentation Slides"]
    ["newsletter" "Newsletter"]
    ["other"      "Other"]])
@@ -738,8 +764,8 @@
   (or (some (fn [[k l]] (when (= k v) l)) file-category-options) v))
 
 (defn files-list [ctx]
-  (let [rows (biff.sqlite/execute ctx {:select :* :from :file
-                                       :order-by [[:uploaded_at :desc]]})]
+  (let [rows (exec ctx {:select :* :from :file
+                        :order-by [[:uploaded_at :desc]]})]
     (adm/admin-page "Files"
                     (adm/top-bar)
                     [:div {:class "adm-content"}
@@ -764,23 +790,26 @@
                               (adm/delete-form (str "/admin/files/" (:id r) "/delete")
                                                (ui/anti-forgery-field))]]])]])])))
 
-(defn files-new [_ctx]
-  (adm/admin-page "Upload File"
-                  (adm/top-bar)
-                  [:div {:class "adm-content"}
-                   (adm/page-header "Upload File" "/admin/files")
-                   [:form {:method "post" :action "/admin/files"
-                           :class "adm-form" :enctype "multipart/form-data"}
-                    (ui/anti-forgery-field)
-                    (adm/field {:label "File" :hint "PDF, PPTX, or other document"}
-                               [:input {:type "file" :name "file" :class "adm-input"
-                                        :required "true"
-                                        :accept ".pdf,.pptx,.ppt,.doc,.docx,.xls,.xlsx"}])
-                    (adm/field {:label "Label" :hint "e.g. Bulletin · May 4, 2026"}
-                               (adm/text-input {:name "label" :placeholder "Bulletin · May 4, 2026"}))
-                    (adm/field {:label "Category"}
-                               (adm/select-input {:name "category"} file-category-options "bulletin"))
-                    (adm/submit-row {:label "Upload" :cancel-href "/admin/files"})]]))
+(defn files-new [{:keys [query-params]}]
+  (let [pre-cat (get query-params "category" "")]
+    (adm/admin-page "Upload File"
+                    (adm/top-bar)
+                    [:div {:class "adm-content"}
+                     [:div {:class "adm-section-header"}
+                      [:h1 {:class "adm-page-title" :style "margin:0;"} "Upload File"]
+                      [:a {:href "/admin/files" :class "adm-link"} "View all files →"]]
+                     [:form {:method "post" :action "/admin/files"
+                             :class "adm-form" :enctype "multipart/form-data"}
+                      (ui/anti-forgery-field)
+                      (adm/field {:label "File" :hint "PDF, PPTX, or other document"}
+                                 [:input {:type "file" :name "file" :class "adm-input"
+                                          :required "true"
+                                          :accept ".pdf,.pptx,.ppt,.doc,.docx,.xls,.xlsx"}])
+                      (adm/field {:label "Label" :hint "e.g. Bulletin · May 4, 2026"}
+                                 (adm/text-input {:name "label" :placeholder "Bulletin · May 4, 2026"}))
+                      (adm/field {:label "Category"}
+                                 (adm/select-input {:name "category"} file-category-options pre-cat))
+                      (adm/submit-row {:label "Upload" :cancel-href "/admin/files"})]])))
 
 (defn files-upload [{:keys [params] :as ctx}]
   (ensure-upload-dir! ctx)
@@ -794,25 +823,25 @@
         url      (str "/uploads/" stored)]
     (when (:tempfile upload)
       (io/copy (:tempfile upload) dest))
-    (biff.sqlite/execute ctx
-                         {:insert-into :file
-                          :values [{:id (new-id)
-                                    :filename original
-                                    :label label
-                                    :category (or (:category params) "other")
-                                    :url url
-                                    :size_bytes (:size upload)
-                                    :uploaded_at (now-epoch)}]}))
+    (exec ctx
+          {:insert-into :file
+           :values [{:id (new-id)
+                     :filename original
+                     :label label
+                     :category (or (:category params) "other")
+                     :url url
+                     :size_bytes (:size upload)
+                     :uploaded_at (now-epoch)}]}))
   {:status 303 :headers {"location" "/admin/files"}})
 
 (defn files-delete [{:keys [path-params] :as ctx}]
-  (let [row (first (biff.sqlite/execute ctx {:select :* :from :file
-                                             :where [:= :id (:id path-params)]}))]
+  (let [row (first (exec ctx {:select :* :from :file
+                              :where [:= :id (:id path-params)]}))]
     (when row
       (let [filename (last (str/split (:url row) #"/"))
             f        (java.io.File. (str (upload-dir ctx) "/" filename))]
         (.delete f))
-      (biff.sqlite/execute ctx {:delete-from :file :where [:= :id (:id path-params)]})))
+      (exec ctx {:delete-from :file :where [:= :id (:id path-params)]})))
   {:status 303 :headers {"location" "/admin/files"}})
 
 (defn serve-upload [{:keys [path-params] :as ctx}]
