@@ -1,1 +1,0 @@
-["^ ","~$hello-page-renders",["^ ","~:row",5,"~:col",1,"~:fixed-arities",["~#set",[0]],"~:name","^0","~:ns","~$com.mtzion.app.hello-test","~:top-ns","^7","~:arities",["^ ","~i0",["^ ","~:ret",["^4",["~:string","~:vector","~:nil"]],"~:arglist-str","[]"]]],"~:filename","/Users/tombrooke/Code/mtzion/MTZ-B/test/com/mtzion/app/hello_test.clj"]

@@ -1,6 +1,7 @@
 (ns com.mtzion.app.home-sections
   "Homepage section components — all static defaults, no CMS dependency."
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [lambdaisland.hiccup :as hiccup]))
 
 ;; ---------------------------------------------------------------------------
 ;; THIS SUNDAY
@@ -16,10 +17,8 @@
    :facebook-url nil})
 
 (def ^:private default-services
-  [["8:30 AM"  "Early Worship"       "Sanctuary · contemplative"]
-   ["9:30 AM"  "Sunday School"       "All ages"]
-   ["10:30 AM" "Traditional Worship" "Sanctuary · choir & organ"]
-   ["6:00 PM"  "Youth Group"         "Fellowship Hall"]])
+  [["9:30 AM"  "Sunday School"       "All ages · Education Wing"]
+   ["10:30 AM" "Traditional Worship" "Sanctuary · choir & organ"]])
 
 (defn this-sunday-section
   ([] (this-sunday-section nil))
@@ -108,45 +107,96 @@
          "View sermon archive →"]]]])))
 
 ;; ---------------------------------------------------------------------------
-;; FEATURED EVENT
+;; WHAT'S COMING UP  (secretary event flyers, replaces old featured-event)
 ;; ---------------------------------------------------------------------------
 
-(def ^:private default-featured-event
-  {:tags      ["Fellowship" "All ages"]
-   :title     "Upcoming Event"
-   :date-line "See calendar for details"
-   :excerpt   "Join us for fellowship and community."
-   :rsvp-url  nil
-   :cal-url   nil})
+(defn- flyer-card [f]
+  (let [cta-href  (or (when (seq (:cta-url f)) (:cta-url f))
+                      (when (seq (:cta_url f)) (:cta_url f))
+                      "/events")
+        img-url   (:image-url f)
+        body-html (when (seq (:body f)) (:body f))
+        has-text? (or (seq (:title f)) (seq (:subtitle f)) (seq (:cta-label f)) (seq (:cta_label f)))]
+    [:article {:class "mtz-card"}
+     [:a {:href cta-href :style "display: block;"}
+      [:div {:class "mtz-flyer-img"}
+       (cond
+         img-url   [:img {:src img-url :alt (or (:title f) "Event")
+                          :style "width:100%; height:100%; object-fit:cover; display:block;"}]
+         body-html [::hiccup/unsafe-html body-html]
+         :else     nil)]]
+     (when has-text?
+       [:div {:class "mtz-card-body"}
+        (when (seq (:subtitle f))
+          [:p {:class "mtz-card-meta"} (:subtitle f)])
+        (when (seq (:title f))
+          [:h3 {:class "mtz-h3" :style "font-size: 22px; margin-bottom: 8px;"} (:title f)])
+        (let [label (or (:cta-label f) (:cta_label f))]
+          (when (seq label)
+            [:a {:class "mtz-arrow-link" :href cta-href} (str label " →")]))])]))
 
-(defn featured-event-section
-  ([] (featured-event-section nil))
-  ([data]
-   (let [d (merge default-featured-event data)]
+(defn whats-coming-up-section
+  ([] nil)
+  ([features]
+   (when (seq features)
      [:section {:id "events" :class "mtz-section--tint"}
       [:div {:class "mtz-section-inner"}
        [:div {:class "mtz-row"
               :style "justify-content: space-between; align-items: baseline; margin-bottom: 28px;"}
-        [:p {:class "mtz-kicker" :style "margin: 0;"} "Featured Event"]
+        [:div
+         [:p {:class "mtz-kicker" :style "margin: 0;"} "What's Coming Up"]
+         [:h2 {:class "mtz-h2" :style "margin: 4px 0 0;"} "Mark your calendar."]]
         [:a {:class "mtz-arrow-link" :href "/events"} "All events →"]]
-       [:div {:class "mtz-grid mtz-grid--2" :style "gap: 48px; align-items: stretch;"}
-        [:div {:class "mtz-img" :style "min-height: 360px; border-radius: 8px;"}
-         [:span {:class "mtz-img-label"} "event poster"]]
-        [:div {:class "mtz-stack" :style "justify-content: center; gap: 16px;"}
-         [:div {:class "mtz-row" :style "gap: 8px; flex-wrap: wrap;"}
-          (for [tag (:tags d)]
-            [:span {:class "mtz-tag"}
-             [:span {:class "mtz-dot"}]
-             tag])]
-         [:h3 {:class "mtz-h2" :style "font-size: 38px; margin: 0;"} (:title d)]
-         [:p {:class "mtz-mute mtz-mono" :style "font-size: 13px; letter-spacing: 0.10em;"}
-          (:date-line d)]
-         [:p {:style "color: var(--mtz-ink-soft); max-width: 480px; margin: 0;"} (:excerpt d)]
-         [:div {:class "mtz-row" :style "gap: 12px; margin-top: 8px; flex-wrap: wrap;"}
-          (cond
-            (:rsvp-url d) [:a {:class "mtz-btn mtz-btn--primary" :href (:rsvp-url d)} "RSVP"]
-            (:cal-url d)  [:a {:class "mtz-btn mtz-btn--ghost"   :href (:cal-url d)}  "Add to Calendar"]
-            :else         [:a {:class "mtz-btn mtz-btn--primary" :href "/events"}      "View All Events"])]]]]])))
+       [:div {:class (if (> (count features) 1) "mtz-grid mtz-grid--2" "mtz-grid")
+              :style "gap: 36px; align-items: stretch;"}
+        (map flyer-card features)]]])))
+
+;; ---------------------------------------------------------------------------
+;; THIS SUNDAY — compact 4-column strip (home page only)
+;; ---------------------------------------------------------------------------
+
+(defn this-sunday-compact-section
+  ([] (this-sunday-compact-section nil))
+  ([data]
+   (let [d (merge default-this-sunday data)
+         photo (or (:photo-url d) "/images/pulpit.jpg")]
+     [:section {:id "worship" :class "mtz-section"
+                :style "padding-top: 56px; padding-bottom: 56px;"}
+      ;; header row
+      [:div {:style (str "display: flex; justify-content: space-between; align-items: baseline;"
+                         " padding-bottom: 20px; border-bottom: 1px solid var(--mtz-ink);"
+                         " flex-wrap: wrap; gap: 16px; margin-bottom: 32px;")}
+       [:div
+        [:p {:class "mtz-kicker" :style "margin: 0;"} "This Sunday"]
+        [:h3 {:class "mtz-h3" :style "margin: 4px 0 0; font-size: 24px;"} "Worship times"]]
+       [:div {:style "display: flex; gap: 24px; flex-wrap: wrap;"}
+        (when (:bulletin-url d)
+          [:a {:class "mtz-arrow-link" :href (:bulletin-url d)} "This week's bulletin →"])
+        (when (:facebook-url d)
+          [:a {:class "mtz-arrow-link" :href (:facebook-url d) :target "_blank" :rel "noopener"}
+           "Watch on Facebook →"])]]
+      ;; photo + service times
+      [:div {:class "mtz-grid mtz-grid--2" :style "gap: 48px; align-items: stretch;"}
+       ;; photo
+       [:div {:style (str "border-radius: 6px; overflow: hidden;"
+                          " border: 1px solid var(--mtz-rule);"
+                          " min-height: 260px;")}
+        [:img {:src photo :alt "Mount Zion sanctuary"
+               :style "display: block; width: 100%; height: 100%; object-fit: cover;"}]]
+       ;; service time blocks
+       [:div {:style "border: 1px solid var(--mtz-rule); border-radius: 6px; overflow: hidden;"}
+        (map-indexed
+         (fn [i [time title sub]]
+           [:div {:style (str "padding: 28px 32px;"
+                              (when (< i (dec (count default-services)))
+                                " border-bottom: 1px solid var(--mtz-rule);"))}
+            [:div {:class "mtz-mono"
+                   :style "font-size: 12.5px; letter-spacing: 0.12em; color: var(--mtz-mint-dark); font-weight: 600; margin-bottom: 8px;"}
+             time]
+            [:div {:style "font-family: var(--mtz-serif-display); font-size: 26px; font-weight: 500; margin-bottom: 4px;"}
+             title]
+            [:div {:class "mtz-mute" :style "font-size: 14px;"} sub]])
+         default-services)]]])))
 
 ;; ---------------------------------------------------------------------------
 ;; ALWAYS AT MT. ZION
@@ -282,10 +332,9 @@
   ([] (home-page nil))
   ([data]
    (list
-    (this-sunday-section    (:this-sunday data))
-    (last-sunday-section    (:last-sunday data))
-    (featured-event-section (:featured-event data))
-    (always-at-mtz-section  (:activities data))
-    (news-section           (:news data))
+    (whats-coming-up-section   (:features data))
+    (this-sunday-compact-section (:this-sunday data))
+    (always-at-mtz-section     (:activities data))
+    (news-section              (:news data))
     (about-teaser-section)
-    (outreach-section       (:outreach data)))))
+    (outreach-section          (:outreach data)))))

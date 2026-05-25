@@ -15,7 +15,7 @@
    [:div {:class "mtz-img"
           :style "aspect-ratio: 16/9; border-radius: 0; border-left: 0; border-right: 0; border-top: 0; background: var(--mtz-stone);"}
     (if (:video_id s)
-      [:a {:href   (str "/worship#sermon-" (:id s))
+      [:a {:href   (str "/sermons/" (:id s))
            :style  "position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;"}
        [:img {:src   (str "https://videodelivery.net/" (:video_id s) "/thumbnails/thumbnail.jpg")
               :alt   (:title s)
@@ -37,10 +37,9 @@
   (let [sermons (biff.sqlite/execute ctx {:select   :*
                                           :from     :sermon
                                           :where    [:= :published 1]
-                                          :order-by [[:sermon_date :desc]]
-                                          :limit    6})
+                                          :order-by [[:sermon_date :desc]]})
         latest  (first sermons)
-        recent  (rest sermons)]
+        recent  (take 5 (rest sermons))]
     (list
      [:section {:class "mtz-section"}
       [:p {:class "mtz-kicker"} "Sunday Worship · 10:30 AM"]
@@ -80,9 +79,26 @@
         [:div {:class "mtz-section-inner"}
          [:div {:class "mtz-row"
                 :style "justify-content: space-between; align-items: baseline; margin-bottom: 28px;"}
-          [:h2 {:class "mtz-h2" :style "margin: 0;"} "Recent Sermons"]]
+          [:h2 {:class "mtz-h2" :style "margin: 0;"} "Recent Sermons"]
+          [:a {:class "mtz-arrow-link" :href "/sermons"} "Full archive →"]]
          [:div {:class "mtz-grid mtz-grid--3"}
           (map sermon-card recent)]]])
+
+     (when (seq sermons)
+       [:section {:class "mtz-section--tint"}
+        [:div {:class "mtz-section-inner"}
+         [:h2 {:class "mtz-h2" :style "margin-bottom: 20px;"} "Browse Services"]
+         [:div {:style "max-width: 480px;"}
+          [:select {:style "width:100%; padding:12px 16px; font-size:15px; border:1px solid var(--mtz-rule); border-radius:6px; background:var(--mtz-bg); cursor:pointer; color:var(--mtz-ink);"
+                    :onchange "if(this.value) window.location.href=this.value"}
+           [:option {:value ""} "Select a Sunday…"]
+           (map (fn [s]
+                  [:option {:value (str "/sermons/" (:id s))}
+                   (str (or (format-date (:sermon_date s)) "Undated")
+                        (when (seq (:title s)) (str " — " (:title s))))])
+                sermons)]
+          [:a {:class "mtz-arrow-link" :href "/sermons" :style "margin-top: 12px; display: inline-flex;"}
+           "Full archive →"]]]])
 
      [:section {:class "mtz-section"}
       [:div {:class "mtz-grid mtz-grid--2" :style "gap: 64px; align-items: center;"}

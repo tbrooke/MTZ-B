@@ -385,6 +385,13 @@
   margin: 0 0 8px;
 }
 
+/* ---------- Flyer cards (What's Coming Up) ------------------- */
+.mtz-flyer-img img {
+  display: block;
+  width: 100%;
+  border-bottom: 1px solid var(--mtz-rule);
+}
+
 /* ---------- Image placeholders ------------------------------- */
 .mtz-img {
   position: relative;
@@ -766,4 +773,354 @@ body {
 .bento-drop-title { font-family:var(--adm-serif); font-size:17px; font-weight:500; }
 .bento-drop-hint { font-size:11.5px; opacity:0.6; margin-top:2px; }
 .bento-choose-btn { background:#F7F4EE; color:#1C1A17; border:none; padding:10px 16px; border-radius:4px; font-size:13px; font-weight:500; white-space:nowrap; cursor:pointer; font-family:var(--mtz-sans-menu); text-decoration:none; display:inline-block; }
+
+/* =============================================================
+   Preschool Site
+   ============================================================= */
+
+:root {
+  --ps-cream:      #F2EBDD;
+  --ps-cream-soft: #F8F3E8;
+  --ps-paper:      #FFFFFF;
+  --ps-ink:        #1A1A1A;
+  --ps-ink-2:      #2A2A2A;
+  --ps-muted:      #6B6358;
+  --ps-rule:       #E4DCC8;
+  --ps-green:      #1B6B53;
+  --ps-green-deep: #155743;
+  --ps-green-tint: #E6EFEB;
+  --ps-sun:        #E8C77A;
+  --ps-blush:      #E9B69A;
+}
+
+.ps-page {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 19px;
+  line-height: 1.55;
+  color: var(--ps-ink);
+  background: var(--ps-paper);
+  margin: 0; padding: 0;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+.ps-page *, .ps-page *::before, .ps-page *::after { box-sizing: border-box; }
+.ps-page a { color: inherit; text-decoration: none; }
+.ps-page img, .ps-page svg { display: block; max-width: 100%; }
+
+/* ── Header ── */
+.ps-header { background: var(--ps-cream); border-bottom: 1px solid var(--ps-rule); }
+.ps-nav-wrap {
+  max-width: 1320px; margin: 0 auto; padding: 28px 48px 36px;
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center; column-gap: 32px;
+}
+.ps-nav-left, .ps-nav-right {
+  display: flex; align-items: center; gap: 56px;
+  font-family: "Outfit", system-ui, sans-serif;
+  font-weight: 400; font-size: 13px;
+  letter-spacing: 0.18em; text-transform: uppercase;
+}
+.ps-nav-right { justify-content: flex-end; }
+.ps-nav-left a:hover, .ps-nav-right a:hover { color: var(--ps-green); }
+.ps-has-caret::after {
+  content: ""; display: inline-block;
+  width: 0; height: 0;
+  border-left: 3px solid transparent; border-right: 3px solid transparent;
+  border-top: 3px solid currentColor;
+  margin-left: 6px; transform: translateY(-2px);
+}
+.ps-brand {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 2px; text-align: center; padding: 0 8px;
+}
+.ps-brand-mark { width: 56px; height: 38px; color: var(--ps-green); }
+.ps-brand-name {
+  font-family: "Outfit", sans-serif; font-weight: 500;
+  letter-spacing: 0.22em; font-size: 18px;
+  color: var(--ps-ink); margin-top: 2px;
+}
+.ps-brand-sub {
+  font-family: "Outfit", sans-serif; font-weight: 500;
+  letter-spacing: 0.22em; font-size: 11px;
+  color: var(--ps-ink); margin-top: 2px;
+}
+.ps-brand-locale {
+  font-family: "IBM Plex Mono", monospace; font-weight: 400;
+  letter-spacing: 0.16em; font-size: 9.5px;
+  color: var(--ps-muted); margin-top: 6px; line-height: 1.3;
+}
+.ps-toggle-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 12px 18px; border: 1px solid var(--ps-ink);
+  border-radius: 999px; background: transparent;
+  color: var(--ps-ink); cursor: pointer; text-decoration: none;
+  font-family: "Outfit", sans-serif; font-weight: 400;
+  font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.ps-toggle-btn:hover { background: var(--ps-ink); color: var(--ps-cream); }
+.ps-toggle-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+/* ── Shared utilities ── */
+.ps-mono-eyebrow {
+  font-family: "IBM Plex Mono", monospace; font-weight: 500;
+  letter-spacing: 0.18em; text-transform: uppercase;
+  font-size: 13px; color: var(--ps-green);
+}
+.ps-btn {
+  font-family: "Outfit", sans-serif; font-weight: 500;
+  letter-spacing: 0.16em; text-transform: uppercase; font-size: 12.5px;
+  padding: 18px 28px; border-radius: 2px; cursor: pointer;
+  border: 1px solid transparent; transition: all 0.15s ease;
+  display: inline-flex; align-items: center; gap: 10px;
+}
+.ps-btn--primary { background: var(--ps-green); color: #fff; border-color: var(--ps-green); }
+.ps-btn--primary:hover { background: var(--ps-green-deep); border-color: var(--ps-green-deep); }
+.ps-btn--secondary { background: transparent; color: var(--ps-ink); border-color: var(--ps-ink); }
+.ps-btn--secondary:hover { background: var(--ps-ink); color: var(--ps-cream); }
+
+/* ── Hero ── */
+.ps-hero {
+  max-width: 1320px; margin: 0 auto; padding: 72px 48px 88px;
+  display: grid; grid-template-columns: 1fr 1.5fr;
+  gap: 64px; align-items: start;
+}
+.ps-hero-copy { padding-top: 48px; }
+.ps-hero-eyebrow { display: block; margin-bottom: 28px; }
+.ps-hero-lede {
+  font-family: "Cormorant Garamond", serif; font-size: 24px;
+  line-height: 1.45; color: var(--ps-ink-2);
+  max-width: 520px; margin: 0 0 40px; font-weight: 400;
+}
+.ps-cta-row { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
+
+/* ── Hero right column (artwork + headline) ── */
+.ps-hero-right { display: flex; flex-direction: column; }
+.ps-hero-headline {
+  font-family: "Cormorant Garamond", serif; font-weight: 500;
+  font-size: clamp(28px, 3vw, 44px); line-height: 1.1;
+  letter-spacing: -0.01em; margin: 52px 0 0;
+  color: var(--ps-ink); text-wrap: pretty;
+}
+.ps-hero-headline em { font-style: italic; font-weight: 400; color: var(--ps-green); }
+
+/* ── Hero artwork frame ── */
+.ps-hero-art {
+  position: relative; aspect-ratio: 558 / 400;
+  width: 100%;
+}
+.ps-hero-art .ps-backplate {
+  position: absolute; inset: -28px -32px -40px -16px;
+  background: var(--ps-cream-soft); border-radius: 4px; z-index: 0;
+}
+.ps-hero-art .ps-dot {
+  position: absolute; width: 14px; height: 14px;
+  border-radius: 999px; z-index: 2;
+}
+.ps-hero-art .ps-dot-tl { top: -10px; left: 10%; background: var(--ps-sun); }
+.ps-hero-art .ps-dot-br { bottom: -8px; right: 18%; background: var(--ps-green); }
+.ps-hero-art .ps-stamp {
+  position: absolute; bottom: -22px; left: -8px;
+  font-family: "IBM Plex Mono", monospace; font-size: 10.5px;
+  letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ps-muted); background: var(--ps-paper);
+  padding: 4px 10px; border: 1px solid var(--ps-rule); z-index: 3;
+}
+.ps-hero-art .ps-art-img {
+  position: relative; z-index: 1;
+  width: 100%; height: 100%; object-fit: contain;
+}
+.ps-rule-row { max-width: 1320px; margin: 0 auto; padding: 0 48px; }
+.ps-rule-row hr { border: 0; border-top: 1px solid var(--ps-rule); margin: 0; }
+
+/* ── Welcome ── */
+.ps-welcome {
+  max-width: 1320px; margin: 0 auto; padding: 96px 48px;
+  display: grid; grid-template-columns: 1fr 1.4fr; gap: 96px; align-items: start;
+}
+.ps-welcome h2 {
+  font-family: "Cormorant Garamond", serif; font-weight: 500;
+  font-size: 44px; line-height: 1.08; margin: 16px 0 0; color: var(--ps-ink);
+}
+.ps-welcome h2 em { font-style: italic; color: var(--ps-green); }
+.ps-welcome-body p {
+  font-size: 20px; line-height: 1.6; color: var(--ps-ink-2);
+  margin: 0 0 18px; max-width: 60ch;
+}
+.ps-welcome-body p:first-child::first-letter {
+  font-family: "Cormorant Garamond", serif; font-weight: 500;
+  float: left; font-size: 64px; line-height: 0.9;
+  margin: 6px 10px 0 0; color: var(--ps-green);
+}
+.ps-signature {
+  margin-top: 28px; font-family: "Cormorant Garamond", serif;
+  font-style: italic; font-size: 22px; color: var(--ps-ink);
+}
+.ps-signature small {
+  display: block; font-family: "IBM Plex Mono", monospace; font-style: normal;
+  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--ps-muted); margin-top: 4px;
+}
+
+/* ── Programs ── */
+.ps-programs {
+  background: var(--ps-cream-soft);
+  border-top: 1px solid var(--ps-rule); border-bottom: 1px solid var(--ps-rule);
+}
+.ps-programs-inner { max-width: 1320px; margin: 0 auto; padding: 88px 48px 96px; }
+.ps-section-head {
+  display: grid; grid-template-columns: 1fr auto;
+  gap: 32px; align-items: end; margin-bottom: 56px;
+}
+.ps-section-head h2 {
+  font-family: "Cormorant Garamond", serif; font-weight: 500;
+  font-size: 48px; line-height: 1.05; margin: 12px 0 0; color: var(--ps-ink); max-width: 14ch;
+}
+.ps-section-head h2 em { font-style: italic; color: var(--ps-green); }
+.ps-section-lede { font-size: 19px; color: var(--ps-ink-2); max-width: 38ch; margin: 0; }
+.ps-prog-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+.ps-prog-card {
+  background: var(--ps-paper); border: 1px solid var(--ps-rule);
+  padding: 32px 30px 36px; display: flex; flex-direction: column;
+  gap: 18px; min-height: 340px; position: relative;
+}
+.ps-prog-card .ps-prog-age {
+  font-family: "IBM Plex Mono", monospace; font-size: 11px;
+  letter-spacing: 0.18em; text-transform: uppercase; color: var(--ps-green);
+}
+.ps-prog-card h3 {
+  font-family: "Cormorant Garamond", serif; font-weight: 500;
+  font-size: 32px; line-height: 1.1; margin: 0; color: var(--ps-ink);
+}
+.ps-prog-card p {
+  font-size: 17px; line-height: 1.55; color: var(--ps-ink-2); margin: 0; flex: 1;
+}
+.ps-prog-meta {
+  display: flex; justify-content: space-between;
+  font-family: "IBM Plex Mono", monospace; font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ps-muted);
+  border-top: 1px solid var(--ps-rule); padding-top: 14px;
+}
+.ps-prog-tag {
+  position: absolute; top: 26px; right: 30px;
+  width: 8px; height: 8px; border-radius: 999px; background: var(--ps-sun);
+}
+.ps-prog-card.t2 .ps-prog-tag { background: var(--ps-blush); }
+.ps-prog-card.t3 .ps-prog-tag { background: var(--ps-green); }
+
+/* ── Day in the life ── */
+.ps-day {
+  max-width: 1320px; margin: 0 auto; padding: 104px 48px;
+  display: grid; grid-template-columns: 1fr 1.1fr; gap: 80px; align-items: center;
+}
+.ps-day-art {
+  position: relative; background: var(--ps-green); color: var(--ps-cream-soft);
+  aspect-ratio: 4 / 5; padding: 32px; overflow: hidden;
+}
+.ps-day-stripe {
+  position: absolute; inset: 0;
+  background-image: repeating-linear-gradient(
+    135deg, transparent 0 22px, rgba(255,255,255,0.06) 22px 23px
+  );
+}
+.ps-day-label {
+  position: relative; font-family: "IBM Plex Mono", monospace;
+  font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: rgba(255,255,255,0.7);
+}
+.ps-day-quote {
+  position: absolute; bottom: 40px; left: 32px; right: 32px;
+  font-family: "Cormorant Garamond", serif; font-weight: 400;
+  font-style: italic; font-size: 30px; line-height: 1.18; color: #fff;
+}
+.ps-day-quote::before {
+  content: "\201C"; display: block; font-size: 80px; line-height: 0.6;
+  margin-bottom: 12px; color: var(--ps-sun); font-style: normal;
+}
+.ps-day h2 {
+  font-family: "Cormorant Garamond", serif; font-weight: 500;
+  font-size: 48px; line-height: 1.05; margin: 12px 0 24px;
+}
+.ps-day h2 em { font-style: italic; color: var(--ps-green); }
+.ps-schedule { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ps-rule); }
+.ps-schedule li {
+  display: grid; grid-template-columns: 100px 1fr auto;
+  gap: 24px; padding: 16px 0; border-bottom: 1px solid var(--ps-rule); align-items: baseline;
+}
+.ps-sched-time { font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: 0.12em; color: var(--ps-green); }
+.ps-sched-what { font-family: "Cormorant Garamond", serif; font-size: 22px; line-height: 1.2; color: var(--ps-ink); }
+.ps-sched-note { font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ps-muted); }
+
+/* ── Values ── */
+.ps-values { background: var(--ps-green); color: var(--ps-cream-soft); padding: 96px 0; }
+.ps-values-inner { max-width: 1320px; margin: 0 auto; padding: 0 48px; }
+.ps-values-eyebrow { color: var(--ps-sun); font-family: "IBM Plex Mono", monospace; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; font-size: 12px; }
+.ps-values h2 {
+  font-family: "Cormorant Garamond", serif; font-weight: 500;
+  font-size: 56px; line-height: 1.05; margin: 16px 0 56px; max-width: 18ch; color: #fff;
+}
+.ps-values h2 em { font-style: italic; color: var(--ps-sun); }
+.ps-values-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px;
+  border-top: 1px solid rgba(255,255,255,0.18); padding-top: 40px;
+}
+.ps-value-num { font-family: "IBM Plex Mono", monospace; font-size: 12px; letter-spacing: 0.16em; color: var(--ps-sun); margin-bottom: 16px; }
+.ps-values-grid h3 { font-family: "Cormorant Garamond", serif; font-weight: 500; font-size: 26px; color: #fff; margin: 0 0 12px; }
+.ps-values-grid p { font-size: 16px; line-height: 1.55; color: rgba(255,255,255,0.78); margin: 0; }
+
+/* ── Enrollment ── */
+.ps-enroll { max-width: 1320px; margin: 0 auto; padding: 112px 48px; text-align: center; }
+.ps-enroll-eyebrow { display: block; margin-bottom: 20px; }
+.ps-enroll h2 {
+  font-family: "Cormorant Garamond", serif; font-weight: 500;
+  font-size: clamp(48px, 5vw, 72px); line-height: 1.02;
+  margin: 0 0 24px; max-width: 18ch; margin-left: auto; margin-right: auto;
+}
+.ps-enroll h2 em { font-style: italic; color: var(--ps-green); }
+.ps-enroll p { font-size: 21px; color: var(--ps-ink-2); max-width: 56ch; margin: 0 auto 36px; }
+.ps-enroll-meta {
+  display: inline-flex; gap: 48px; margin-top: 56px;
+  padding-top: 28px; border-top: 1px solid var(--ps-rule);
+}
+.ps-enroll-meta div { text-align: left; }
+.ps-enroll-k { font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ps-muted); display: block; margin-bottom: 4px; }
+.ps-enroll-v { font-family: "Cormorant Garamond", serif; font-size: 20px; color: var(--ps-ink); }
+
+/* ── Footer ── */
+.ps-footer { background: var(--ps-cream); border-top: 1px solid var(--ps-rule); padding: 64px 0 28px; }
+.ps-foot-inner {
+  max-width: 1320px; margin: 0 auto; padding: 0 48px;
+  display: grid; grid-template-columns: 1.4fr 1fr 1fr 1fr; gap: 56px;
+}
+.ps-foot-brand-name { font-family: "Outfit", sans-serif; font-weight: 500; letter-spacing: 0.22em; font-size: 16px; margin-top: 8px; color: var(--ps-ink); }
+.ps-foot-brand p { font-size: 17px; color: var(--ps-ink-2); margin: 18px 0 0; max-width: 34ch; }
+.ps-foot h4 { font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ps-muted); margin: 4px 0 16px; font-weight: 500; }
+.ps-foot ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.ps-foot a { font-family: "Cormorant Garamond", serif; font-size: 19px; color: var(--ps-ink); }
+.ps-foot a:hover { color: var(--ps-green); }
+.ps-foot-legal {
+  max-width: 1320px; margin: 56px auto 0; padding: 24px 48px 0;
+  border-top: 1px solid var(--ps-rule); display: flex; justify-content: space-between;
+  font-family: "IBM Plex Mono", monospace; font-size: 11px;
+  letter-spacing: 0.14em; text-transform: uppercase; color: var(--ps-muted);
+}
+
+/* ── Responsive ── */
+@media (max-width: 1080px) {
+  .ps-nav-left, .ps-nav-right { gap: 32px; }
+  .ps-nav-wrap { padding: 24px 28px 28px; }
+  .ps-hero, .ps-welcome, .ps-day, .ps-programs-inner, .ps-values-inner, .ps-enroll, .ps-foot-inner { padding-left: 28px; padding-right: 28px; }
+  .ps-rule-row { padding-left: 28px; padding-right: 28px; }
+}
+@media (max-width: 920px) {
+  .ps-nav-left, .ps-nav-right { display: none; }
+  .ps-nav-wrap { grid-template-columns: 1fr; justify-items: center; }
+  .ps-hero, .ps-welcome, .ps-day { grid-template-columns: 1fr; gap: 48px; }
+  .ps-hero-copy { padding-top: 0; }
+  .ps-hero-headline { font-size: clamp(24px, 5vw, 36px); margin-top: 44px; }
+  .ps-prog-grid { grid-template-columns: 1fr 1fr; }
+  .ps-values-grid { grid-template-columns: 1fr 1fr; }
+  .ps-foot-inner { grid-template-columns: 1fr 1fr; }
+  .ps-section-head { grid-template-columns: 1fr; }
+}
 .bento-choose-btn:hover { background:#EDE8DF; }

@@ -1,6 +1,8 @@
 (ns com.mtzion.app.outreach
-  (:require [com.mtzion.app.home-sections :as home-sections]
-            [com.mtzion.ui.base :as base]))
+  (:require [com.biffweb.sqlite :as biff.sqlite]
+            [com.mtzion.app.home-sections :as home-sections]
+            [com.mtzion.ui.base :as base]
+            [lambdaisland.hiccup :as hiccup]))
 
 (defn- page-content []
   (list
@@ -50,8 +52,12 @@
           [:h3 {:class "mtz-h3" :style "font-size: 20px; margin-bottom: 6px;"} name]
           [:p {:style "color: var(--mtz-ink-soft); margin: 0; font-size: 15px;"} desc]]])]]]))
 
-(defn outreach [_ctx]
-  (base/page "Outreach — Mount Zion UCC" (page-content)))
+(defn outreach [ctx]
+  (let [db-page (first (biff.sqlite/execute ctx {:select :* :from :page :where [:= :slug "outreach"]}))]
+    (base/page "Outreach — Mount Zion UCC"
+               (if (seq (:body db-page))
+                 [::hiccup/unsafe-html (:body db-page)]
+                 (page-content)))))
 
 (def module
   {:biff.ring/routes

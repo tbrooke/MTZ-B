@@ -1,21 +1,18 @@
 (ns com.mtzion.app.landing
-  (:require [com.biffweb.sqlite :as biff.sqlite]
+  (:require [clojure.string :as str]
+            [com.biffweb.sqlite :as biff.sqlite]
             [com.mtzion.app.home-sections :as home-sections]
             [com.mtzion.ui.base :as base]))
 
-(defn- now-epoch [] (quot (System/currentTimeMillis) 1000))
+(defn- normalize [row]
+  (when row
+    (into {} (map (fn [[k v]] [(keyword (str/replace (name k) "-" "_")) v]) row))))
 
 (defn- format-month-year [epoch]
   (when epoch
     (-> (java.time.Instant/ofEpochSecond epoch)
         (java.time.LocalDate/ofInstant java.time.ZoneOffset/UTC)
         (.format (java.time.format.DateTimeFormatter/ofPattern "MMMM yyyy")))))
-
-(defn- format-date [epoch]
-  (when epoch
-    (-> (java.time.Instant/ofEpochSecond epoch)
-        (java.time.LocalDate/ofInstant java.time.ZoneOffset/UTC)
-        (.format (java.time.format.DateTimeFormatter/ofPattern "MMMM d, yyyy")))))
 
 (defn- photo-hero []
   [:section {:id "home"}
@@ -30,7 +27,7 @@
      [:div {:style "max-width: 760px; color: #fff;"}
       [:p {:class "mtz-kicker"
            :style "color: rgba(255,255,255,0.85); margin-bottom: 18px;"}
-       "Welcome to Mt Zion UCC · est. 1858"]
+       "Welcome to Mt Zion UCC · est. 1755"]
       [:h1 {:class "mtz-h1"
             :style "color: #fff; margin: 0; font-size: 72px; line-height: 1.02;"}
        "A family-oriented church in China Grove — "
@@ -50,50 +47,49 @@
      "family you've been looking for."]]
    [:hr {:class "mtz-rule"}]])
 
+(defn- exec [ctx honey]
+  (mapv normalize (biff.sqlite/execute ctx honey)))
+
+(defn- cf-img-url [ctx image-id variant]
+  (when (seq image-id)
+    (str "https://imagedelivery.net/" (:cf/images-hash ctx) "/" image-id "/" variant)))
+
+(defn- format-event-date [epoch]
+  (when epoch
+    (-> (java.time.Instant/ofEpochSecond epoch)
+        (java.time.LocalDate/ofInstant java.time.ZoneOffset/UTC)
+        (.format (java.time.format.DateTimeFormatter/ofPattern "EEEE, MMMM d")))))
+
 (defn home [ctx]
-  (let [latest-sermon (first (biff.sqlite/execute ctx
-                                                  {:select   :*
-                                                   :from     :sermon
-                                                   :where    [:= :published 1]
-                                                   :order-by [[:sermon_date :desc]]
-                                                   :limit    1}))
-        latest-posts  (biff.sqlite/execute ctx
-                                           {:select   :*
-                                            :from     :post
-                                            :where    [:is-not :published_at nil]
-                                            :order-by [[:published_at :desc]]
-                                            :limit    3})
-        next-event    (first (biff.sqlite/execute ctx
-                                                  {:select   :*
-                                                   :from     :event
-                                                   :where    [:and
-                                                              [:= :published 1]
-                                                              [:> :start_at (now-epoch)]]
-                                                   :order-by [[:start_at :asc]]
-                                                   :limit    1}))]
+  (let [featured-events (exec ctx {:select   :*
+                                   :from     :event
+                                   :where    [:and [:= :featured 1] [:= :published 1]]
+                                   :order-by [[:start_at :asc]]
+                                   :limit    2})
+        latest-posts    (exec ctx {:select   :*
+                                   :from     :post
+                                   :where    [:is-not :published_at nil]
+                                   :order-by [[:published_at :desc]]
+                                   :limit    3})]
     (base/page "Mount Zion UCC — Welcome"
                (list
                 (photo-hero)
                 (home-sections/home-page
-                 {:last-sunday    (when latest-sermon
-                                    {:title     (:title latest-sermon)
-                                     :date      (or (format-date (:sermon_date latest-sermon)) "Last Sunday")
-                                     :scripture (:scripture latest-sermon)
-                                     :excerpt   (or (:description latest-sermon) "")
-                                     :video-url (when (:video_id latest-sermon)
-                                                  (str "https://iframe.cloudflarestream.com/"
-                                                       (:video_id latest-sermon)))})
-                  :featured-event (when next-event
-                                    {:title     (:title next-event)
-                                     :date-line (format-date (:start_at next-event))
-                                     :excerpt   (or (:description next-event) "")})
-                  :news           (when (seq latest-posts)
-                                    (map (fn [p]
-                                           {:tag      "News"
-                                            :title    (:title p)
-                                            :date     (or (format-month-year (:published_at p)) "")
-                                            :excerpt  (or (:excerpt p) "")})
-                                         latest-posts))})))))
+                 {:features (map (fn [ev]
+                                   {:body      (:description ev)
+                                    :image-url (cf-img-url ctx (:image_id ev) "public")
+                                    :title     (:title ev)
+                                    :subtitle  (format-event-date (:start_at ev))
+                                    :cta-url   "/events"
+                                    :cta-label "See all events"})
+                                 featured-events)
+                  :news     (when (seq latest-posts)
+                              (map (fn [p]
+                                     {:tag     "News"
+                                      :title   (:title p)
+                                      :date    (or (format-month-year (:published_at p)) "")
+                                      :excerpt (or (:excerpt p) "")})
+                                   latest-posts))})))))
 
 (def module
   {:biff.ring/routes

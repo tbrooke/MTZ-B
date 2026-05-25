@@ -1,19 +1,80 @@
 (ns com.mtzion.app.events
-  (:require [com.mtzion.ui.base :as base]))
+  (:require [clojure.string :as str]
+            [com.biffweb.sqlite :as biff.sqlite]
+            [com.mtzion.ui.base :as base]
+            [lambdaisland.hiccup :as hiccup]))
 
-(def ^:private upcoming-events
-  [{:date "May 18, 2026"  :tags ["Fellowship"] :title "Spring Picnic"
-    :desc "Annual church picnic on the lawn. Bring a dish to share. All ages welcome."}
-   {:date "May 25, 2026"  :tags ["Worship"]    :title "Memorial Day Sunday"
-    :desc "Special service honoring those who have served. No Sunday School."}
-   {:date "June 1, 2026"  :tags ["Community"]  :title "Food Drive Drop-Off"
-    :desc "Monthly food sort at Rowan Helping Ministries. Meet at the fellowship hall at 9 AM."}
-   {:date "June 8, 2026"  :tags ["Youth"]      :title "Youth Group Pool Party"
-    :desc "Middle and high school students are invited for an end-of-year celebration."}
-   {:date "June 15, 2026" :tags ["All ages"]   :title "Vacation Bible School Kick-Off"
-    :desc "VBS runs June 15–19. Registration open now — see the church office for details."}])
+(defn- normalize [rows]
+  (mapv (fn [row]
+          (into {} (map (fn [[k v]] [(keyword (str/replace (name k) "-" "_")) v]) row)))
+        rows))
 
-(defn- page-content []
+(defn- now-epoch [] (.getEpochSecond (java.time.Instant/now)))
+
+(defn- format-date [epoch]
+  (when epoch
+    (-> (java.time.Instant/ofEpochSecond epoch)
+        (java.time.LocalDate/ofInstant java.time.ZoneOffset/UTC)
+        (.format (java.time.format.DateTimeFormatter/ofPattern "EEEE, MMMM d, yyyy")))))
+
+(defn- format-time [epoch]
+  (when epoch
+    (-> (java.time.Instant/ofEpochSecond epoch)
+        (java.time.LocalTime/ofInstant java.time.ZoneOffset/UTC)
+        (.format (java.time.format.DateTimeFormatter/ofPattern "h:mm a")))))
+
+(defn- cf-img-url [ctx image-id]
+  (when (seq image-id)
+    (str "https://imagedelivery.net/" (:cf/images-hash ctx) "/" image-id "/public")))
+
+(defn- event-row [ev ctx]
+  [:div {:class "mtz-row"
+         :style "padding: 24px 0; border-bottom: 1px solid var(--mtz-rule); gap: 32px; align-items: start;"}
+   (when-let [img (cf-img-url ctx (:image_id ev))]
+     [:div {:style "flex: 0 0 140px;"}
+      [:img {:src img :alt (:title ev)
+             :style "width:140px; height:90px; object-fit:cover; border-radius:4px; display:block;"}]])
+   [:div {:style "flex: 1; min-width: 0;"}
+    [:div {:class "mtz-mono"
+           :style "font-size: 13px; color: var(--mtz-mint-dark); margin-bottom: 6px; font-weight: 600;"}
+     (str (format-date (:start_at ev))
+          (when (and (not= 1 (:all_day ev)) (:start_at ev))
+            (str " · " (format-time (:start_at ev))))
+          (when (seq (:location ev)) (str " · " (:location ev)))
+          (when (not= "none" (:recurrence ev "none"))
+            (case (:recurrence ev)
+              "weekly"   " · Weekly"
+              "biweekly" " · Every 2 weeks"
+              "monthly"  " · Monthly"
+              "daily"    " · Daily"
+              "yearly"   " · Yearly"
+              "")))]
+    [:h3 {:class "mtz-h3" :style "font-size: 20px; margin-bottom: 8px;"} (:title ev)]
+    (when (seq (:description ev))
+      [:div {:class "mtz-prose"
+             :style "color: var(--mtz-ink-soft); font-size: 15px; margin: 0;"}
+       [::hiccup/unsafe-html (:description ev)]])]])
+
+(defn- featured-card [ev ctx]
+  (let [img (cf-img-url ctx (:image_id ev))]
+    [:article {:class "mtz-card"}
+     (when img
+       [:div {:class "mtz-flyer-img"}
+        [:img {:src img :alt (:title ev)
+               :style "width:100%; height:100%; object-fit:cover; display:block;"}]])
+     [:div {:class "mtz-card-body"}
+      [:p {:class "mtz-card-meta"}
+       (str (format-date (:start_at ev))
+            (when (and (not= 1 (:all_day ev)) (:start_at ev))
+              (str " · " (format-time (:start_at ev))))
+            (when (seq (:location ev)) (str " · " (:location ev))))]
+      [:h3 {:class "mtz-h3" :style "font-size: 22px; margin-bottom: 8px;"} (:title ev)]
+      (when (seq (:description ev))
+        [:div {:style "color: var(--mtz-ink-soft); font-size: 15px; margin: 0 0 12px;"}
+         [::hiccup/unsafe-html (:description ev)]])
+      [:a {:class "mtz-arrow-link" :href "/contact"} "Get in Touch →"]]]))
+
+(defn- page-content [ctx events featured-events]
   (list
    [:section {:class "mtz-section"}
     [:p {:class "mtz-kicker"} "What's Coming Up"]
@@ -22,41 +83,29 @@
      "From Sunday worship to community gatherings, there's always something happening at Mt. Zion."]
     [:hr {:class "mtz-rule"}]]
 
-   [:section {:class "mtz-section--tint"}
-    [:div {:class "mtz-section-inner"}
-     [:p {:class "mtz-kicker" :style "margin: 0 0 12px;"} "Featured Event"]
-     [:div {:class "mtz-grid mtz-grid--2" :style "gap: 48px; align-items: center;"}
-      [:div {:class "mtz-img" :style "min-height: 320px; border-radius: 8px;"}
-       [:span {:class "mtz-img-label"} "event poster"]]
-      [:div
-       [:div {:class "mtz-row" :style "gap: 8px; margin-bottom: 16px; flex-wrap: wrap;"}
-        [:span {:class "mtz-tag"} [:span {:class "mtz-dot"}] "Fellowship"]
-        [:span {:class "mtz-tag"} [:span {:class "mtz-dot"}] "All ages"]]
-       [:h2 {:class "mtz-h2"} "Spring Picnic"]
-       [:p {:class "mtz-mono mtz-mute" :style "font-size: 13px; letter-spacing: 0.10em; margin-bottom: 16px;"}
-        "Sunday, May 18 · After the 10:30 AM Service"]
-       [:p {:style "color: var(--mtz-ink-soft); max-width: 480px; margin: 0 0 24px;"}
-        "Join us on the church lawn for our annual spring picnic. Bring a dish to share — "
-        "the church will provide lemonade and dessert. All are welcome."]
-       [:a {:class "mtz-btn mtz-btn--primary" :href "/contact"} "RSVP / Questions"]]]]]
+   (when (seq featured-events)
+     [:section {:class "mtz-section--tint"}
+      [:div {:class "mtz-section-inner"}
+       [:div {:class "mtz-row"
+              :style "justify-content: space-between; align-items: baseline; margin-bottom: 28px;"}
+        [:div
+         [:p {:class "mtz-kicker" :style "margin: 0;"} "Featured"]
+         [:h2 {:class "mtz-h2" :style "margin: 4px 0 0;"} "Mark your calendar."]]
+        [:a {:class "mtz-arrow-link" :href "/contact"} "Questions? Contact us →"]]
+       [:div {:class (if (> (count featured-events) 1) "mtz-grid mtz-grid--2" "mtz-grid")
+              :style "gap: 36px; align-items: stretch;"}
+        (map #(featured-card % ctx) featured-events)]]])
 
    [:section {:class "mtz-section"}
     [:div {:class "mtz-row"
            :style "justify-content: space-between; align-items: baseline; margin-bottom: 32px;"}
      [:h2 {:class "mtz-h2" :style "margin: 0;"} "Upcoming Events"]
      [:a {:class "mtz-arrow-link" :href "/calendar.ics"} "Subscribe to calendar →"]]
-    [:div {:class "mtz-stack" :style "gap: 0; border-top: 1px solid var(--mtz-ink);"}
-     (for [e upcoming-events]
-       [:div {:class "mtz-row"
-              :style "padding: 24px 0; border-bottom: 1px solid var(--mtz-rule); gap: 32px; align-items: start;"}
-        [:div {:class "mtz-mono" :style "min-width: 140px; color: var(--mtz-mint-dark); font-size: 13px; padding-top: 4px;"}
-         (:date e)]
-        [:div {:style "flex: 1;"}
-         [:div {:class "mtz-row" :style "gap: 6px; margin-bottom: 8px; flex-wrap: wrap;"}
-          (for [tag (:tags e)]
-            [:span {:class "mtz-tag"} [:span {:class "mtz-dot"}] tag])]
-         [:h3 {:class "mtz-h3" :style "font-size: 20px; margin-bottom: 6px;"} (:title e)]
-         [:p {:style "color: var(--mtz-ink-soft); margin: 0; font-size: 15px;"} (:desc e)]]])]]
+    (if (seq events)
+      [:div {:style "border-top: 1px solid var(--mtz-ink);"}
+       (map #(event-row % ctx) events)]
+      [:p {:class "mtz-mute" :style "padding: 32px 0;"}
+       "No upcoming events at the moment. Check back soon."])]
 
    [:section {:class "mtz-section--cream"}
     [:div {:class "mtz-section-inner" :style "text-align: center;"}
@@ -65,8 +114,19 @@
       "Subscribe to our calendar to get Mt. Zion events right in your calendar app."]
      [:a {:class "mtz-btn mtz-btn--ghost" :href "/calendar.ics"} "Subscribe (.ics)"]]]))
 
-(defn events [_ctx]
-  (base/page "Events — Mount Zion UCC" (page-content)))
+(defn events [ctx]
+  (let [n-ep           (now-epoch)
+        rows           (normalize (biff.sqlite/execute ctx {:select   :*
+                                                            :from     :event
+                                                            :where    [:and [:= :published 1]
+                                                                       [:>= :start_at n-ep]]
+                                                            :order-by [[:start_at :asc]]}))
+        featured-events (normalize (biff.sqlite/execute ctx {:select   :*
+                                                             :from     :event
+                                                             :where    [:and [:= :published 1]
+                                                                        [:= :featured 1]]
+                                                             :order-by [[:start_at :asc]]}))]
+    (base/page "Events — Mount Zion UCC" (page-content ctx rows featured-events))))
 
 (def module
   {:biff.ring/routes

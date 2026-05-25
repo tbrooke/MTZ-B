@@ -3,6 +3,7 @@
             [clojure.string :as str]
             [com.biffweb.sqlite :as biff.sqlite]
             [com.mtzion.lib.middleware :refer [wrap-signed-in]]
+            [com.mtzion.lib.r2 :as r2]
             [com.mtzion.lib.ui :as ui]
             [com.mtzion.ui.admin :as adm]
             [hato.client :as http]
@@ -67,6 +68,14 @@
         (biff.sqlite/execute ctx honey)))
 (defn- new-id [] (str (random-uuid)))
 
+(defn- save-sermon-pdf [ctx date-str param-file suffix]
+  (when-let [f (:tempfile param-file)]
+    (when (and (seq (:filename param-file)) (pos? (.length f)))
+      (let [key (str "sermons/" date-str "/" suffix)]
+        (with-open [in (java.io.FileInputStream. f)]
+          (r2/put! ctx key "application/pdf" in (.length f)))
+        (r2/public-url ctx key)))))
+
 (defn- epoch->date [epoch]
   (when epoch
     (-> (java.time.Instant/ofEpochSecond epoch) .toString (subs 0 10))))
@@ -121,17 +130,43 @@
    (adm/field {:label "Description / Pastor's Note"}
               [:textarea {:name "description" :class "adm-textarea" :rows "4"}
                (or (:description s) "")])
-   (if (:video_id s)
-     (adm/field {:label "Video"}
-                [:div
-                 [:p {:class "adm-hint" :style "margin-bottom:8px;"}
-                  "Current video ID: " (:video_id s)]
-                 [:label {:class "adm-label" :style "margin-top:12px;"} "Replace video (optional)"]
-                 [:input {:type "file" :name "video" :class "adm-input"
-                          :accept "video/*"}]])
-     (adm/field {:label "Video File" :hint "Upload to Cloudflare Stream"}
-                [:input {:type "file" :name "video" :class "adm-input"
-                         :accept "video/*"}]))
+   (adm/field {:label "Video" :hint "Uploads directly to Cloudflare — no file size limit"}
+              [:div {:id "sermon-video-widget" :style "display:flex; flex-direction:column; gap:8px;"}
+               [:input {:type "file" :accept "video/*" :id "sermon-video-input"
+                        :style "position:absolute; opacity:0; pointer-events:none; width:1px; height:1px; overflow:hidden;"}]
+               [:div {:style "display:flex; align-items:center; gap:10px; flex-wrap:wrap;"}
+                [:button {:type "button" :id "sermon-video-btn" :class "mtz-btn mtz-btn--ghost"}
+                 (if (:video_id s) "Replace Video" "Choose Video File")]
+                [:span {:id "sermon-video-filename"
+                        :style "font-size:13px; color:var(--mtz-ink-soft);"}]]
+               [:div {:id "sermon-video-progress" :style "display:none; margin-top:4px;"}
+                [:div {:style "height:5px; background:var(--mtz-stone); border-radius:3px; overflow:hidden; margin-bottom:4px;"}
+                 [:div {:id "sermon-video-bar"
+                        :style "height:100%; width:0; background:#5A7257; border-radius:3px; transition:width 0.15s;"}]]
+                [:span {:id "sermon-video-pct" :style "font-size:12px; color:var(--mtz-ink-soft);"} "0%"]]
+               [:p {:id "sermon-video-status"
+                    :style "font-size:13px; color:var(--mtz-ink-soft); margin:0;"} ""]
+               [:details {:style "margin-top:4px;"}
+                [:summary {:class "adm-hint" :style "cursor:pointer; user-select:none;"}
+                 "Paste Cloudflare video ID manually"]
+                [:div {:style "margin-top:8px; display:flex; flex-direction:column; gap:4px;"}
+                 [:input {:type "text" :name "video_id" :id "sermon-video-id"
+                          :class "adm-input"
+                          :placeholder "e.g. 0fcc55133ed33f986a1a2a185f3c45e5"
+                          :value (or (:video_id s) "")}]
+                 [:p {:class "adm-hint" :style "margin:0;"}
+                  "The video ID is set automatically after upload. "
+                  "Only paste here if the automatic upload completed but the ID was lost."]]]])
+   (adm/field {:label "Bulletin PDF"
+               :hint  (if (:bulletin_path s)
+                        (str "Current: " (:bulletin_path s) " — upload to replace")
+                        "Upload the Sunday bulletin (PDF)")}
+              [:input {:type "file" :name "bulletin" :class "adm-input" :accept ".pdf,application/pdf"}])
+   (adm/field {:label "Presentation PDF"
+               :hint  (if (:presentation_path s)
+                        (str "Current: " (:presentation_path s) " — upload to replace")
+                        "Upload the presentation slides (PDF)")}
+              [:input {:type "file" :name "presentation" :class "adm-input" :accept ".pdf,application/pdf"}])
    (adm/field {:label "Status"}
               [:label {:class "adm-check-row"}
                [:input {:type "checkbox" :name "published" :value "1"
@@ -166,49 +201,66 @@
                        (sermon-form (str "/admin/sermons/" (:id s)) s (ui/anti-forgery-field))])
       {:status 404 :body "Not found"})))
 
-(defn- upload-to-stream [ctx video-upload title]
-  (when (:tempfile video-upload)
-    (let [resp (http/post (cf-url ctx "/stream")
-                          {:headers   (cf-headers ctx)
-                           :multipart [{:name         "file"
-                                        :content      (java.io.FileInputStream. (:tempfile video-upload))
-                                        :filename     (:filename video-upload)
-                                        :content-type (:content-type video-upload)}
-                                       {:name    "meta"
-                                        :content (json/generate-string {:name title})
-                                        :content-type "application/json"}]
-                           :as        :string})
-          body (json/parse-string (:body resp) true)]
-      (get-in body [:result :uid]))))
+(defn stream-upload-slot [{:keys [params] :as ctx}]
+  (let [title  (or (:title params) "Sermon")
+        expiry (-> (java.time.Instant/now) (.plusSeconds 7200) .toString)
+        resp   (http/post (cf-url ctx "/stream/direct_upload")
+                          {:headers (assoc (cf-headers ctx) "Content-Type" "application/json")
+                           :body    (json/generate-string {:maxDurationSeconds 21600
+                                                           :expiry             expiry
+                                                           :meta               {:name title}})
+                           :as      :string})
+        body   (json/parse-string (:body resp) true)]
+    (if (get-in body [:result :uid])
+      {:status  200
+       :headers {"Content-Type" "application/json"}
+       :body    (json/generate-string {:uid       (get-in body [:result :uid])
+                                       :uploadUrl (get-in body [:result :uploadURL])})}
+      {:status  500
+       :headers {"Content-Type" "application/json"}
+       :body    (json/generate-string {:error (get-in body [:errors 0 :message] "Upload slot request failed")})})))
 
 (defn sermons-create [{:keys [params] :as ctx}]
-  (let [title    (or (:title params) "")
-        video-id (upload-to-stream ctx (:video params) title)]
+  (let [title         (or (:title params) "")
+        date-str      (or (:sermon_date params) "")
+        video-id      (not-empty (:video_id params))
+        bulletin-path (save-sermon-pdf ctx date-str (:bulletin params) "bulletin.pdf")
+        pres-path     (save-sermon-pdf ctx date-str (:presentation params) "presentation.pdf")]
     (exec ctx
           {:insert-into :sermon
-           :values [{:id          (new-id)
-                     :title       title
-                     :sermon_date (parse-date-epoch (:sermon_date params))
-                     :scripture   (or (:scripture params) "")
-                     :description (or (:description params) "")
-                     :video_id    video-id
-                     :published   (if (:published params) 1 0)
-                     :created_at  (now-epoch)}]}))
+           :values [{:id                (new-id)
+                     :title             title
+                     :sermon_date       (parse-date-epoch date-str)
+                     :scripture         (or (:scripture params) "")
+                     :description       (or (:description params) "")
+                     :video_id          video-id
+                     :bulletin_path     bulletin-path
+                     :presentation_path pres-path
+                     :published         (if (:published params) 1 0)
+                     :created_at        (now-epoch)}]}))
   {:status 303 :headers {"location" "/admin/sermons"}})
 
 (defn sermons-update [{:keys [params path-params] :as ctx}]
-  (let [title    (or (:title params) "")
-        new-vid  (upload-to-stream ctx (:video params) title)
-        existing (first (exec ctx {:select [:video_id] :from :sermon
-                                   :where [:= :id (:id path-params)]}))]
+  (let [title         (or (:title params) "")
+        date-str      (or (:sermon_date params) "")
+        new-vid       (not-empty (:video_id params))
+        existing      (first (exec ctx {:select [:video_id :bulletin_path :presentation_path]
+                                        :from :sermon
+                                        :where [:= :id (:id path-params)]}))
+        bulletin-path (or (save-sermon-pdf ctx date-str (:bulletin params) "bulletin.pdf")
+                          (:bulletin_path existing))
+        pres-path     (or (save-sermon-pdf ctx date-str (:presentation params) "presentation.pdf")
+                          (:presentation_path existing))]
     (exec ctx
           {:update :sermon
-           :set    {:title       title
-                    :sermon_date (parse-date-epoch (:sermon_date params))
-                    :scripture   (or (:scripture params) "")
-                    :description (or (:description params) "")
-                    :video_id    (or new-vid (:video_id existing))
-                    :published   (if (:published params) 1 0)}
+           :set    {:title             title
+                    :sermon_date       (parse-date-epoch date-str)
+                    :scripture         (or (:scripture params) "")
+                    :description       (or (:description params) "")
+                    :video_id          (or new-vid (:video_id existing))
+                    :bulletin_path     bulletin-path
+                    :presentation_path pres-path
+                    :published         (if (:published params) 1 0)}
            :where  [:= :id (:id path-params)]}))
   {:status 303 :headers {"location" "/admin/sermons"}})
 
@@ -402,6 +454,7 @@
      ["/sermons"
       ["" {:get sermons-list :post sermons-create :name ::sermons}]
       ["/new" {:get sermons-new :name ::sermons-new :conflicting true}]
+      ["/upload-slot" {:post stream-upload-slot :name ::stream-upload-slot :conflicting true}]
       ["/:id/edit" {:get sermons-edit :name ::sermons-edit}]
       ["/:id" {:post sermons-update :name ::sermons-update :conflicting true}]
       ["/:id/delete" {:post sermons-delete :name ::sermons-delete}]]]]})

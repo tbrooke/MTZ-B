@@ -75,10 +75,10 @@
               {:label "Staff & Council" :path "/about"}]}
    {:label "Worship"    :path "/worship"    :has-children? true  :scroll? true
     :submenu [{:label "This Sunday" :path "/worship"}
-              {:label "Sermons"     :path "/worship"}
+              {:label "Sunday Worship" :path "/sermons"}
               {:label "Music"       :path "/worship"}]}
-   {:label "Events"     :path "/events"     :has-children? false :scroll? true}
-   {:label "Activities" :path "/activities" :has-children? false :scroll? true}
+   {:label "Events"     :path "/events"     :has-children? false :scroll? false}
+   {:label "Activities" :path "/activities" :has-children? false :scroll? false}
    {:label "News"       :path "/news"       :has-children? true  :scroll? true
     :submenu [{:label "Newsletter"    :path "/news"}
               {:label "Announcements" :path "/news"}]}
@@ -118,7 +118,7 @@
                   :stroke-width "1.4" :stroke-linecap "round" :stroke-linejoin "round"}]]
          [:span {:class "mtz-logo-mt"} "MT"]
          [:span {:class "mtz-logo-zion"} "ZION"]
-         [:span {:class "mtz-logo-ucc"} "UCC"]]
+         [:span {:class "mtz-logo-ucc"} (if (= site-context :preschool) "Preschool" "UCC")]]
         [:span {:class "mtz-wordmark-sub-static"} "China Grove, NC"]]
        [:nav {:class "mtz-nav mtz-nav--right" :aria-label "Primary navigation right"}
         (for [item right-items]
@@ -151,6 +151,45 @@
       [:p {:class "mtz-footer-meta"}
        [:a {:href "/privacy"} "Privacy Policy"]]
       [:p {:class "mtz-footer-meta"} "Powered by Mount Zion CMS"]]]]))
+
+;; --- PRESCHOOL HEADER ---
+
+(def ^:private preschool-nav
+  [{:label "Home"       :path "/preschool"          :has-children? false :scroll? false}
+   {:label "About"      :path "/preschool#about"    :has-children? false :scroll? false}
+   {:label "Programs"   :path "/preschool#programs" :has-children? false :scroll? false}
+   {:label "Enrollment" :path "/preschool#enroll"   :has-children? false :scroll? false}
+   {:label "Calendar"   :path "/preschool#schedule" :has-children? false :scroll? false}
+   {:label "Staff"      :path "/preschool#about"    :has-children? false :scroll? false}
+   {:label "Contact"    :path "/contact"            :has-children? false :scroll? false}])
+
+(defn preschool-header []
+  (site-header preschool-nav :preschool))
+
+;; --- PRESCHOOL FOOTER ---
+
+(defn preschool-footer []
+  [:footer {:class "mtz-footer"}
+   [:div {:class "mtz-footer-inner"}
+    [:div {:class "mtz-footer-col"}
+     [:h4 {:class "mtz-footer-h"} "Mt. Zion Preschool"]
+     [:p {:class "mtz-footer-p"} "A ministry of Mt. Zion UCC. Open to all families."]
+     [:div {:class "mtz-footer-cta"}
+      [:a {:href "/preschool#enroll" :class "mtz-btn mtz-btn--primary"} "Inquire About Enrollment"]
+      [:a {:href "/contact" :class "mtz-btn mtz-btn--ghost"} "Contact Us"]]]
+    [:div {:class "mtz-footer-col mtz-footer-col--center"}
+     [:h4 {:class "mtz-footer-h"} "Mt. Zion Preschool"]
+     [:p {:class "mtz-footer-p"}
+      "1415 S Main St" [:br]
+      "China Grove, NC 28023" [:br]
+      [:a {:href "tel:+17048571169"
+           :style "color: inherit; text-decoration: underline; text-underline-offset: 2px;"}
+       "(704) 857-1169"]]]
+    [:div {:class "mtz-footer-col mtz-footer-col--right"}
+     [:p {:class "mtz-footer-meta"} "© 2026 Mount Zion UCC"]
+     [:p {:class "mtz-footer-meta"}
+      [:a {:href "/"} "Church Site"]]
+     [:p {:class "mtz-footer-meta"} "Powered by Mount Zion CMS"]]]])
 
 ;; --- BREADCRUMBS ---
 

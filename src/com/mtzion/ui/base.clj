@@ -4,6 +4,29 @@
             [com.mtzion.ui.nav :as nav]
             [lambdaisland.hiccup :as hiccup]))
 
+(defn preschool-page
+  "Standalone page template for the preschool site with its own fonts and design tokens."
+  [title content]
+  {:status  200
+   :headers {"Content-Type" "text/html; charset=utf-8"}
+   :body
+   (hiccup/render
+    [:html {:lang "en"}
+     [:head
+      [:meta {:charset "utf-8"}]
+      [:meta {:name "viewport" :content "width=device-width, initial-scale=1"}]
+      [:title title]
+      [:link {:rel "icon" :href "data:,"}]
+      [:link {:rel "preconnect" :href "https://fonts.googleapis.com"}]
+      [:link {:rel "preconnect" :href "https://fonts.gstatic.com" :crossorigin "anonymous"}]
+      [:link {:rel "stylesheet"
+              :href "https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Outfit:wght@300;400;500;600&display=swap"}]
+      [:link {:rel "stylesheet" :href (ui/css-path)}]]
+     [:body {:class "ps-page"}
+      (nav/preschool-header)
+      [:main content]
+      (nav/preschool-footer)]])})
+
 (defn page
   "Public page with mtz header/footer. Returns a Ring response map.
    site-context — :church (default) or :preschool"

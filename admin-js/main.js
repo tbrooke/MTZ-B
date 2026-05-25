@@ -101,7 +101,118 @@ function createToolbar(editor) {
   return bar
 }
 
+function initVideoUploads() {
+  const widget     = document.getElementById('sermon-video-widget')
+  if (!widget) return
+
+  const idInput    = document.getElementById('sermon-video-id')
+  const fileInput  = document.getElementById('sermon-video-input')
+  const pickBtn    = document.getElementById('sermon-video-btn')
+  const fileLabel  = document.getElementById('sermon-video-filename')
+  const progressEl = document.getElementById('sermon-video-progress')
+  const bar        = document.getElementById('sermon-video-bar')
+  const pct        = document.getElementById('sermon-video-pct')
+  const status     = document.getElementById('sermon-video-status')
+
+  if (!fileInput || !idInput || !pickBtn) return
+
+  const form        = widget.closest('form')
+  const submitBtns  = form ? Array.from(form.querySelectorAll('[type="submit"]')) : []
+  let uploadInProgress = false
+
+  const lockForm   = () => {
+    uploadInProgress = true
+    submitBtns.forEach(b => { b.disabled = true; b.title = 'Wait for video upload to finish' })
+  }
+  const unlockForm = () => {
+    uploadInProgress = false
+    submitBtns.forEach(b => { b.disabled = false; b.title = '' })
+  }
+
+  if (form) {
+    form.addEventListener('submit', e => {
+      if (uploadInProgress) {
+        e.preventDefault()
+        if (status) { status.textContent = '⚠ Upload still in progress — please wait'; status.style.color = '#c0392b' }
+      }
+    })
+  }
+
+  pickBtn.addEventListener('click', () => fileInput.click())
+
+  fileInput.addEventListener('change', async () => {
+    const file = fileInput.files[0]
+    if (!file) return
+
+    lockForm()
+    if (fileLabel) fileLabel.textContent     = file.name
+    if (status)    status.textContent        = 'Getting upload slot…'
+    if (status)    status.style.color        = 'var(--mtz-ink-soft)'
+    if (progressEl) progressEl.style.display = 'block'
+    if (bar)       bar.style.width           = '0'
+    if (pct)       pct.textContent           = '0%'
+
+    const title = document.querySelector('input[name="title"]')?.value || 'Sermon'
+    const fd = new FormData()
+    fd.append('__anti-forgery-token', csrfToken())
+    fd.append('title', title)
+
+    let slot
+    try {
+      const r = await fetch('/admin/sermons/upload-slot', { method: 'POST', body: fd })
+      slot = await r.json()
+    } catch (e) {
+      if (status) { status.textContent = '✗ Could not get upload slot'; status.style.color = '#c0392b' }
+      unlockForm()
+      return
+    }
+
+    if (!slot.uploadUrl) {
+      if (status) { status.textContent = '✗ ' + (slot.error || 'No upload URL returned'); status.style.color = '#c0392b' }
+      unlockForm()
+      return
+    }
+
+    if (status) status.textContent = 'Uploading…'
+
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', slot.uploadUrl)
+
+    xhr.upload.addEventListener('progress', e => {
+      if (e.lengthComputable) {
+        const p = Math.round(e.loaded / e.total * 100)
+        if (bar) bar.style.width = p + '%'
+        if (pct) pct.textContent = p + '%'
+      }
+    })
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        idInput.value = slot.uid
+        if (bar)    bar.style.width    = '100%'
+        if (pct)    pct.textContent   = '100%'
+        if (status) { status.textContent = '✓ Uploaded — save the form to attach this video'; status.style.color = '#5A7257' }
+        if (pickBtn) pickBtn.textContent = 'Replace Video'
+      } else {
+        if (status) { status.textContent = '✗ Upload failed (HTTP ' + xhr.status + ') — video ID: ' + slot.uid; status.style.color = '#c0392b' }
+        idInput.value = slot.uid
+      }
+      unlockForm()
+    })
+
+    xhr.addEventListener('error', () => {
+      if (status) { status.textContent = '✗ Upload failed (network error) — video ID: ' + slot.uid; status.style.color = '#c0392b' }
+      unlockForm()
+    })
+
+    xhr.setRequestHeader('Content-Type', file.type || 'video/mp4')
+    xhr.send(file)
+  })
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  initVideoUploads()
+
   document.querySelectorAll('[data-tiptap]').forEach(wrapper => {
     const name = wrapper.dataset.tiptap
     const input = document.querySelector(`input[name="${name}"]`)

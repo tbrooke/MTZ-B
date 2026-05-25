@@ -17,6 +17,7 @@
             [com.mtzion.app.news :as news-page]
             [com.mtzion.app.outreach :as outreach]
             [com.mtzion.app.preschool :as preschool]
+            [com.mtzion.app.sermons :as sermons]
             [com.mtzion.app.worship :as worship]
             [com.mtzion.model.schema :as schema]
             [com.mtzion.model.user :as model.user]))
@@ -46,6 +47,7 @@
    media/module
    landing/module
    about/module
+   sermons/module
    worship/module
    events-page/module
    activities/module

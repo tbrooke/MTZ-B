@@ -1,82 +1,154 @@
 (ns com.mtzion.app.preschool
   (:require [com.mtzion.ui.base :as base]))
 
-(defn- page-content []
+(def ^:private artwork-url
+  "https://imagedelivery.net/gNdSe_N39XhCrHxk2h53Cw/f37fb815-ddd2-4aea-c674-2dac97b18800/w=800")
+
+(defn- hero []
   (list
-   [:section {:class "mtz-section"}
-    [:p {:class "mtz-kicker"} "A nurturing Christian early childhood program"]
-    [:h1 {:class "mtz-h1" :style "max-width: 760px;"} "Mt. Zion Preschool"]
-    [:p {:class "mtz-lede" :style "max-width: 640px;"}
-     "Providing quality early childhood education in a warm, faith-based environment "
-     "for children ages 2–5 in China Grove and Rowan County."]
-    [:div {:class "mtz-row" :style "gap: 12px; margin-top: 28px; flex-wrap: wrap;"}
-     [:a {:class "mtz-btn mtz-btn--primary" :href "/contact"} "Inquire About Enrollment"]
-     [:a {:class "mtz-btn mtz-btn--ghost"   :href "#programs"} "Our Programs"]]
-    [:hr {:class "mtz-rule" :style "margin-top: 48px;"}]]
+   [:section {:class "ps-hero"}
+    [:div {:class "ps-hero-copy"}
+     [:span {:class "ps-mono-eyebrow ps-hero-eyebrow"}
+      "A Nurturing Christian Early Childhood Program"]
+     [:p {:class "ps-hero-lede"}
+      "Quality, faith-based early childhood education in a warm, welcoming "
+      "environment — serving children ages 2–5 in China Grove "
+      "and Rowan County since 1989."]
+     [:div {:class "ps-cta-row"}
+      [:a {:class "ps-btn ps-btn--primary" :href "#enroll"} "Inquire about enrollment"]
+      [:a {:class "ps-btn ps-btn--secondary" :href "#programs"} "Our programs"]]]
+    [:div {:class "ps-hero-right"}
+     [:div {:class "ps-hero-art"}
+      [:div {:class "ps-backplate"}]
+      [:div {:class "ps-dot ps-dot-tl"}]
+      [:div {:class "ps-dot ps-dot-br"}]
+      [:img {:class "ps-art-img" :src artwork-url :alt "Children at play — artwork by Linda M."}]
+      [:span {:class "ps-stamp"} "Original artwork · Linda M."]]
+     [:h1 {:class "ps-hero-headline"}
+      "Where little ones " [:em "grow, play,"]
+      " and find their place in the world."]]]
+   [:div {:class "ps-rule-row"} [:hr]]))
 
-   [:section {:id "programs" :class "mtz-section"}
-    [:h2 {:class "mtz-h2" :style "margin-bottom: 32px;"} "Our Programs"]
-    [:div {:class "mtz-grid mtz-grid--3"}
-     (for [[title age days desc] [["Toddler Class"
-                                   "Ages 2–3"
-                                   "Tue & Thu · 9 AM–12 PM"
-                                   "Gentle introduction to structured learning through play, song, and story in a nurturing classroom."]
-                                  ["PreK-3"
-                                   "Age 3"
-                                   "Mon, Wed & Fri · 9 AM–12 PM"
-                                   "Building social skills, early literacy, and creativity through hands-on activities and circle time."]
-                                  ["PreK-4"
-                                   "Age 4–5"
-                                   "Mon–Fri · 9 AM–12 PM"
-                                   "School-readiness focus with phonics, math readiness, science exploration, and daily chapel."]]]
-       [:div {:class "mtz-card" :style "padding: 28px;"}
-        [:p {:class "mtz-mono"
-             :style "font-size: 12px; letter-spacing: 0.12em; color: var(--mtz-mint-dark); font-weight: 600; text-transform: uppercase; margin: 0 0 6px;"}
-         age]
-        [:h3 {:class "mtz-h3" :style "font-size: 22px; margin-bottom: 8px;"} title]
-        [:p {:class "mtz-mute" :style "font-size: 13px; margin: 0 0 12px;"} days]
-        [:p {:style "color: var(--mtz-ink-soft); margin: 0; font-size: 15px; line-height: 1.6;"} desc]])]]
+(defn- welcome []
+  [:section {:class "ps-welcome"}
+   [:div
+    [:span {:class "ps-mono-eyebrow"} "A note from our Director"]
+    [:h2 "Every child is a " [:em "gift"]
+     " — we are honored to share in their first steps."]]
+   [:div {:class "ps-welcome-body"}
+    [:p "For more than three decades, Mt. Zion Preschool has been a place where children "
+     "are known by name, met with kindness, and gently guided into a lifelong love of learning. "
+     "Our classrooms are small, our teachers are patient, and our days are filled with the kind "
+     "of unhurried play that lets a two-year-old become a confident four-year-old without anyone "
+     "rushing the work."]
+    [:p "We are a ministry of Mt. Zion United Church of Christ, but our doors are open to every "
+     "family. What we share with every child — regardless of background — is a "
+     "commitment to safety, dignity, and joy."]
+    [:div {:class "ps-signature"}
+     "— Mrs. Karen Whitley"
+     [:small "Director · since 2011"]]]])
 
-   [:section {:class "mtz-section--cream"}
-    [:div {:class "mtz-section-inner"}
-     [:div {:class "mtz-grid mtz-grid--2" :style "gap: 64px; align-items: center;"}
-      [:div {:class "mtz-img" :style "aspect-ratio: 4/3; min-height: 0;"}
-       [:span {:class "mtz-img-label"} "classroom · preschool"]]
-      [:div
-       [:p {:class "mtz-kicker"} "Our Approach"]
-       [:h2 {:class "mtz-h2"} "Learning through love."]
-       [:p {:class "mtz-prose" :style "color: var(--mtz-ink-soft);"}
-        "Mt. Zion Preschool believes that the early childhood years are foundational. "
-        "Our program blends developmentally appropriate practice with a gentle Christian "
-        "environment — daily chapel, seasonal celebrations, and a caring staff that "
-        "treats every child as a gift."]
-       [:p {:class "mtz-prose" :style "color: var(--mtz-ink-soft);"}
-        "We are licensed by the state of North Carolina and maintain small class sizes "
-        "to ensure every child gets individual attention."]]]]]
+(defn- programs []
+  [:section {:class "ps-programs" :id "programs"}
+   [:div {:class "ps-programs-inner"}
+    [:div {:class "ps-section-head"}
+     [:div
+      [:span {:class "ps-mono-eyebrow"} "Our Classrooms"]
+      [:h2 "Programs for " [:em "every age"] " & stage"]]
+     [:p {:class "ps-section-lede"}
+      "Three small, mixed-age classrooms — each designed around how children actually learn at their age."]]
+    [:div {:class "ps-prog-grid"}
+     [:article {:class "ps-prog-card t1"}
+      [:span {:class "ps-prog-tag"}]
+      [:span {:class "ps-prog-age"} "02 — Toddlers"]
+      [:h3 "Little Lambs"]
+      [:p "A gentle first step away from home. Songs, simple stories, sensory play, and lots of laps. Potty-training supported at the family's pace."]
+      [:div {:class "ps-prog-meta"}
+       [:span "Ages 2 – 3"]
+       [:span "T / Th · ½ day"]]]
+     [:article {:class "ps-prog-card t2"}
+      [:span {:class "ps-prog-tag"}]
+      [:span {:class "ps-prog-age"} "03 — Preschool"]
+      [:h3 "Doves Class"]
+      [:p "The world opens up. Friendships, dramatic play, early letters and numbers, gardening, chapel time, and outdoor adventures every day weather allows."]
+      [:div {:class "ps-prog-meta"}
+       [:span "Ages 3 – 4"]
+       [:span "M/W/F · ½ day"]]]
+     [:article {:class "ps-prog-card t3"}
+      [:span {:class "ps-prog-tag"}]
+      [:span {:class "ps-prog-age"} "04 — Pre-Kindergarten"]
+      [:h3 "Shepherds"]
+      [:p "Kindergarten-ready confidence. Phonics, journaling, problem-solving, project work, and the social-emotional skills that matter most in big school."]
+      [:div {:class "ps-prog-meta"}
+       [:span "Ages 4 – 5"]
+       [:span "M – F · Full day option"]]]]]])
 
-   [:section {:class "mtz-section--tint"}
-    [:div {:class "mtz-section-inner"}
-     [:div {:class "mtz-grid mtz-grid--3"}
-      (for [[label value] [["Licensed by" "NC DHHS Division of Child Development"]
-                           ["Class Size"  "Max 12 students per class"]
-                           ["Calendar"    "September – May · follows Rowan-Salisbury Schools"]]]
-        [:div {:style "text-align: center;"}
-         [:p {:class "mtz-mono" :style "font-size: 12px; letter-spacing: 0.12em; color: var(--mtz-mint-dark); font-weight: 600; text-transform: uppercase; margin: 0 0 8px;"}
-          label]
-         [:p {:style "font-family: var(--mtz-serif-display); font-size: 18px; color: var(--mtz-ink); margin: 0;"}
-          value]])]]]
+(defn- day-in-life []
+  [:section {:class "ps-day" :id "schedule"}
+   [:div {:class "ps-day-art"}
+    [:div {:class "ps-day-stripe"}]
+    [:span {:class "ps-day-label"} "A day in the life"]
+    [:p {:class "ps-day-quote"}
+     "Children learn most when they are loved, listened to, and allowed to wonder out loud."]]
+   [:div
+    [:span {:class "ps-mono-eyebrow"} "Our Rhythm"]
+    [:h2 "What a day at " [:em "Mt. Zion"] " looks like."]
+    [:ul {:class "ps-schedule"}
+     (for [[time what note] [["8:30 AM"  "Arrival & free play"        "Classroom"]
+                             ["9:15 AM"  "Morning circle & chapel"     "Sanctuary"]
+                             ["9:45 AM"  "Centers & small group work"  "Classroom"]
+                             ["10:45 AM" "Outdoor play"                "Playground"]
+                             ["11:30 AM" "Lunch & story time"          "Fellowship"]
+                             ["12:30 PM" "Rest, art, dismissal"        "Classroom"]]]
+       [:li
+        [:span {:class "ps-sched-time"} time]
+        [:span {:class "ps-sched-what"} what]
+        [:span {:class "ps-sched-note"} note]])]]])
 
-   [:section {:class "mtz-section" :style "text-align: center;"}
-    [:h2 {:class "mtz-h2" :style "margin-bottom: 16px;"} "Enrollment & Registration"]
-    [:p {:class "mtz-lede" :style "max-width: 520px; margin: 0 auto 28px;"}
-     "We accept rolling enrollment throughout the year, subject to availability. "
-     "Contact us to schedule a visit and learn about openings."]
-    [:div {:class "mtz-row" :style "justify-content: center; gap: 12px; flex-wrap: wrap;"}
-     [:a {:class "mtz-btn mtz-btn--primary" :href "/contact"} "Inquire About Enrollment"]
-     [:a {:class "mtz-btn mtz-btn--ghost"   :href "tel:+17048571169"} "(704) 857-1169"]]]))
+(defn- values []
+  [:section {:class "ps-values"}
+   [:div {:class "ps-values-inner"}
+    [:span {:class "ps-values-eyebrow"} "What we believe"]
+    [:h2 "A few things we " [:em "hold close"] "."]
+    [:div {:class "ps-values-grid"}
+     (for [[num title body] [["01" "Faith, gently shared"
+                              "Bible stories, simple songs, and a weekly chapel time — taught with warmth, never pressure. Families of every background are welcome."]
+                             ["02" "Play is the work"
+                              "Children do their most important learning through play. Our classrooms protect time for it — uninterrupted, imaginative, and a little messy."]
+                             ["03" "Small & known"
+                              "Low ratios mean every child is seen, every name is known, and every parent knows the teacher who knows their kid."]
+                             ["04" "Outside, daily"
+                              "Wide playground, vegetable garden, a wooded path. Children spend at least an hour outside every day school is in session."]]]
+       [:div
+        [:div {:class "ps-value-num"} num]
+        [:h3 title]
+        [:p body]])]]])
+
+(defn- enrollment []
+  [:section {:class "ps-enroll" :id "enroll"}
+   [:span {:class "ps-mono-eyebrow ps-enroll-eyebrow"} "Enrollment · 2026 – 2027"]
+   [:h2 "We’d love to " [:em "show you around."]]
+   [:p "Tours are offered every Wednesday morning and by appointment. Families typically "
+    "enroll one to three months before their child’s start date — and yes, "
+    "sibling spots are held."]
+   [:div {:class "ps-cta-row" :style "justify-content:center;"}
+    [:a {:class "ps-btn ps-btn--primary" :href "/contact"} "Schedule a tour"]
+    [:a {:class "ps-btn ps-btn--secondary" :href "/contact"} "Ask a question"]]
+   [:div {:class "ps-enroll-meta"}
+    [:div [:span {:class "ps-enroll-k"} "Hours"] [:span {:class "ps-enroll-v"} "8:30 AM – 12:30 PM"]]
+    [:div [:span {:class "ps-enroll-k"} "Calendar"] [:span {:class "ps-enroll-v"} "September – May"]]
+    [:div [:span {:class "ps-enroll-k"} "License"] [:span {:class "ps-enroll-v"} "NC 5-Star Center"]]]])
 
 (defn preschool [_ctx]
-  (base/page "Mt. Zion Preschool" (page-content) :preschool))
+  (base/preschool-page
+   "Mt. Zion Preschool — China Grove, NC"
+   (list
+    (hero)
+    (welcome)
+    (programs)
+    (day-in-life)
+    (values)
+    (enrollment))))
 
 (def module
   {:biff.ring/routes

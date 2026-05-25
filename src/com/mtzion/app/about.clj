@@ -1,5 +1,7 @@
 (ns com.mtzion.app.about
-  (:require [com.mtzion.ui.base :as base]))
+  (:require [com.biffweb.sqlite :as biff.sqlite]
+            [com.mtzion.ui.base :as base]
+            [lambdaisland.hiccup :as hiccup]))
 
 (defn- page-content []
   (list
@@ -17,7 +19,7 @@
       [:span {:class "mtz-img-label"} "archival photo · ca. 1910"]]
      [:div
       [:p {:class "mtz-kicker"} "Our Story"]
-      [:h2 {:class "mtz-h2"} "A congregation on this hill since 1858."]
+      [:h2 {:class "mtz-h2"} "A congregation on this hill since 1755."]
       [:p {:class "mtz-prose" :style "color: var(--mtz-ink-soft);"}
        "Mount Zion was founded in 1858 by a small group of German Reformed settlers "
        "in what was then a rural crossroads community. The original log meetinghouse "
@@ -63,8 +65,12 @@
       [:a {:class "mtz-btn mtz-btn--primary" :href "/contact"} "Get in Touch"]
       [:a {:class "mtz-btn mtz-btn--ghost" :href "/worship"} "Plan Your Visit"]]]]))
 
-(defn about [_ctx]
-  (base/page "About — Mount Zion UCC" (page-content)))
+(defn about [ctx]
+  (let [db-page (first (biff.sqlite/execute ctx {:select :* :from :page :where [:= :slug "about"]}))]
+    (base/page "About — Mount Zion UCC"
+               (if (seq (:body db-page))
+                 [::hiccup/unsafe-html (:body db-page)]
+                 (page-content)))))
 
 (def module
   {:biff.ring/routes

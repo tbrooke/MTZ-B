@@ -1,8 +1,8 @@
 (ns com.mtzion.app.admin
-  (:require [clojure.java.io :as io]
-            [clojure.string :as str]
+  (:require [clojure.string :as str]
             [com.biffweb.sqlite :as biff.sqlite]
             [com.mtzion.lib.middleware :refer [wrap-signed-in]]
+            [com.mtzion.lib.r2 :as r2]
             [com.mtzion.lib.ui :as ui]
             [com.mtzion.ui.admin :as adm]))
 
@@ -47,6 +47,69 @@
 
 (defn- slugify [s]
   (-> s str/lower-case (str/replace #"[^a-z0-9]+" "-") (str/replace #"^-|-$" "")))
+
+;; ---------------------------------------------------------------------------
+;; Recurrence expansion
+;; ---------------------------------------------------------------------------
+
+(defn- ldt->epoch [^java.time.LocalDateTime ldt]
+  (.toEpochSecond ldt java.time.ZoneOffset/UTC))
+
+(defn- advance-recurrence [^java.time.LocalDateTime ldt recurrence]
+  (case recurrence
+    "daily"    (.plusDays ldt 1)
+    "weekly"   (.plusWeeks ldt 1)
+    "biweekly" (.plusWeeks ldt 2)
+    "monthly"  (.plusMonths ldt 1)
+    "yearly"   (.plusYears ldt 1)
+    nil))
+
+(defn- event-occurrences-in-range
+  "Returns coll of ev maps (with :start_at set to the occurrence epoch) for all
+  occurrences of ev within [from-epoch, to-epoch).
+  Non-recurring events are returned as-is when start_at falls in the range."
+  [ev from-epoch to-epoch]
+  (let [recur (:recurrence ev "none")
+        base  (or (:start_at ev) 0)
+        until (:recur_until ev)]
+    (if (= recur "none")
+      (when (and (>= base from-epoch) (< base to-epoch)) [ev])
+      (when (and (pos? base) (or (nil? until) (>= until from-epoch)))
+        (let [base-ldt (java.time.LocalDateTime/ofInstant
+                        (java.time.Instant/ofEpochSecond base)
+                        java.time.ZoneOffset/UTC)]
+          (loop [ldt base-ldt acc [] n 0]
+            (if (> n 3650)
+              acc
+              (let [t (ldt->epoch ldt)]
+                (cond
+                  (or (>= t to-epoch) (and until (> t until))) acc
+                  (>= t from-epoch)
+                  (let [next (advance-recurrence ldt recur)]
+                    (if next
+                      (recur next (conj acc (assoc ev :start_at t)) (inc n))
+                      (conj acc (assoc ev :start_at t))))
+                  :else
+                  (let [next (advance-recurrence ldt recur)]
+                    (if next (recur next acc (inc n)) acc)))))))))))
+
+(defn- expand-events-in-range [events from-epoch to-epoch]
+  (sort-by :start_at
+           (mapcat #(event-occurrences-in-range % from-epoch to-epoch) events)))
+
+(defn- next-occurrence
+  "Returns ev with :start_at set to the next occurrence >= after-epoch,
+  or nil if the event has no future occurrences."
+  [ev after-epoch]
+  (first (event-occurrences-in-range ev after-epoch (+ after-epoch (* 3650 86400)))))
+
+(defn- events-next-occurrence
+  "Returns events (one entry per event) with :start_at set to their next
+  occurrence >= after-epoch, sorted by that date."
+  [events after-epoch]
+  (->> events
+       (keep #(next-occurrence % after-epoch))
+       (sort-by :start_at)))
 
 (defn- checked? [params k]
   (contains? params k))
@@ -178,9 +241,9 @@
         month-name (.format first-day (java.time.format.DateTimeFormatter/ofPattern "MMMM"))
         ms         (.toEpochSecond (.atStartOfDay first-day java.time.ZoneOffset/UTC))
         me         (.toEpochSecond (.atStartOfDay (.plusMonths first-day 1) java.time.ZoneOffset/UTC))
-        evs        (exec ctx
-                         {:select [:start_at] :from :event
-                          :where  [:and [:>= :start_at ms] [:< :start_at me] [:= :published 1]]})
+        all-evs    (exec ctx {:select [:start_at :recurrence :recur_until] :from :event
+                              :where  [:= :published 1]})
+        evs        (expand-events-in-range all-evs ms me)
         event-days (into #{} (map #(-> (java.time.Instant/ofEpochSecond (:start_at %))
                                        (java.time.LocalDate/ofInstant java.time.ZoneOffset/UTC)
                                        .getDayOfMonth) evs))
@@ -248,15 +311,18 @@
 (defn dashboard [ctx]
   (let [n-ep     (now-epoch)
         n-posts  (count-table ctx :post)
-        n-events (or (:n (first (exec ctx
-                                      {:select [[:%count.id :n]] :from :event
-                                       :where  [:and [:= :published 1] [:>= :start_at n-ep]]}))) 0)
         n-pages  (count-table ctx :page)
         n-feats  (count-table ctx :feature)
-        upcoming (exec ctx
-                       {:select   [:title :start_at] :from :event
-                        :where    [:and [:= :published 1] [:>= :start_at n-ep]]
-                        :order-by [[:start_at :asc]] :limit 3})
+        upcoming-src (exec ctx
+                           {:select [:title :start_at :recurrence :recur_until] :from :event
+                            :where  [:and [:= :published 1]
+                                     [:or
+                                      [:and [:= :recurrence "none"] [:>= :start_at n-ep]]
+                                      [:and [:not= :recurrence "none"]
+                                       [:or [:is :recur_until nil] [:>= :recur_until n-ep]]]]]})
+        upcoming-exp (events-next-occurrence upcoming-src n-ep)
+        upcoming     (take 3 upcoming-exp)
+        n-events     (count upcoming-exp)
         r-post   (latest-title ctx :post :created_at)
         r-feat   (latest-title ctx :feature :updated_at)]
     (adm/bento-page "Dashboard"
@@ -277,21 +343,24 @@
 ;; Features
 ;; ---------------------------------------------------------------------------
 
-(def ^:private placement-options
-  [["home_main"      "Home — Main Feature"]
-   ["home_secondary" "Home — Secondary Feature"]
-   ["home_news_1"    "Home — News #1"]
-   ["home_news_2"    "Home — News #2"]
-   ["home_news_3"    "Home — News #3"]])
-
-(defn- placement-label [v]
-  (or (some (fn [[k l]] (when (= k v) l)) placement-options) v))
+(def ^:private known-page-slugs
+  ["home" "about" "worship" "events" "activities" "news" "outreach" "contact" "preschool"])
 
 (defn- feature-form [action f csrf]
   [:form {:method "post" :action action :class "adm-form"}
    csrf
-   (adm/field {:label "Placement"}
-              (adm/select-input {:name "placement" :required "true"} placement-options (:placement f)))
+   (adm/field {:label "Page" :hint "Slug of the page this section belongs to (e.g. home, about, activities)"}
+              [:div {:style "display:flex; flex-direction:column; gap:6px;"}
+               [:input {:type "text" :name "page_slug" :class "adm-input"
+                        :value (or (:page_slug f) "home")
+                        :list "page-slug-list" :required "true"}]
+               [:datalist {:id "page-slug-list"}
+                (for [s known-page-slugs] [:option {:value s}])]])
+   (adm/field {:label "Options"}
+              [:label {:class "adm-check-row"}
+               [:input {:type "checkbox" :name "show_on_home" :value "1"
+                        :checked (= 1 (:show_on_home f))}]
+               "Also show as teaser on home page"])
    (adm/field {:label "Title"}
               (adm/text-input {:name "title" :value (or (:title f) "") :required "true"}))
    (adm/field {:label "Subtitle" :hint "Optional short line below title"}
@@ -323,12 +392,13 @@
                        [:table {:class "adm-table"}
                         [:thead
                          [:tr
-                          [:th "Placement"] [:th "Title"] [:th "Status"] [:th ""]]]
+                          [:th "Page"] [:th "Title"] [:th "Home?"] [:th "Status"] [:th ""]]]
                         [:tbody
                          (for [r rows]
                            [:tr
-                            [:td (placement-label (:placement r))]
+                            [:td (:page_slug r)]
                             [:td (:title r)]
+                            [:td (when (= 1 (:show_on_home r)) "✓")]
                             [:td (adm/badge (= 1 (:published r)))]
                             [:td
                              [:div {:class "adm-actions"}
@@ -346,17 +416,19 @@
 (defn features-create [{:keys [params] :as ctx}]
   (exec ctx
         {:insert-into :feature
-         :values [{:id (new-id)
-                   :placement (or (:placement params) "home_main")
-                   :title (or (:title params) "")
-                   :subtitle (or (:subtitle params) "")
-                   :body (or (:body params) "")
-                   :cta_label (or (:cta_label params) "")
-                   :cta_url (or (:cta_url params) "")
-                   :published (if (:published params) 1 0)
-                   :sort_order 0
-                   :updated_at (now-epoch)
-                   :created_at (now-epoch)}]})
+         :values [{:id           (new-id)
+                   :page_slug    (let [s (str/trim (or (:page_slug params) ""))]
+                                   (if (seq s) s "home"))
+                   :show_on_home (if (:show_on_home params) 1 0)
+                   :title        (or (:title params) "")
+                   :subtitle     (or (:subtitle params) "")
+                   :body         (or (:body params) "")
+                   :cta_label    (or (:cta_label params) "")
+                   :cta_url      (or (:cta_url params) "")
+                   :published    (if (:published params) 1 0)
+                   :sort_order   0
+                   :updated_at   (now-epoch)
+                   :created_at   (now-epoch)}]})
   {:status 303 :headers {"location" "/admin/features"}})
 
 (defn features-edit [{:keys [path-params] :as ctx}]
@@ -373,14 +445,16 @@
 (defn features-update [{:keys [params path-params] :as ctx}]
   (exec ctx
         {:update :feature
-         :set {:placement (or (:placement params) "home_main")
-               :title (or (:title params) "")
-               :subtitle (or (:subtitle params) "")
-               :body (or (:body params) "")
-               :cta_label (or (:cta_label params) "")
-               :cta_url (or (:cta_url params) "")
-               :published (if (:published params) 1 0)
-               :updated_at (now-epoch)}
+         :set {:page_slug    (let [s (str/trim (or (:page_slug params) ""))]
+                               (if (seq s) s "home"))
+               :show_on_home (if (:show_on_home params) 1 0)
+               :title        (or (:title params) "")
+               :subtitle     (or (:subtitle params) "")
+               :body         (or (:body params) "")
+               :cta_label    (or (:cta_label params) "")
+               :cta_url      (or (:cta_url params) "")
+               :published    (if (:published params) 1 0)
+               :updated_at   (now-epoch)}
          :where [:= :id (:id path-params)]})
   {:status 303 :headers {"location" "/admin/features"}})
 
@@ -406,6 +480,11 @@
    (adm/field {:label "Published Date" :hint "Leave blank to save as draft"}
               [:input {:type "date" :name "published_at" :class "adm-input"
                        :value (or (epoch->date (:published_at p)) "")}])
+   (adm/field {:label "Options"}
+              [:label {:class "adm-check-row"}
+               [:input {:type "checkbox" :name "show_on_home" :value "1"
+                        :checked (= 1 (:show_on_home p))}]
+               "Show as teaser on home page"])
    (adm/submit-row {:cancel-href "/admin/posts"})])
 
 (defn posts-list [ctx]
@@ -446,13 +525,14 @@
                 (if (seq s) s (slugify title)))]
     (exec ctx
           {:insert-into :post
-           :values [{:id (new-id)
-                     :slug slug
-                     :title title
-                     :excerpt (or (:excerpt params) "")
-                     :body (or (:body params) "")
+           :values [{:id           (new-id)
+                     :slug         slug
+                     :title        title
+                     :excerpt      (or (:excerpt params) "")
+                     :body         (or (:body params) "")
+                     :show_on_home (if (:show_on_home params) 1 0)
                      :published_at (parse-date-epoch (:published_at params))
-                     :created_at (now-epoch)}]}))
+                     :created_at   (now-epoch)}]}))
   {:status 303 :headers {"location" "/admin/posts"}})
 
 (defn posts-edit [{:keys [path-params] :as ctx}]
@@ -472,10 +552,11 @@
                 (if (seq s) s (slugify title)))]
     (exec ctx
           {:update :post
-           :set {:slug slug
-                 :title title
-                 :excerpt (or (:excerpt params) "")
-                 :body (or (:body params) "")
+           :set {:slug         slug
+                 :title        title
+                 :excerpt      (or (:excerpt params) "")
+                 :body         (or (:body params) "")
+                 :show_on_home (if (:show_on_home params) 1 0)
                  :published_at (parse-date-epoch (:published_at params))}
            :where [:= :id (:id path-params)]}))
   {:status 303 :headers {"location" "/admin/posts"}})
@@ -521,11 +602,19 @@
    (adm/field {:label "Repeat Until" :hint "For recurring events — leave blank for no end date"}
               [:input {:type "date" :name "recur_until" :class "adm-input"
                        :value (or (epoch->date (:recur_until e)) "")}])
+   (adm/field {:label "Image" :hint "Cloudflare image ID — paste from the Images panel, or leave blank"}
+              (adm/text-input {:name "image_id" :value (or (:image_id e) "")
+                               :placeholder "e.g. abc123..."}))
    (adm/field {:label "Status"}
-              [:label {:class "adm-check-row"}
-               [:input {:type "checkbox" :name "published" :value "1"
-                        :checked (not= 0 (:published e 1))}]
-               "Published"])
+              [:div {:style "display:flex; flex-direction:column; gap:10px;"}
+               [:label {:class "adm-check-row"}
+                [:input {:type "checkbox" :name "featured" :value "1"
+                         :checked (= 1 (:featured e))}]
+                "Featured on home page"]
+               [:label {:class "adm-check-row"}
+                [:input {:type "checkbox" :name "published" :value "1"
+                         :checked (not= 0 (:published e 1))}]
+                "Published"]])
    (adm/submit-row {:cancel-href "/admin/events"})])
 
 (defn- events-calendar-view [ctx query-params]
@@ -542,9 +631,8 @@
         ym-fmt    (java.time.format.DateTimeFormatter/ofPattern "yyyy-MM")
         ms        (.toEpochSecond (.atStartOfDay first-day java.time.ZoneOffset/UTC))
         me        (.toEpochSecond (.atStartOfDay (.plusMonths first-day 1) java.time.ZoneOffset/UTC))
-        evs       (exec ctx {:select [:start_at :title :id] :from :event
-                             :where  [:and [:>= :start_at ms] [:< :start_at me]]
-                             :order-by [[:start_at :asc]]})
+        all-evs   (exec ctx {:select [:start_at :title :id :recurrence :recur_until] :from :event})
+        evs       (expand-events-in-range all-evs ms me)
         ev-map    (group-by #(-> (java.time.Instant/ofEpochSecond (:start_at %))
                                  (java.time.LocalDate/ofInstant java.time.ZoneOffset/UTC)
                                  .getDayOfMonth) evs)
@@ -591,14 +679,17 @@
                         [:a {:href "/admin/events?view=calendar" :class "adm-link"} "Calendar view"])]
                      (if calendar?
                        (events-calendar-view ctx query-params)
-                       (let [rows (exec ctx {:select :* :from :event
-                                             :where  [:>= :start_at n-ep]
-                                             :order-by [[:start_at :asc]]})]
+                       (let [all-rows (exec ctx {:select :* :from :event
+                                                 :where  [:or
+                                                          [:and [:= :recurrence "none"] [:>= :start_at n-ep]]
+                                                          [:and [:not= :recurrence "none"]
+                                                           [:or [:is :recur_until nil] [:>= :recur_until n-ep]]]]})
+                             rows (events-next-occurrence all-rows n-ep)]
                          (if (empty? rows)
                            [:p {:class "adm-empty"} "No upcoming events. "
                             [:a {:href "/admin/events?view=all" :class "adm-link"} "View all past events"]]
                            [:table {:class "adm-table"}
-                            [:thead [:tr [:th "Title"] [:th "Start"] [:th "Location"] [:th "Repeats"] [:th "Status"] [:th ""]]]
+                            [:thead [:tr [:th "Title"] [:th "Next / Start"] [:th "Location"] [:th "Repeats"] [:th "Status"] [:th ""]]]
                             [:tbody
                              (for [r rows]
                                [:tr
@@ -632,6 +723,8 @@
                    :all_day (if (:all_day params) 1 0)
                    :recurrence (or (:recurrence params) "none")
                    :recur_until (parse-date-epoch (:recur_until params))
+                   :image_id (not-empty (:image_id params))
+                   :featured (if (:featured params) 1 0)
                    :published (if (:published params) 1 0)
                    :created_at (now-epoch)}]})
   {:status 303 :headers {"location" "/admin/events"}})
@@ -658,6 +751,8 @@
                :all_day (if (:all_day params) 1 0)
                :recurrence (or (:recurrence params) "none")
                :recur_until (parse-date-epoch (:recur_until params))
+               :image_id (not-empty (:image_id params))
+               :featured (if (:featured params) 1 0)
                :published (if (:published params) 1 0)}
          :where [:= :id (:id path-params)]})
   {:status 303 :headers {"location" "/admin/events"}})
@@ -687,10 +782,20 @@
 (defn- page-form [slug p csrf]
   [:form {:method "post" :action (str "/admin/pages/" slug) :class "adm-form"}
    csrf
-   (adm/field {:label "Page Title Override" :hint "Optional — leave blank to use the default page title"}
+   (adm/field {:label "Page Title" :hint "Leave blank to use the default static title"}
               (adm/text-input {:name "title" :value (or (:title p) "")}))
+   (adm/field {:label "Nav Label" :hint "Label shown in site navigation — leave blank to hide from nav"}
+              (adm/text-input {:name "nav_label" :value (or (:nav_label p) "")}))
+   (adm/field {:label "Nav Order" :hint "Position in menu (1 = first) — leave blank if not in nav"}
+              [:input {:type "number" :name "nav_order" :class "adm-input"
+                       :min "1" :value (or (some-> (:nav_order p) str) "")}])
    (adm/field {:label "Page Body"}
               (adm/tiptap-field "body" (:body p)))
+   (adm/field {:label "Status"}
+              [:label {:class "adm-check-row"}
+               [:input {:type "checkbox" :name "published" :value "1"
+                        :checked (not= 0 (:published p 1))}]
+               "Published"])
    (adm/submit-row {:cancel-href "/admin/pages"})])
 
 (defn pages-list [ctx]
@@ -702,12 +807,14 @@
                      [:p {:class "adm-hint" :style "margin-bottom:20px;"}
                       "Select a page to edit its content. If no DB record exists yet the page shows its default static content."]
                      [:table {:class "adm-table"}
-                      [:thead [:tr [:th "Page"] [:th "Last Updated"] [:th ""]]]
+                      [:thead [:tr [:th "Page"] [:th "Nav Label"] [:th "Nav Order"] [:th "Last Updated"] [:th ""]]]
                       [:tbody
                        (for [[slug label] page-slugs]
                          (let [r (first (filter #(= (:slug %) slug) rows))]
                            [:tr
                             [:td label]
+                            [:td (or (:nav_label r) [:em {:class "adm-hint"} "—"])]
+                            [:td (or (some-> (:nav_order r) str) [:em {:class "adm-hint"} "—"])]
                             [:td (if r (epoch->date (:updated_at r)) [:em {:class "adm-hint"} "default"])]
                             [:td [:a {:href (str "/admin/pages/" slug "/edit") :class "adm-link"} "Edit"]]]))]]])))
 
@@ -722,27 +829,27 @@
                      (page-form slug p (ui/anti-forgery-field))])))
 
 (defn pages-update [{:keys [params path-params] :as ctx}]
-  (let [slug (str/trim (:slug path-params))]
+  (let [slug      (str/trim (:slug path-params))
+        nav-order (when (seq (str/trim (or (:nav_order params) "")))
+                    (try (Integer/parseInt (str/trim (:nav_order params)))
+                         (catch Exception _ nil)))]
     (exec ctx
           {:insert-into :page
-           :values [{:id (new-id)
-                     :slug slug
-                     :title (or (:title params) "")
-                     :body (or (:body params) "")
+           :values [{:id        (new-id)
+                     :slug      slug
+                     :title     (or (:title params) "")
+                     :nav_label (or (:nav_label params) "")
+                     :nav_order nav-order
+                     :body      (or (:body params) "")
+                     :published (if (:published params) 1 0)
                      :updated_at (now-epoch)}]
            :on-conflict {:on [:slug]
-                         :do-update-set [:title :body :updated_at]}}))
+                         :do-update-set [:title :nav_label :nav_order :body :published :updated_at]}}))
   {:status 303 :headers {"location" "/admin/pages"}})
 
 ;; ---------------------------------------------------------------------------
 ;; Files (bulletins, slides, documents)
 ;; ---------------------------------------------------------------------------
-
-(defn- upload-dir [ctx]
-  (get ctx :mtz/upload-dir "storage/uploads"))
-
-(defn- ensure-upload-dir! [ctx]
-  (.mkdirs (java.io.File. (upload-dir ctx))))
 
 (defn- sanitize-filename [s]
   (-> s str/trim (str/replace #"[^a-zA-Z0-9._\-]" "_")))
@@ -776,14 +883,14 @@
                        [:p {:class "adm-hint"} "No files uploaded yet."]
                        [:table {:class "adm-table"}
                         [:thead
-                         [:tr [:th "Label"] [:th "Category"] [:th "Size"] [:th "Uploaded"] [:th ""]]]
+                         [:tr [:th "Label"] [:th "Category"] [:th "Date"] [:th "Size"] [:th ""]]]
                         [:tbody
                          (for [r rows]
                            [:tr
                             [:td [:a {:href (:url r) :class "adm-link" :target "_blank"} (:label r)]]
                             [:td (file-category-label (:category r))]
+                            [:td (or (epoch->date (:file_date r)) [:span {:class "adm-hint"} "—"])]
                             [:td (when (:size_bytes r) (format-bytes (:size_bytes r)))]
-                            [:td (epoch->date (:uploaded_at r))]
                             [:td
                              [:div {:class "adm-actions"}
                               [:a {:href (:url r) :class "adm-link" :target "_blank"} "View"]
@@ -807,30 +914,32 @@
                                           :accept ".pdf,.pptx,.ppt,.doc,.docx,.xls,.xlsx"}])
                       (adm/field {:label "Label" :hint "e.g. Bulletin · May 4, 2026"}
                                  (adm/text-input {:name "label" :placeholder "Bulletin · May 4, 2026"}))
+                      (adm/field {:label "Date" :hint "Sunday date this file is for"}
+                                 [:input {:type "date" :name "file_date" :class "adm-input"}])
                       (adm/field {:label "Category"}
                                  (adm/select-input {:name "category"} file-category-options pre-cat))
                       (adm/submit-row {:label "Upload" :cancel-href "/admin/files"})]])))
 
 (defn files-upload [{:keys [params] :as ctx}]
-  (ensure-upload-dir! ctx)
-  (let [dir      (upload-dir ctx)
-        upload   (:file params)
+  (let [upload   (:file params)
         original (sanitize-filename (or (:filename upload) "file"))
-        stored   (str (new-id) "-" original)
-        dest     (java.io.File. (str dir "/" stored))
+        key      (str "files/" (new-id) "-" original)
         label    (let [l (str/trim (or (:label params) ""))]
                    (if (seq l) l original))
-        url      (str "/uploads/" stored)]
+        ct       (or (:content-type upload) "application/octet-stream")
+        size     (or (:size upload) 0)]
     (when (:tempfile upload)
-      (io/copy (:tempfile upload) dest))
+      (with-open [in (java.io.FileInputStream. (:tempfile upload))]
+        (r2/put! ctx key ct in size)))
     (exec ctx
           {:insert-into :file
-           :values [{:id (new-id)
-                     :filename original
-                     :label label
-                     :category (or (:category params) "other")
-                     :url url
-                     :size_bytes (:size upload)
+           :values [{:id          (new-id)
+                     :filename    original
+                     :label       label
+                     :category    (or (:category params) "other")
+                     :url         (r2/public-url ctx key)
+                     :size_bytes  size
+                     :file_date   (parse-date-epoch (:file_date params))
                      :uploaded_at (now-epoch)}]}))
   {:status 303 :headers {"location" "/admin/files"}})
 
@@ -838,22 +947,10 @@
   (let [row (first (exec ctx {:select :* :from :file
                               :where [:= :id (:id path-params)]}))]
     (when row
-      (let [filename (last (str/split (:url row) #"/"))
-            f        (java.io.File. (str (upload-dir ctx) "/" filename))]
-        (.delete f))
+      (when-let [key (r2/key-from-url ctx (:url row))]
+        (r2/delete! ctx key))
       (exec ctx {:delete-from :file :where [:= :id (:id path-params)]})))
   {:status 303 :headers {"location" "/admin/files"}})
-
-(defn serve-upload [{:keys [path-params] :as ctx}]
-  (let [filename (str/replace (:filename path-params) #"\.\.|/" "")
-        f        (java.io.File. (str (upload-dir ctx) "/" filename))]
-    (if (.exists f)
-      {:status  200
-       :headers {"Content-Type"        (or (java.nio.file.Files/probeContentType (.toPath f))
-                                           "application/octet-stream")
-                 "Content-Disposition" (str "inline; filename=\"" filename "\"")}
-       :body    f}
-      {:status 404 :body "Not found"})))
 
 ;; ---------------------------------------------------------------------------
 ;; Module
@@ -861,8 +958,7 @@
 
 (def module
   {:biff.ring/routes
-   [["/uploads/:filename" {:get serve-upload :name ::serve-upload}]
-    ["/admin" {:middleware [[wrap-signed-in]]}
+   [["/admin" {:middleware [[wrap-signed-in]]}
      ["" {:get dashboard :name ::dashboard}]
      ["/features"
       ["" {:get features-list :post features-create :name ::features}]

@@ -34,7 +34,8 @@
 (def extra-sql
   ["CREATE TABLE IF NOT EXISTS feature (
       id TEXT PRIMARY KEY NOT NULL,
-      placement TEXT NOT NULL,
+      page_slug TEXT NOT NULL DEFAULT 'home',
+      show_on_home INTEGER NOT NULL DEFAULT 0,
       title TEXT NOT NULL,
       subtitle TEXT,
       body TEXT NOT NULL DEFAULT '',
@@ -53,6 +54,7 @@
       excerpt TEXT,
       body TEXT NOT NULL DEFAULT '',
       image_id TEXT,
+      show_on_home INTEGER NOT NULL DEFAULT 0,
       published_at INTEGER,
       created_at INTEGER NOT NULL,
       UNIQUE(slug)
@@ -68,6 +70,7 @@
       recurrence TEXT NOT NULL DEFAULT 'none',
       recur_until INTEGER,
       image_id TEXT,
+      featured INTEGER NOT NULL DEFAULT 0,
       published INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER NOT NULL
     ) STRICT;"
@@ -75,7 +78,10 @@
       id TEXT PRIMARY KEY NOT NULL,
       slug TEXT NOT NULL,
       title TEXT,
+      nav_label TEXT,
+      nav_order INTEGER,
       body TEXT NOT NULL DEFAULT '',
+      published INTEGER NOT NULL DEFAULT 1,
       updated_at INTEGER NOT NULL,
       UNIQUE(slug)
     ) STRICT;"
@@ -86,6 +92,7 @@
       category TEXT NOT NULL DEFAULT 'other',
       url TEXT NOT NULL,
       size_bytes INTEGER,
+      file_date INTEGER,
       uploaded_at INTEGER NOT NULL
     ) STRICT;"
    "CREATE TABLE IF NOT EXISTS sermon (
@@ -95,6 +102,8 @@
       scripture TEXT,
       description TEXT NOT NULL DEFAULT '',
       video_id TEXT,
+      bulletin_path TEXT,
+      presentation_path TEXT,
       published INTEGER NOT NULL DEFAULT 1,
       created_at INTEGER NOT NULL
     ) STRICT;"])

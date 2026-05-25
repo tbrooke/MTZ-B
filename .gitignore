@@ -14,6 +14,7 @@ bin/tailwindcss
 .lein-failures
 .nrepl-port
 .cpcache/
+.clj-kondo/
 /storage/
 config.env
 config.prod.env
