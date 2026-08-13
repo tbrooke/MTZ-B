@@ -4,115 +4,40 @@
             [com.mtzion.lib.middleware :refer [wrap-signed-in]]
             [com.mtzion.lib.r2 :as r2]
             [com.mtzion.lib.ui :as ui]
+            [com.mtzion.model.event :as event]
+            [com.mtzion.model.nav :as model.nav]
+            [com.mtzion.model.normalize :as normalize]
             [com.mtzion.ui.admin :as adm]))
 
 ;; ---------------------------------------------------------------------------
 ;; Helpers
 ;; ---------------------------------------------------------------------------
 
-(defn- now-epoch [] (.getEpochSecond (java.time.Instant/now)))
+;; Local aliases onto com.mtzion.model.normalize. The importer and these admin
+;; forms must share one implementation of the epoch/timezone conversions — see
+;; that namespace for why the datetime and date-only conventions differ.
+(def ^:private now-epoch       normalize/now-epoch)
+(def ^:private parse-epoch     normalize/local-datetime->epoch)
+(def ^:private parse-date-epoch normalize/local-date->epoch)
+(def ^:private epoch->dt       normalize/epoch->local-datetime-str)
+(def ^:private epoch->date     normalize/epoch->date-str)
+(def ^:private slugify         normalize/slugify)
 
 (defn- exec
   "Wrapper around biff.sqlite/execute that returns rows with unqualified
   snake_case keys, matching the DB column names used throughout this file."
   [ctx honey]
-  (mapv (fn [row]
-          (into {} (map (fn [[k v]]
-                          [(keyword (str/replace (name k) "-" "_")) v])
-                        row)))
-        (biff.sqlite/execute ctx honey)))
+  (normalize/snake-keys-all (biff.sqlite/execute ctx honey)))
+
 (defn- new-id [] (str (random-uuid)))
 
-(defn- parse-epoch
-  "datetime-local input gives '2025-05-15T10:30' — append :00Z to parse as UTC."
-  [s]
-  (when (seq s)
-    (try (.getEpochSecond (java.time.Instant/parse (str s ":00Z")))
-         (catch Exception _ nil))))
-
-(defn- parse-date-epoch
-  "date input gives '2025-05-15' — parse as start-of-day UTC."
-  [s]
-  (when (seq s)
-    (try (.getEpochSecond (java.time.Instant/parse (str s "T00:00:00Z")))
-         (catch Exception _ nil))))
-
-(defn- epoch->dt [epoch]
-  (when epoch
-    (-> (java.time.Instant/ofEpochSecond epoch) .toString (subs 0 16))))
-
-(defn- epoch->date [epoch]
-  (when epoch
-    (-> (java.time.Instant/ofEpochSecond epoch) .toString (subs 0 10))))
-
-(defn- slugify [s]
-  (-> s str/lower-case (str/replace #"[^a-z0-9]+" "-") (str/replace #"^-|-$" "")))
-
-;; ---------------------------------------------------------------------------
-;; Recurrence expansion
-;; ---------------------------------------------------------------------------
-
-(defn- ldt->epoch [^java.time.LocalDateTime ldt]
-  (.toEpochSecond ldt java.time.ZoneOffset/UTC))
-
-(defn- advance-recurrence [^java.time.LocalDateTime ldt recurrence]
-  (case recurrence
-    "daily"    (.plusDays ldt 1)
-    "weekly"   (.plusWeeks ldt 1)
-    "biweekly" (.plusWeeks ldt 2)
-    "monthly"  (.plusMonths ldt 1)
-    "yearly"   (.plusYears ldt 1)
-    nil))
-
-(defn- event-occurrences-in-range
-  "Returns coll of ev maps (with :start_at set to the occurrence epoch) for all
-  occurrences of ev within [from-epoch, to-epoch).
-  Non-recurring events are returned as-is when start_at falls in the range."
-  [ev from-epoch to-epoch]
-  (let [recur (:recurrence ev "none")
-        base  (or (:start_at ev) 0)
-        until (:recur_until ev)]
-    (if (= recur "none")
-      (when (and (>= base from-epoch) (< base to-epoch)) [ev])
-      (when (and (pos? base) (or (nil? until) (>= until from-epoch)))
-        (let [base-ldt (java.time.LocalDateTime/ofInstant
-                        (java.time.Instant/ofEpochSecond base)
-                        java.time.ZoneOffset/UTC)]
-          (loop [ldt base-ldt acc [] n 0]
-            (if (> n 3650)
-              acc
-              (let [t (ldt->epoch ldt)]
-                (cond
-                  (or (>= t to-epoch) (and until (> t until))) acc
-                  (>= t from-epoch)
-                  (let [next (advance-recurrence ldt recur)]
-                    (if next
-                      (recur next (conj acc (assoc ev :start_at t)) (inc n))
-                      (conj acc (assoc ev :start_at t))))
-                  :else
-                  (let [next (advance-recurrence ldt recur)]
-                    (if next (recur next acc (inc n)) acc)))))))))))
-
-(defn- expand-events-in-range [events from-epoch to-epoch]
-  (sort-by :start_at
-           (mapcat #(event-occurrences-in-range % from-epoch to-epoch) events)))
-
-(defn- next-occurrence
-  "Returns ev with :start_at set to the next occurrence >= after-epoch,
-  or nil if the event has no future occurrences."
-  [ev after-epoch]
-  (first (event-occurrences-in-range ev after-epoch (+ after-epoch (* 3650 86400)))))
-
-(defn- events-next-occurrence
-  "Returns events (one entry per event) with :start_at set to their next
-  occurrence >= after-epoch, sorted by that date."
-  [events after-epoch]
-  (->> events
-       (keep #(next-occurrence % after-epoch))
-       (sort-by :start_at)))
-
-(defn- checked? [params k]
-  (contains? params k))
+(defn- parse-int-param
+  "Form value -> int, falling back to `default` when blank or unparseable."
+  [params k default]
+  (let [v (str/trim (or (get params k) ""))]
+    (if (seq v)
+      (try (Integer/parseInt v) (catch Exception _ default))
+      default)))
 
 ;; ---------------------------------------------------------------------------
 ;; Dashboard — bento layout
@@ -220,7 +145,7 @@
         (for [ev upcoming]
           (let [ld (some-> (:start_at ev)
                            java.time.Instant/ofEpochSecond
-                           (java.time.LocalDate/ofInstant java.time.ZoneOffset/UTC))]
+                           (java.time.LocalDate/ofInstant normalize/eastern))]
             [:div {:class "bento-event-row"}
              [:div {:class "bento-date-chip" :style (str "border:1px solid " soft ";")}
               [:span {:class "bento-date-chip-m" :style (str "color:" ink ";")}
@@ -233,19 +158,19 @@
       [:a {:href "/admin/events" :class "bento-btn bento-btn--ghost" :style (str "border-color:" ink ";color:" ink ";")} "All"]]]))
 
 (defn- calendar-tile [ctx]
-  (let [today      (java.time.LocalDate/now java.time.ZoneOffset/UTC)
+  (let [today      (java.time.LocalDate/now normalize/eastern)
         first-day  (java.time.LocalDate/of (.getYear today) (.getMonthValue today) 1)
         dow        (.getValue (.getDayOfWeek first-day))
         offset     (mod dow 7)
         days-in    (.lengthOfMonth first-day)
         month-name (.format first-day (java.time.format.DateTimeFormatter/ofPattern "MMMM"))
-        ms         (.toEpochSecond (.atStartOfDay first-day java.time.ZoneOffset/UTC))
-        me         (.toEpochSecond (.atStartOfDay (.plusMonths first-day 1) java.time.ZoneOffset/UTC))
+        ms         (.toEpochSecond (.atStartOfDay first-day normalize/eastern))
+        me         (.toEpochSecond (.atStartOfDay (.plusMonths first-day 1) normalize/eastern))
         all-evs    (exec ctx {:select [:start_at :recurrence :recur_until] :from :event
                               :where  [:= :published 1]})
-        evs        (expand-events-in-range all-evs ms me)
+        evs        (event/expand-in-range all-evs ms me)
         event-days (into #{} (map #(-> (java.time.Instant/ofEpochSecond (:start_at %))
-                                       (java.time.LocalDate/ofInstant java.time.ZoneOffset/UTC)
+                                       (java.time.LocalDate/ofInstant normalize/eastern)
                                        .getDayOfMonth) evs))
         today-day  (.getDayOfMonth today)
         raw-cells  (concat (repeat offset nil) (range 1 (inc days-in)))
@@ -303,7 +228,7 @@
                             :order-by [[order-col :desc]] :limit 1}))))
 
 (defn- format-day-header []
-  (let [d (java.time.LocalDate/now java.time.ZoneOffset/UTC)]
+  (let [d (java.time.LocalDate/now normalize/eastern)]
     (str (.format d (java.time.format.DateTimeFormatter/ofPattern "EEEE"))
          " · "
          (.format d (java.time.format.DateTimeFormatter/ofPattern "MMM d")))))
@@ -315,12 +240,8 @@
         n-feats  (count-table ctx :feature)
         upcoming-src (exec ctx
                            {:select [:title :start_at :recurrence :recur_until] :from :event
-                            :where  [:and [:= :published 1]
-                                     [:or
-                                      [:and [:= :recurrence "none"] [:>= :start_at n-ep]]
-                                      [:and [:not= :recurrence "none"]
-                                       [:or [:is :recur_until nil] [:>= :recur_until n-ep]]]]]})
-        upcoming-exp (events-next-occurrence upcoming-src n-ep)
+                            :where  [:and [:= :published 1] (event/upcoming-where n-ep)]})
+        upcoming-exp (event/next-occurrences upcoming-src n-ep)
         upcoming     (take 3 upcoming-exp)
         n-events     (count upcoming-exp)
         r-post   (latest-title ctx :post :created_at)
@@ -344,18 +265,29 @@
 ;; ---------------------------------------------------------------------------
 
 (def ^:private known-page-slugs
-  ["home" "about" "worship" "events" "activities" "news" "outreach" "contact" "preschool"])
+  ;; MUST include every slug the public pages actually query. The named content
+  ;; slots below were missing, which meant opening one of those features and
+  ;; saving it silently reset page_slug to "home" (the browser submits the first
+  ;; <option> when none matches) — detaching the section from its page.
+  ["home"
+   "home-hero"        ; landing.clj — the large photo hero
+   "home-worship"     ; landing.clj — sanctuary section
+   "home-activities"  ; landing.clj — "Always at Mt. Zion" graphics
+   "current-theme"    ; worship.clj — sermon series banner
+   "activities"       ; activities.clj — seasonal programme cards
+   "about" "worship" "events" "news" "outreach" "contact" "preschool"])
 
-(defn- feature-form [action f csrf]
+(defn- all-page-slugs [ctx]
+  (let [db-slugs (map :slug (exec ctx {:select [:slug] :from :page :order-by [[:slug :asc]]}))]
+    (distinct (concat known-page-slugs db-slugs))))
+
+(defn- feature-form [action f page-slugs csrf]
   [:form {:method "post" :action action :class "adm-form"}
    csrf
-   (adm/field {:label "Page" :hint "Slug of the page this section belongs to (e.g. home, about, activities)"}
-              [:div {:style "display:flex; flex-direction:column; gap:6px;"}
-               [:input {:type "text" :name "page_slug" :class "adm-input"
-                        :value (or (:page_slug f) "home")
-                        :list "page-slug-list" :required "true"}]
-               [:datalist {:id "page-slug-list"}
-                (for [s known-page-slugs] [:option {:value s}])]])
+   (adm/field {:label "Page"}
+              [:select {:name "page_slug" :class "adm-select" :required "true"}
+               (for [s page-slugs]
+                 [:option {:value s :selected (= s (or (:page_slug f) "home"))} s])])
    (adm/field {:label "Options"}
               [:label {:class "adm-check-row"}
                [:input {:type "checkbox" :name "show_on_home" :value "1"
@@ -365,6 +297,13 @@
               (adm/text-input {:name "title" :value (or (:title f) "") :required "true"}))
    (adm/field {:label "Subtitle" :hint "Optional short line below title"}
               (adm/text-input {:name "subtitle" :value (or (:subtitle f) "")}))
+   (adm/field {:label "Image"
+               :hint  "Cloudflare image ID — copy it from the Images panel. Required for home-activities graphics."}
+              (adm/text-input {:name "image_id" :value (or (:image_id f) "")
+                               :placeholder "e.g. a4df1d13-4c92-46f7-a871-cfc910f3ca00"}))
+   (adm/field {:label "Sort Order" :hint "Lower numbers appear first"}
+              [:input {:type "number" :name "sort_order" :class "adm-input" :min "0"
+                       :value (or (some-> (:sort_order f) str) "0")}])
    (adm/field {:label "Body"}
               (adm/tiptap-field "body" (:body f)))
    (adm/field {:label "CTA Button Label" :hint "e.g. Learn More"}
@@ -406,12 +345,12 @@
                               (adm/delete-form (str "/admin/features/" (:id r) "/delete")
                                                (ui/anti-forgery-field))]]])]])])))
 
-(defn features-new [_ctx]
+(defn features-new [ctx]
   (adm/admin-page "New Feature"
                   (adm/top-bar)
                   [:div {:class "adm-content"}
                    (adm/page-header "New Feature" "/admin/features")
-                   (feature-form "/admin/features" nil (ui/anti-forgery-field))]))
+                   (feature-form "/admin/features" nil (all-page-slugs ctx) (ui/anti-forgery-field))]))
 
 (defn features-create [{:keys [params] :as ctx}]
   (exec ctx
@@ -425,8 +364,9 @@
                    :body         (or (:body params) "")
                    :cta_label    (or (:cta_label params) "")
                    :cta_url      (or (:cta_url params) "")
+                   :image_id     (not-empty (:image_id params))
                    :published    (if (:published params) 1 0)
-                   :sort_order   0
+                   :sort_order   (parse-int-param params :sort_order 0)
                    :updated_at   (now-epoch)
                    :created_at   (now-epoch)}]})
   {:status 303 :headers {"location" "/admin/features"}})
@@ -439,7 +379,7 @@
                       (adm/top-bar)
                       [:div {:class "adm-content"}
                        (adm/page-header "Edit Feature" "/admin/features")
-                       (feature-form (str "/admin/features/" (:id f)) f (ui/anti-forgery-field))])
+                       (feature-form (str "/admin/features/" (:id f)) f (all-page-slugs ctx) (ui/anti-forgery-field))])
       {:status 404 :body "Not found"})))
 
 (defn features-update [{:keys [params path-params] :as ctx}]
@@ -453,6 +393,8 @@
                :body         (or (:body params) "")
                :cta_label    (or (:cta_label params) "")
                :cta_url      (or (:cta_url params) "")
+               :image_id     (not-empty (:image_id params))
+               :sort_order   (parse-int-param params :sort_order 0)
                :published    (if (:published params) 1 0)
                :updated_at   (now-epoch)}
          :where [:= :id (:id path-params)]})
@@ -466,15 +408,26 @@
 ;; Posts (Pastor Jim Reflects)
 ;; ---------------------------------------------------------------------------
 
+(def ^:private post-category-options
+  [["blog"       "Blog"]
+   ["news"       "News — Church Announcements"]
+   ["reflection" "Reflection — Pastor Jim Reflects"]])
+
 (defn- post-form [action p csrf]
   [:form {:method "post" :action action :class "adm-form"}
    csrf
+   (adm/field {:label "Category"}
+              (adm/select-input {:name "category"} post-category-options (or (:category p) "blog")))
    (adm/field {:label "Title"}
               (adm/text-input {:name "title" :value (or (:title p) "") :required "true"}))
    (adm/field {:label "Slug" :hint "URL path — auto-generated from title if left blank"}
               (adm/text-input {:name "slug" :value (or (:slug p) "")}))
    (adm/field {:label "Excerpt" :hint "Short summary for listing pages"}
               [:textarea {:name "excerpt" :class "adm-textarea"} (or (:excerpt p) "")])
+   (adm/field {:label "Image"
+               :hint  "Cloudflare image ID — shown on the news cards. Copy it from the Images panel."}
+              (adm/text-input {:name "image_id" :value (or (:image_id p) "")
+                               :placeholder "e.g. a4df1d13-4c92-46f7-a871-cfc910f3ca00"}))
    (adm/field {:label "Body"}
               (adm/tiptap-field "body" (:body p)))
    (adm/field {:label "Published Date" :hint "Leave blank to save as draft"}
@@ -498,10 +451,13 @@
                      (if (empty? rows)
                        [:p {:class "adm-empty"} "No posts yet."]
                        [:table {:class "adm-table"}
-                        [:thead [:tr [:th "Title"] [:th "Published"] [:th ""]]]
+                        [:thead [:tr [:th "Category"] [:th "Title"] [:th "Published"] [:th ""]]]
                         [:tbody
                          (for [r rows]
                            [:tr
+                            [:td (if (= "news" (:category r "blog"))
+                                   [:span {:class "adm-badge"} "News"]
+                                   [:span {:class "adm-badge adm-badge--green"} "Blog"])]
                             [:td (:title r)]
                             [:td (if (:published_at r)
                                    (epoch->date (:published_at r))
@@ -528,7 +484,9 @@
            :values [{:id           (new-id)
                      :slug         slug
                      :title        title
+                     :category     (or (:category params) "blog")
                      :excerpt      (or (:excerpt params) "")
+                     :image_id     (not-empty (:image_id params))
                      :body         (or (:body params) "")
                      :show_on_home (if (:show_on_home params) 1 0)
                      :published_at (parse-date-epoch (:published_at params))
@@ -554,7 +512,9 @@
           {:update :post
            :set {:slug         slug
                  :title        title
+                 :category     (or (:category params) "blog")
                  :excerpt      (or (:excerpt params) "")
+                 :image_id     (not-empty (:image_id params))
                  :body         (or (:body params) "")
                  :show_on_home (if (:show_on_home params) 1 0)
                  :published_at (parse-date-epoch (:published_at params))}
@@ -618,7 +578,7 @@
    (adm/submit-row {:cancel-href "/admin/events"})])
 
 (defn- events-calendar-view [ctx query-params]
-  (let [today     (java.time.LocalDate/now java.time.ZoneOffset/UTC)
+  (let [today     (java.time.LocalDate/now normalize/eastern)
         month-str (get query-params "month" "")
         first-day (if (seq month-str)
                     (try (java.time.LocalDate/parse (str month-str "-01"))
@@ -629,12 +589,12 @@
         days-in   (.lengthOfMonth first-day)
         month-fmt (java.time.format.DateTimeFormatter/ofPattern "MMMM yyyy")
         ym-fmt    (java.time.format.DateTimeFormatter/ofPattern "yyyy-MM")
-        ms        (.toEpochSecond (.atStartOfDay first-day java.time.ZoneOffset/UTC))
-        me        (.toEpochSecond (.atStartOfDay (.plusMonths first-day 1) java.time.ZoneOffset/UTC))
+        ms        (.toEpochSecond (.atStartOfDay first-day normalize/eastern))
+        me        (.toEpochSecond (.atStartOfDay (.plusMonths first-day 1) normalize/eastern))
         all-evs   (exec ctx {:select [:start_at :title :id :recurrence :recur_until] :from :event})
-        evs       (expand-events-in-range all-evs ms me)
+        evs       (event/expand-in-range all-evs ms me)
         ev-map    (group-by #(-> (java.time.Instant/ofEpochSecond (:start_at %))
-                                 (java.time.LocalDate/ofInstant java.time.ZoneOffset/UTC)
+                                 (java.time.LocalDate/ofInstant normalize/eastern)
                                  .getDayOfMonth) evs)
         today-day (when (and (= (.getYear today) (.getYear first-day))
                              (= (.getMonthValue today) (.getMonthValue first-day)))
@@ -664,45 +624,64 @@
               (for [ev day-evs]
                 [:a {:href (str "/admin/events/" (:id ev) "/edit") :class "adm-cal-ev"} (:title ev)])])))]])))
 
+(defn- events-table [rows all? n-ep]
+  [:table {:class "adm-table"}
+   [:thead [:tr [:th "Title"] [:th (if all? "Start" "Next / Start")] [:th "Location"]
+            [:th "Repeats"] [:th "Home?"] [:th "Status"] [:th ""]]]
+   [:tbody
+    (for [r rows]
+      [:tr
+       [:td (:title r)
+        (when (and all? (= "none" (:recurrence r "none")) (< (:start_at r 0) n-ep))
+          [:span {:class "adm-badge adm-badge--draft" :style "margin-left:8px;"} "Past"])]
+       [:td (or (epoch->dt (:start_at r)) "—")]
+       [:td (or (not-empty (:location r)) "—")]
+       [:td (:recurrence r "none")]
+       [:td (when (= 1 (:featured r)) "★")]
+       [:td (adm/badge (= 1 (:published r)))]
+       [:td
+        [:div {:class "adm-actions"}
+         [:a {:href (str "/admin/events/" (:id r) "/edit") :class "adm-link"} "Edit"]
+         (adm/delete-form (str "/admin/events/" (:id r) "/delete")
+                          (ui/anti-forgery-field))]]])]])
+
 (defn events-list [{:keys [query-params] :as ctx}]
-  (let [view     (get query-params "view" "list")
-        n-ep     (now-epoch)
-        calendar? (= view "calendar")]
+  (let [view      (get query-params "view" "list")
+        n-ep      (now-epoch)
+        calendar? (= view "calendar")
+        all?      (= view "all")]
     (adm/admin-page "Events"
                     (adm/top-bar)
                     [:div {:class "adm-content"}
                      (adm/page-header "Events" "/admin")
                      [:div {:style "display:flex; gap:12px; margin-bottom:20px; align-items:center;"}
                       [:a {:href "/admin/events/new" :class "mtz-btn mtz-btn--primary"} "+ New Event"]
+                      (when-not calendar?
+                        (if all?
+                          [:a {:href "/admin/events" :class "adm-link"} "Upcoming only"]
+                          [:a {:href "/admin/events?view=all" :class "adm-link"} "All events (incl. past)"]))
                       (if calendar?
                         [:a {:href "/admin/events" :class "adm-link"} "List view"]
                         [:a {:href "/admin/events?view=calendar" :class "adm-link"} "Calendar view"])]
-                     (if calendar?
+                     (cond
+                       calendar?
                        (events-calendar-view ctx query-params)
+
+                       all?
+                       (let [rows (exec ctx {:select :* :from :event
+                                             :order-by [[:start_at :desc]]})]
+                         (if (empty? rows)
+                           [:p {:class "adm-empty"} "No events yet."]
+                           (events-table rows true n-ep)))
+
+                       :else
                        (let [all-rows (exec ctx {:select :* :from :event
-                                                 :where  [:or
-                                                          [:and [:= :recurrence "none"] [:>= :start_at n-ep]]
-                                                          [:and [:not= :recurrence "none"]
-                                                           [:or [:is :recur_until nil] [:>= :recur_until n-ep]]]]})
-                             rows (events-next-occurrence all-rows n-ep)]
+                                                 :where  (event/upcoming-where n-ep)})
+                             rows     (event/next-occurrences all-rows n-ep)]
                          (if (empty? rows)
                            [:p {:class "adm-empty"} "No upcoming events. "
-                            [:a {:href "/admin/events?view=all" :class "adm-link"} "View all past events"]]
-                           [:table {:class "adm-table"}
-                            [:thead [:tr [:th "Title"] [:th "Next / Start"] [:th "Location"] [:th "Repeats"] [:th "Status"] [:th ""]]]
-                            [:tbody
-                             (for [r rows]
-                               [:tr
-                                [:td (:title r)]
-                                [:td (or (epoch->dt (:start_at r)) "—")]
-                                [:td (or (:location r) "—")]
-                                [:td (:recurrence r "none")]
-                                [:td (adm/badge (= 1 (:published r)))]
-                                [:td
-                                 [:div {:class "adm-actions"}
-                                  [:a {:href (str "/admin/events/" (:id r) "/edit") :class "adm-link"} "Edit"]
-                                  (adm/delete-form (str "/admin/events/" (:id r) "/delete")
-                                                   (ui/anti-forgery-field))]]])]])))])))
+                            [:a {:href "/admin/events?view=all" :class "adm-link"} "View all events, including past"]]
+                           (events-table rows false n-ep))))])))
 
 (defn events-new [_ctx]
   (adm/admin-page "New Event"
@@ -779,16 +758,37 @@
 (defn- page-slug-label [slug]
   (or (some (fn [[s l]] (when (= s slug) l)) page-slugs) slug))
 
+(def ^:private parent-options
+  (into [["" "— Top level (its own menu item) —"]]
+        (map (fn [s] [s (page-slug-label s)]) model.nav/top-level-slugs)))
+
+(defn- position-options
+  "1..8 plus a blank. Position is relative to siblings under the chosen parent."
+  []
+  (into [["" "— Last —"]]
+        (map (fn [n] [(str n) (str n)]) (range 1 9))))
+
+(defn- nav-fields
+  "Parent + position + label. Shared by the new and edit page forms."
+  [p]
+  (list
+   (adm/field {:label "Nav Label"
+               :hint  "Text shown in the menu — leave blank to keep the page off the menu entirely"}
+              (adm/text-input {:name "nav_label" :value (or (:nav_label p) "")}))
+   (adm/field {:label "Parent Menu"
+               :hint  "Which top-level menu this page appears under. Top level gives it its own menu item."}
+              (adm/select-input {:name "parent_slug"} parent-options (or (:parent_slug p) "")))
+   (adm/field {:label "Position"
+               :hint  "Order within that menu — 1 is first. Leave blank to put it last."}
+              (adm/select-input {:name "nav_order"} (position-options)
+                                (or (some-> (:nav_order p) str) "")))))
+
 (defn- page-form [slug p csrf]
   [:form {:method "post" :action (str "/admin/pages/" slug) :class "adm-form"}
    csrf
    (adm/field {:label "Page Title" :hint "Leave blank to use the default static title"}
               (adm/text-input {:name "title" :value (or (:title p) "")}))
-   (adm/field {:label "Nav Label" :hint "Label shown in site navigation — leave blank to hide from nav"}
-              (adm/text-input {:name "nav_label" :value (or (:nav_label p) "")}))
-   (adm/field {:label "Nav Order" :hint "Position in menu (1 = first) — leave blank if not in nav"}
-              [:input {:type "number" :name "nav_order" :class "adm-input"
-                       :min "1" :value (or (some-> (:nav_order p) str) "")}])
+   (nav-fields p)
    (adm/field {:label "Page Body"}
               (adm/tiptap-field "body" (:body p)))
    (adm/field {:label "Status"}
@@ -804,19 +804,49 @@
                     (adm/top-bar)
                     [:div {:class "adm-content"}
                      (adm/page-header "Pages" "/admin")
-                     [:p {:class "adm-hint" :style "margin-bottom:20px;"}
-                      "Select a page to edit its content. If no DB record exists yet the page shows its default static content."]
-                     [:table {:class "adm-table"}
-                      [:thead [:tr [:th "Page"] [:th "Nav Label"] [:th "Nav Order"] [:th "Last Updated"] [:th ""]]]
-                      [:tbody
-                       (for [[slug label] page-slugs]
-                         (let [r (first (filter #(= (:slug %) slug) rows))]
-                           [:tr
-                            [:td label]
-                            [:td (or (:nav_label r) [:em {:class "adm-hint"} "—"])]
-                            [:td (or (some-> (:nav_order r) str) [:em {:class "adm-hint"} "—"])]
-                            [:td (if r (epoch->date (:updated_at r)) [:em {:class "adm-hint"} "default"])]
-                            [:td [:a {:href (str "/admin/pages/" slug "/edit") :class "adm-link"} "Edit"]]]))]]])))
+                     [:div {:style "display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;"}
+                      [:p {:class "adm-hint" :style "margin:0;"}
+                       "Select a page to edit its content. If no DB record exists yet the page shows its default static content."]
+                      [:a {:href "/admin/pages/new" :class "mtz-btn mtz-btn--primary"} "+ New Page"]]
+                     ;; Built-in pages first, then any CMS-created page. Without the
+                     ;; second group a newly created page is invisible here.
+                     (let [known    (set (map first page-slugs))
+                           custom   (remove #(known (:slug %)) rows)
+                           row-for  #(first (filter (fn [r] (= (:slug r) %)) rows))
+                           nav-cell (fn [r]
+                                      (cond
+                                        (not (seq (:nav_label r))) [:em {:class "adm-hint"} "not in menu"]
+                                        (seq (:parent_slug r))     (str (page-slug-label (:parent_slug r))
+                                                                        " › " (:nav_label r))
+                                        :else                      (str (:nav_label r) " (top level)")))]
+                       [:table {:class "adm-table"}
+                        [:thead [:tr [:th "Page"] [:th "URL"] [:th "In Menu"] [:th "Pos"]
+                                 [:th "Status"] [:th "Last Updated"] [:th ""]]]
+                        [:tbody
+                         (concat
+                          (for [[slug label] page-slugs]
+                            (let [r (row-for slug)]
+                              [:tr
+                               [:td label]
+                               [:td [:code {:class "adm-hint"} (str "/" slug)]]
+                               [:td (if r (nav-cell r) [:em {:class "adm-hint"} "—"])]
+                               [:td (or (some-> (:nav_order r) str) [:em {:class "adm-hint"} "—"])]
+                               [:td (if r (adm/badge (= 1 (:published r))) [:em {:class "adm-hint"} "static"])]
+                               [:td (if r (epoch->date (:updated_at r)) [:em {:class "adm-hint"} "default"])]
+                               [:td [:a {:href (str "/admin/pages/" slug "/edit") :class "adm-link"} "Edit"]]]))
+                          (for [r custom]
+                            [:tr
+                             [:td (or (not-empty (:title r)) (:slug r))
+                              [:span {:class "adm-badge adm-badge--green" :style "margin-left:8px;"} "New"]]
+                             [:td [:code {:class "adm-hint"} (model.nav/page-path r)]]
+                             [:td (nav-cell r)]
+                             [:td (or (some-> (:nav_order r) str) [:em {:class "adm-hint"} "—"])]
+                             [:td (adm/badge (= 1 (:published r)))]
+                             [:td (epoch->date (:updated_at r))]
+                             [:td
+                              [:div {:class "adm-actions"}
+                               [:a {:href (str "/admin/pages/" (:slug r) "/edit") :class "adm-link"} "Edit"]
+                               [:a {:href (model.nav/page-path r) :class "adm-link" :target "_blank"} "View"]]]]))]])])))
 
 (defn pages-edit [{:keys [path-params] :as ctx}]
   (let [slug (:slug path-params)
@@ -828,23 +858,74 @@
                      (adm/page-header (str "Edit: " (page-slug-label slug)) "/admin/pages")
                      (page-form slug p (ui/anti-forgery-field))])))
 
+(defn- parse-nav-order [params]
+  (when (seq (str/trim (or (:nav_order params) "")))
+    (try (Integer/parseInt (str/trim (:nav_order params)))
+         (catch Exception _ nil))))
+
+(defn- parse-parent
+  "Blank means top level (stored as NULL). Anything not in the known top-level
+  list is rejected the same way, so a stale form can't orphan a page."
+  [params]
+  (let [v (str/trim (or (:parent_slug params) ""))]
+    (when (some #{v} model.nav/top-level-slugs) v)))
+
+(def ^:private page-upsert-cols
+  [:title :nav_label :nav_order :parent_slug :body :published :updated_at])
+
 (defn pages-update [{:keys [params path-params] :as ctx}]
-  (let [slug      (str/trim (:slug path-params))
-        nav-order (when (seq (str/trim (or (:nav_order params) "")))
-                    (try (Integer/parseInt (str/trim (:nav_order params)))
-                         (catch Exception _ nil)))]
+  (let [slug (str/trim (:slug path-params))]
     (exec ctx
           {:insert-into :page
-           :values [{:id        (new-id)
-                     :slug      slug
-                     :title     (or (:title params) "")
-                     :nav_label (or (:nav_label params) "")
-                     :nav_order nav-order
-                     :body      (or (:body params) "")
-                     :published (if (:published params) 1 0)
-                     :updated_at (now-epoch)}]
-           :on-conflict {:on [:slug]
-                         :do-update-set [:title :nav_label :nav_order :body :published :updated_at]}}))
+           :values [{:id          (new-id)
+                     :slug        slug
+                     :title       (or (:title params) "")
+                     :nav_label   (or (:nav_label params) "")
+                     :nav_order   (parse-nav-order params)
+                     :parent_slug (parse-parent params)
+                     :body        (or (:body params) "")
+                     :published   (if (:published params) 1 0)
+                     :updated_at  (now-epoch)}]
+           :on-conflict :slug
+           :do-update-set page-upsert-cols}))
+  {:status 303 :headers {"location" "/admin/pages"}})
+
+(defn pages-new [_ctx]
+  (adm/admin-page "New Page"
+                  (adm/top-bar)
+                  [:div {:class "adm-content"}
+                   (adm/page-header "New Page" "/admin/pages")
+                   [:form {:method "post" :action "/admin/pages" :class "adm-form"}
+                    (ui/anti-forgery-field)
+                    (adm/field {:label "Slug" :hint "URL path segment — e.g. johns-river, stewardship, youth"}
+                               (adm/text-input {:name "slug" :required "true" :placeholder "my-new-page"}))
+                    (adm/field {:label "Page Title"}
+                               (adm/text-input {:name "title"}))
+                    (nav-fields nil)
+                    (adm/field {:label "Page Body"}
+                               (adm/tiptap-field "body" nil))
+                    (adm/field {:label "Status"}
+                               [:label {:class "adm-check-row"}
+                                [:input {:type "checkbox" :name "published" :value "1" :checked true}]
+                                "Published"])
+                    (adm/submit-row {:cancel-href "/admin/pages"})]]))
+
+(defn pages-create [{:keys [params] :as ctx}]
+  (let [slug (slugify (str/trim (or (:slug params) "")))]
+    (when (seq slug)
+      (exec ctx
+            {:insert-into :page
+             :values [{:id          (new-id)
+                       :slug        slug
+                       :title       (or (:title params) "")
+                       :nav_label   (or (:nav_label params) "")
+                       :nav_order   (parse-nav-order params)
+                       :parent_slug (parse-parent params)
+                       :body        (or (:body params) "")
+                       :published   (if (:published params) 1 0)
+                       :updated_at  (now-epoch)}]
+             :on-conflict :slug
+             :do-update-set page-upsert-cols})))
   {:status 303 :headers {"location" "/admin/pages"}})
 
 ;; ---------------------------------------------------------------------------
@@ -979,9 +1060,10 @@
       ["/:id/edit" {:get events-edit :name ::events-edit}]
       ["/:id/delete" {:post events-delete :name ::events-delete}]]
      ["/pages"
-      ["" {:get pages-list :name ::pages}]
-      ["/:slug/edit" {:get pages-edit :name ::pages-edit}]
-      ["/:slug" {:post pages-update :name ::pages-update}]]
+      ["" {:get pages-list :post pages-create :name ::pages}]
+      ["/new" {:get pages-new :name ::pages-new :conflicting true}]
+      ["/:slug/edit" {:get pages-edit :name ::pages-edit :conflicting true}]
+      ["/:slug" {:post pages-update :name ::pages-update :conflicting true}]]
      ["/files"
       ["" {:get files-list :post files-upload :name ::files}]
       ["/new" {:get files-new :name ::files-new}]

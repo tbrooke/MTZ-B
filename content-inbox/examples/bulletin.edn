@@ -1,0 +1,66 @@
+;; Example content drop — the shape Claude Desktop should produce.
+;; Validated by test/com/mtzion/content/ingest_test.clj, so this file can never
+;; illustrate something the schema would reject.
+{:mtz/contract 1
+ :contract-sha "example"
+ :source {:kind :bulletin
+          :files ["Bulletin 8-9-26.pdf" "Aug 9 Slides.pptx"]
+          :extracted-on "2026-08-07"}
+ :items
+ [{:type :sermon
+   :key "sermon-2026-08-09"
+   :sermon-date "2026-08-09"
+   :title "The Bread That Endures"
+   :scripture-cw "Exodus 16:2-4, 9-15"
+   :scripture-gospel "John 6:24-35"
+   :series "bread-of-life-2026"
+   :description "Pastor Jim continues the Bread of Life series."}
+
+  {:type :event
+   :key "handbell-rehearsal-fall-2026"
+   :title "Handbell Choir Rehearsal"
+   :starts-at "2026-08-13T18:30"
+   :ends-at "2026-08-13T19:30"
+   :all-day false
+   :location "Sanctuary"
+   :recurrence :weekly
+   :recur-until "2026-12-17"
+   :featured false
+   :description [[:p "New ringers welcome — no experience necessary."]]}
+
+  {:type :event
+   :key "back-to-school-blessing-2026"
+   :title "Back-to-School Blessing"
+   :starts-at "2026-08-16T10:30"
+   :all-day false
+   :location "Sanctuary"
+   :featured true
+   :description [[:p "Students, teachers, and staff are invited forward during "
+                  "worship for a blessing as the new school year begins. "
+                  "Bring your backpack!"]]}
+
+  {:type :post
+   :key "council-notes-2026-08"
+   :slug "council-notes-august-2026"
+   :category :news
+   :title "Notes from Consistory"
+   :excerpt "Highlights from the August meeting: roof project, budget, and fall programming."
+   :published-on "2026-08-09"
+   :show-on-home false
+   :body [[:p "Consistory met on August 4. Three items are worth sharing:"]
+          [:ul
+           [:li [:strong "Roof project."] " Bids are in; work begins in September."]
+           [:li [:strong "Budget."] " Giving is tracking 4% ahead of last year."]
+           [:li [:strong "Fall programming."] " Sunday School resumes September 7."]]
+          [:p "The next meeting is " [:strong "September 1 at 7:00 PM"] "."]]}
+
+  {:type :feature
+   :key "home-fall-kickoff-2026"
+   :page-slug :home
+   :title "Fall Kickoff Sunday"
+   :subtitle "September 7 · 10:30 AM"
+   :body [[:p "One service, one table, one family. Lunch on the lawn follows worship."]]
+   :cta-label "See all events"
+   :cta-url "/events"
+   :sort-order 10
+   :show-on-home true}]}

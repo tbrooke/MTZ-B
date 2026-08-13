@@ -144,12 +144,91 @@ The `sqlite3def` binary must be manually placed at `storage/sqlite3def/sqlite3de
 Recent releases switched from `.tar.gz` to `.zip` for darwin_arm64 — download from GitHub
 (sqldef v3.10.1) and extract manually if the auto-download fails with a corrupt file.
 
+## Reading rows: `biff.sqlite/execute` returns QUALIFIED KEBAB keys
+
+`biff.sqlite/execute` returns `:post/published-at`, `:page/body`, `:feature/subtitle` —
+namespace-qualified and kebab-case. Every renderer in this app reads **unqualified
+snake_case** (`:published_at`, `:body`). Reading a raw result therefore yields `nil`
+for every field, silently, with no error — this caused four separate "section renders
+blank" bugs (about, outreach, news, activities).
+
+Always pass results through `com.mtzion.model.normalize/snake-keys` (single row) or
+`snake-keys-all` (collection). `(name k)` strips the namespace and the dashes become
+underscores in one step. The `exec` helpers in `admin.clj` and `media.clj` already do this.
+
+## Dates: two different timezone conventions
+
+Defined and tested in `com.mtzion.model.normalize`. Do not conflate them:
+
+| Kind | Columns | Stored as |
+|---|---|---|
+| datetime | `event.start_at`, `event.end_at` | church wall-clock, **America/New_York** |
+| date-only | `recur_until`, `published_at`, `file_date`, `sermon_date` | **UTC midnight** |
+
+So `start_at` must be *rendered* in Eastern (rendering it in UTC showed every event 4–5
+hours late), while `sermon_date` must be rendered in UTC. Recurrence expansion steps in
+Eastern `LocalDateTime` so a 6:30 PM weekly event stays 6:30 PM across DST.
+
+## Content import (Claude Desktop → EDN → site)
+
+The weekly path for the pastor's bulletin/slides. Content is authored by an AI
+agent against a published contract, reviewed as a diff, and published by a human.
+
+```bash
+clj -M:run content-doc       # regenerate content-inbox/CONTRACT.md from the schemas
+clj -M:run import            # dry run — prints a diff, writes NOTHING
+clj -M:run import --apply    # commit; archives the input + a receipt
+```
+
+Weekly loop:
+
+1. Drop the bulletin PDF + slides PPTX into a Claude Desktop **Project** whose
+   knowledge is `content-inbox/CONTRACT.md`. Desktop reads both formats natively —
+   there is no parsing code in this repo.
+2. Prompt: *"Extract this week's content per CONTRACT.md. Output exactly one EDN
+   map, no prose, no markdown fence."*
+3. Save the output to `content-inbox/<date>-bulletin.edn`.
+4. `clj -M:run import` → read the diff → `clj -M:run import --apply`.
+5. Review and **publish** in `/admin`. Attach images/video there too.
+
+### Invariants the importer guarantees
+
+- **Everything imports as a draft.** `:published` is not part of the contract.
+- **Re-importing never un-publishes.** Only INSERT sets publish state; UPDATE
+  never touches `published` / `published_at`.
+- **Never deletes.** Removing an item from the EDN leaves the row alone.
+- **Idempotent.** Re-dropping an unchanged file plans zero writes.
+- **All-or-nothing per file**, in a transaction. Validation failure = zero writes.
+- Matching order: `import_key` → natural key (adopting a hand-made row) → insert.
+
+### Contract drift
+
+`CONTRACT.md` is *generated* from `content/schema.clj` + `content/hiccup.clj` +
+`model/nav.clj`. A test asserts the committed file equals the generated output, so
+changing a schema without running `content-doc` fails the build. Each file carries
+a `:contract-sha`; the importer warns (but still imports) when it is stale.
+
+### Layout
+
+```
+src/com/mtzion/content/
+  hiccup.clj   tag/attribute allowlist, explain, ->html (throws on invalid)
+  schema.clj   Malli item + envelope schemas
+  plan.clj     match existing rows, classify create/update/unchanged, render diff
+  ingest.clj   read → validate → plan → apply; the CLI task
+  doc.clj      generates CONTRACT.md
+content-inbox/           gitignored except CONTRACT.md + examples/
+  CONTRACT.md            what Claude Desktop is told to follow
+  examples/bulletin.edn  worked example (validated by a test)
+  applied/               archived inputs + receipts after --apply
+```
+
 ## Dev workflow
 
 ```bash
 clj -M:run dev      # start dev server on :8080 with hot reload + nREPL on :7888
 npm run build       # rebuild admin.js Tiptap bundle (run after editing admin-js/main.js)
-clj -M:test         # run tests
+clj -M:run test     # run tests (there is no :test alias — this is Biff's task)
 ```
 
 To trigger a namespace reload without restarting (if the file watcher misses a change):

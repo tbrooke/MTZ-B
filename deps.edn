@@ -27,6 +27,9 @@
          :main-opts ["-m" "com.mtzion"]}
   :run {:extra-paths ["test"]
         :extra-deps {io.github.jacobobryant/biff-tasks {:git/sha "02d63d6d30e64714262fce15b2d725d24213dd24"}}
-        :main-opts ["-m" "com.biffweb.cljrun" "com.biffweb.tasks/tasks" "--"]}
+        :main-opts ["-m" "com.biffweb.cljrun"
+                    "com.biffweb.tasks/tasks"
+                    "com.mtzion.tasks/tasks"
+                    "--"]}
   :build {:deps {io.github.clojure/tools.build {:mvn/version "0.10.5"}}
           :ns-default build}}}

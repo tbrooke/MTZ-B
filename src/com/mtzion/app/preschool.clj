@@ -139,8 +139,9 @@
     [:div [:span {:class "ps-enroll-k"} "Calendar"] [:span {:class "ps-enroll-v"} "September – May"]]
     [:div [:span {:class "ps-enroll-k"} "License"] [:span {:class "ps-enroll-v"} "NC 5-Star Center"]]]])
 
-(defn preschool [_ctx]
+(defn preschool [ctx]
   (base/preschool-page
+   ctx
    "Mt. Zion Preschool — China Grove, NC"
    (list
     (hero)

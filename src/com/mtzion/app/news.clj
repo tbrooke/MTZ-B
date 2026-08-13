@@ -1,5 +1,6 @@
 (ns com.mtzion.app.news
   (:require [com.biffweb.sqlite :as biff.sqlite]
+            [com.mtzion.model.normalize :as norm]
             [com.mtzion.ui.base :as base]
             [lambdaisland.hiccup :as hiccup]))
 
@@ -9,15 +10,21 @@
         (java.time.LocalDate/ofInstant java.time.ZoneOffset/UTC)
         (.format (java.time.format.DateTimeFormatter/ofPattern "MMMM yyyy")))))
 
-(defn- post-card [p]
+(defn- cf-img-url
+  "The account hash segment is required — without it the URL 404s. This is why
+  post images silently never appeared."
+  [ctx image-id]
+  (when (seq image-id)
+    (str "https://imagedelivery.net/" (:cf/images-hash ctx) "/" image-id "/public")))
+
+(defn- post-card [ctx p]
   [:article {:class "mtz-card"}
-   (if (:image_id p)
-     [:img {:src   (str "https://imagedelivery.net/" (:image_id p) "/public")
+   ;; No image, no box. A grey "image · 800×500" placeholder reads as an
+   ;; unfinished site, which is worse than a card that is simply text.
+   (when-let [img (cf-img-url ctx (:image_id p))]
+     [:img {:src   img
             :alt   (:title p)
-            :style "width: 100%; aspect-ratio: 16/10; object-fit: cover;"}]
-     [:div {:class "mtz-img"
-            :style "aspect-ratio: 16/10; border-radius: 0; border-left: 0; border-right: 0; border-top: 0;"}
-      [:span {:class "mtz-img-label"} "image · 800×500"]])
+            :style "width: 100%; aspect-ratio: 16/10; object-fit: cover;"}])
    [:div {:class "mtz-card-body"}
     [:p {:class "mtz-card-meta"} (str "News · " (or (format-month-year (:published_at p)) ""))]
     [:h3 {:class "mtz-h3" :style "font-size: 22px; margin-bottom: 10px;"} (:title p)]
@@ -43,10 +50,13 @@
        [:p {:style "color: var(--mtz-ink-soft); font-size: 15px; margin: 0;"} excerpt]]])])
 
 (defn- page-content [ctx]
-  (let [posts (biff.sqlite/execute ctx {:select   :*
-                                        :from     :post
-                                        :where    [:is-not :published_at nil]
-                                        :order-by [[:published_at :desc]]})]
+  ;; snake-keys is required: execute returns :post/published-at, but post-card
+  ;; reads :published_at. Without it every card rendered blank.
+  (let [posts (norm/snake-keys-all
+               (biff.sqlite/execute ctx {:select   :*
+                                         :from     :post
+                                         :where    [:is-not :published_at nil]
+                                         :order-by [[:published_at :desc]]}))]
     (list
      [:section {:class "mtz-section"}
       [:p {:class "mtz-kicker"} "From the Mt. Zion Community"]
@@ -60,7 +70,7 @@
        [:h2 {:class "mtz-h2" :style "margin-bottom: 28px;"} "Latest News"]
        (if (seq posts)
          [:div {:class "mtz-grid mtz-grid--3"}
-          (map post-card posts)]
+          (map #(post-card ctx %) posts)]
          (default-news-grid))]]
 
      [:section {:class "mtz-section"}
@@ -86,8 +96,50 @@
        [:a {:class "mtz-btn mtz-btn--primary" :href "/contact"} "Subscribe to Newsletter"]]])))
 
 (defn news [ctx]
-  (base/page "News — Mount Zion UCC" (page-content ctx)))
+  (base/page ctx "News — Mount Zion UCC" (page-content ctx)))
+
+;; ---------------------------------------------------------------------------
+;; /news/:slug — a single post
+;; ---------------------------------------------------------------------------
+
+(defn- post-detail-content [p]
+  (list
+   [:section {:class "mtz-section"}
+    [:p {:class "mtz-kicker"}
+     (str "News · " (or (format-month-year (:published_at p)) ""))]
+    [:h1 {:class "mtz-h1" :style "max-width: 760px;"} (:title p)]
+    (when (seq (:excerpt p))
+      [:p {:class "mtz-lede" :style "max-width: 640px;"} (:excerpt p)])
+    [:hr {:class "mtz-rule"}]]
+   [:section {:class "mtz-section"}
+    [:div {:class "mtz-prose" :style "max-width: 760px;"}
+     [::hiccup/unsafe-html (:body p)]]
+    [:a {:class "mtz-arrow-link" :href "/news" :style "margin-top: 32px; display: inline-flex;"}
+     "← All news"]]))
+
+(defn post-detail
+  "A post is readable only once it has a published_at date — that is what draft
+  means for this table, so the same filter as the listing applies here."
+  [{:keys [path-params] :as ctx}]
+  (let [p (norm/snake-keys
+           (first (biff.sqlite/execute ctx {:select :* :from :post
+                                            :where  [:and
+                                                     [:= :slug (:slug path-params)]
+                                                     [:is-not :published_at nil]]})))]
+    (if p
+      (base/page ctx (str (:title p) " — Mount Zion UCC") (post-detail-content p))
+      (-> (base/page ctx "Not Found — Mount Zion UCC"
+                     [:section {:class "mtz-section"}
+                      [:h1 {:class "mtz-h1"} "Post not found"]
+                      [:p {:class "mtz-lede" :style "max-width: 560px;"}
+                       "That post doesn't exist or hasn't been published yet."]
+                      [:a {:class "mtz-btn mtz-btn--primary" :href "/news"} "All news"]])
+          (assoc :status 404)))))
 
 (def module
   {:biff.ring/routes
-   [["/news" {:get news :name ::news}]]})
+   [["/news" {:get news :name ::news}]
+    ;; Must be a real route: /news/<slug> is two segments with "news" in
+    ;; model.nav/top-level-slugs, so without this the CMS 404-fallback would
+    ;; look the slug up in the page table and always miss.
+    ["/news/:slug" {:get post-detail :name ::post-detail}]]})

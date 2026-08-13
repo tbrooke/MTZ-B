@@ -67,23 +67,63 @@
 ;; --- FALLBACK NAV DATA ---
 
 (def ^:private church-fallback-nav
-  [{:label "Home"       :path "/"           :has-children? false :scroll? true}
-   {:label "About"      :path "/about"      :has-children? true  :scroll? true
+  [{:label "Home"       :slug "home"       :path "/"           :has-children? false :scroll? true}
+   {:label "About"      :slug "about"      :path "/about"      :has-children? true  :scroll? true
     :submenu [{:label "Our Story"       :path "/about"}
-              {:label "History"         :path "/about#archive"}
+              ;; was /about#archive — that anchor never existed, so this link
+              ;; jumped nowhere. Points at the About page's history section
+              ;; until there is a real archive to link to.
+              {:label "History"         :path "/about"}
               {:label "Beliefs"         :path "/about"}
               {:label "Staff & Council" :path "/about"}]}
-   {:label "Worship"    :path "/worship"    :has-children? true  :scroll? true
-    :submenu [{:label "This Sunday" :path "/worship"}
-              {:label "Sunday Worship" :path "/sermons"}
-              {:label "Music"       :path "/worship"}]}
-   {:label "Events"     :path "/events"     :has-children? false :scroll? false}
-   {:label "Activities" :path "/activities" :has-children? false :scroll? false}
-   {:label "News"       :path "/news"       :has-children? true  :scroll? true
+   {:label "Worship"    :slug "worship"    :path "/worship"    :has-children? true  :scroll? true
+    :submenu [{:label "Sunday Worship" :path "/worship/sundays"}
+              {:label "Current Theme"  :path "/worship/theme"}]}
+   {:label "Events"     :slug "events"     :path "/events"     :has-children? false :scroll? false}
+   {:label "Activities" :slug "activities" :path "/activities" :has-children? false :scroll? false}
+   {:label "News"       :slug "news"       :path "/news"       :has-children? true  :scroll? true
     :submenu [{:label "Newsletter"    :path "/news"}
               {:label "Announcements" :path "/news"}]}
-   {:label "Outreach"   :path "/outreach"   :has-children? false :scroll? true}
-   {:label "Contact"    :path "/contact"    :has-children? false :scroll? true}])
+   {:label "Outreach"   :slug "outreach"   :path "/outreach"   :has-children? false :scroll? true}
+   {:label "Contact"    :slug "contact"    :path "/contact"    :has-children? false :scroll? true}])
+
+(defn- page-path [{:keys [slug parent_slug]}]
+  (if (seq parent_slug) (str "/" parent_slug "/" slug) (str "/" slug)))
+
+(defn build-nav
+  "Merge CMS pages into the static nav skeleton.
+
+  A page with a parent_slug is appended to that top-level item's submenu (turning
+  a flat item into a dropdown if it had none). A page without a parent becomes its
+  own top-level item, inserted by nav_order. Pages are pre-sorted by nav_order, so
+  submenu order follows the position set in the admin panel."
+  ([] church-fallback-nav)
+  ([pages]
+   (if (empty? pages)
+     church-fallback-nav
+     (let [{children true, roots false} (group-by #(boolean (seq (:parent_slug %))) pages)
+           by-parent (group-by :parent_slug children)
+           with-kids (mapv (fn [item]
+                             (let [kids (get by-parent (:slug item))]
+                               (if (empty? kids)
+                                 item
+                                 (assoc item
+                                        :has-children? true
+                                        :submenu (into (vec (:submenu item))
+                                                       (map (fn [p]
+                                                              {:label (:nav_label p)
+                                                               :path  (page-path p)})
+                                                            kids))))))
+                           church-fallback-nav)]
+       ;; top-level CMS pages slot in by nav_order, after the static items that
+       ;; share or precede that position.
+       (reduce (fn [acc p]
+                 (let [item {:label (:nav_label p) :slug (:slug p)
+                             :path (page-path p) :has-children? false :scroll? false}
+                       pos  (min (count acc) (max 0 (dec (or (:nav_order p) 9999))))]
+                   (vec (concat (take pos acc) [item] (drop pos acc)))))
+               with-kids
+               (sort-by #(or (:nav_order %) 9999) roots))))))
 
 ;; --- SITE HEADER ---
 

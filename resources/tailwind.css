@@ -1124,3 +1124,74 @@ body {
   .ps-section-head { grid-template-columns: 1fr; }
 }
 .bento-choose-btn:hover { background:#EDE8DF; }
+
+/* ── Worship Sanctuary arch (home page) ── */
+.mtz-arch-frame {
+  position: relative;
+  width: 360px;
+  height: 520px;
+  background: var(--mtz-ink);
+  padding: 10px;
+  border-radius: 180px 180px 6px 6px;
+  box-shadow: 0 30px 60px -30px rgba(27,27,24,0.35);
+  flex-shrink: 0;
+}
+.mtz-arch-inner {
+  width: 100%;
+  height: 100%;
+  border-radius: 170px 170px 2px 2px;
+  overflow: hidden;
+  background: #000;
+}
+.mtz-arch-mullion {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 210px;
+  bottom: 20px;
+  width: 1px;
+  background: rgba(27,27,24,0.45);
+  pointer-events: none;
+}
+.mtz-arch-plaque {
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--mtz-cream);
+  border: 1px solid rgba(27,27,24,0.18);
+  padding: 8px 18px;
+  white-space: nowrap;
+  font-family: ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--mtz-ink-mute);
+}
+/* ── Always at Mt. Zion (home page): 1/3 copy, 2/3 activity graphics ── */
+.mtz-always-grid {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 64px;
+  align-items: start;
+}
+.mtz-always-cards {
+  display: grid;
+  /* auto-fit so one graphic fills the column and more than two wrap cleanly,
+     without needing a code change each time a graphic is added */
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 28px;
+}
+.mtz-always-cards img {
+  display: block;
+  width: 100%;
+  height: auto;              /* these are graphics with baked-in text — never crop */
+  border-radius: 6px;
+  border: 1px solid var(--mtz-rule);
+}
+
+@media (max-width: 860px) {
+  .mtz-arch-grid { grid-template-columns: 1fr !important; gap: 56px !important; }
+  .mtz-arch-frame { width: 280px; height: 400px; margin: 0 auto; }
+  .mtz-always-grid { grid-template-columns: 1fr; gap: 40px; }
+}

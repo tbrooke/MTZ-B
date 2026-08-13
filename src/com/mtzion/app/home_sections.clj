@@ -1,6 +1,8 @@
 (ns com.mtzion.app.home-sections
-  "Homepage section components — all static defaults, no CMS dependency."
+  "Homepage section components. Sections take CMS data where it exists and fall
+  back to the static defaults below, so the page never renders empty."
   (:require [clojure.string :as str]
+            [com.mtzion.model.church :as church]
             [lambdaisland.hiccup :as hiccup]))
 
 ;; ---------------------------------------------------------------------------
@@ -152,86 +154,108 @@
         (map flyer-card features)]]])))
 
 ;; ---------------------------------------------------------------------------
-;; THIS SUNDAY — compact 4-column strip (home page only)
+;; WORSHIP SANCTUARY — Gothic arch section (home page)
 ;; ---------------------------------------------------------------------------
 
-(defn this-sunday-compact-section
-  ([] (this-sunday-compact-section nil))
+(def ^:private worship-green "#2f5a3f")
+
+(defn worship-sanctuary-section
+  ([] (worship-sanctuary-section nil))
   ([data]
-   (let [d (merge default-this-sunday data)
-         photo (or (:photo-url d) "/images/pulpit.jpg")]
-     [:section {:id "worship" :class "mtz-section"
-                :style "padding-top: 56px; padding-bottom: 56px;"}
-      ;; header row
-      [:div {:style (str "display: flex; justify-content: space-between; align-items: baseline;"
-                         " padding-bottom: 20px; border-bottom: 1px solid var(--mtz-ink);"
-                         " flex-wrap: wrap; gap: 16px; margin-bottom: 32px;")}
-       [:div
-        [:p {:class "mtz-kicker" :style "margin: 0;"} "This Sunday"]
-        [:h3 {:class "mtz-h3" :style "margin: 4px 0 0; font-size: 24px;"} "Worship times"]]
-       [:div {:style "display: flex; gap: 24px; flex-wrap: wrap;"}
-        (when (:bulletin-url d)
-          [:a {:class "mtz-arrow-link" :href (:bulletin-url d)} "This week's bulletin →"])
-        (when (:facebook-url d)
-          [:a {:class "mtz-arrow-link" :href (:facebook-url d) :target "_blank" :rel "noopener"}
-           "Watch on Facebook →"])]]
-      ;; photo + service times
-      [:div {:class "mtz-grid mtz-grid--2" :style "gap: 48px; align-items: stretch;"}
-       ;; photo
-       [:div {:style (str "border-radius: 6px; overflow: hidden;"
-                          " border: 1px solid var(--mtz-rule);"
-                          " min-height: 260px;")}
-        [:img {:src photo :alt "Mount Zion sanctuary"
-               :style "display: block; width: 100%; height: 100%; object-fit: cover;"}]]
-       ;; service time blocks
-       [:div {:style "border: 1px solid var(--mtz-rule); border-radius: 6px; overflow: hidden;"}
-        (map-indexed
-         (fn [i [time title sub]]
-           [:div {:style (str "padding: 28px 32px;"
-                              (when (< i (dec (count default-services)))
-                                " border-bottom: 1px solid var(--mtz-rule);"))}
-            [:div {:class "mtz-mono"
-                   :style "font-size: 12.5px; letter-spacing: 0.12em; color: var(--mtz-mint-dark); font-weight: 600; margin-bottom: 8px;"}
-             time]
-            [:div {:style "font-family: var(--mtz-serif-display); font-size: 26px; font-weight: 500; margin-bottom: 4px;"}
-             title]
-            [:div {:class "mtz-mute" :style "font-size: 14px;"} sub]])
-         default-services)]]])))
+   (let [img-url   (:image-url data)
+         body-text (or (:body data)
+                       "One service. Scripture, prayer, and song beneath the windows that have watched over this congregation since 1910 — with our choir and pipe organ.")
+         time-txt  (or (:subtitle data) "10:30 AM · Every Sunday")
+         cta-label (or (:cta-label data) "Plan a visit")
+         cta-url   (or (:cta-url data) "/contact")]
+     [:section {:id "worship" :class "mtz-section--cream"}
+      [:div {:class "mtz-section-inner"}
+       ;; header row
+       [:p {:style (str "font-family: ui-monospace,'SF Mono',Menlo,Consolas,monospace;"
+                        " font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;"
+                        " color: " worship-green "; font-weight: 500; margin: 0 0 14px;")}
+        "This Sunday"]
+       [:h2 {:style (str "font-family: var(--mtz-serif-display);"
+                         " font-size: 52px; font-weight: 400; line-height: 1.05;"
+                         " letter-spacing: -0.01em; color: var(--mtz-ink); margin: 0 0 32px;")}
+        "Worship "
+        [:em {:style (str "font-style: italic; color: " worship-green ";")} "this Sunday"]]
+       [:hr {:style "height: 1px; background: var(--mtz-ink); border: 0; opacity: 0.85; margin: 0 0 40px;"}]
+       ;; two-column body
+       [:div {:class "mtz-arch-grid"
+              :style "display: grid; grid-template-columns: 0.85fr 1fr; gap: 80px; align-items: center;"}
+        ;; left: arch image
+        [:div {:style "display: flex; justify-content: flex-start;"}
+         [:div {:class "mtz-arch-frame"}
+          [:div {:class "mtz-arch-inner"}
+           (if (seq img-url)
+             [:img {:src   img-url
+                    :alt   "Stained-glass window in the Mt Zion sanctuary depicting Christ as the Good Shepherd with a lamb and sheep"
+                    :style "width: 100%; height: 100%; object-fit: cover; object-position: center 30%;"}]
+             [:div {:style "width: 100%; height: 100%; background: var(--mtz-stone);"}])]
+          [:div {:class "mtz-arch-mullion"}]
+          [:div {:class "mtz-arch-plaque"} "The Good Shepherd · c. 1910"]]]
+        ;; right: service details
+        [:div {:style "padding-bottom: 28px;"}
+         [:p {:style (str "font-family: ui-monospace,'SF Mono',Menlo,Consolas,monospace;"
+                          " font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase;"
+                          " color: " worship-green "; font-weight: 500; margin: 0 0 14px;")}
+          time-txt]
+         [:h3 {:style (str "font-family: var(--mtz-serif-display);"
+                           " font-size: 52px; font-weight: 400; line-height: 1.05;"
+                           " letter-spacing: -0.01em; color: var(--mtz-ink); margin: 0 0 22px;")}
+          "Gather in the" [:br]
+          [:em {:style (str "font-style: italic; color: " worship-green ";")} "Sanctuary."]]
+         [:p {:style (str "font-family: var(--mtz-serif-body); font-size: 18px; line-height: 1.55;"
+                          " color: var(--mtz-ink-soft); max-width: 480px; margin: 0 0 22px;")}
+          body-text]
+         [:p {:style (str "font-family: var(--mtz-serif-body); font-size: 14px;"
+                          " color: var(--mtz-ink-mute); margin: 0 0 36px;")}
+          "Sanctuary · ≈60 min · Nursery provided"]
+         [:a {:href  cta-url
+              :style (str "display: inline-flex; align-items: center;"
+                          " background: " worship-green "; color: var(--mtz-cream);"
+                          " padding: 14px 22px; border-radius: 0; border: 0;"
+                          " font-family: ui-monospace,'SF Mono',Menlo,Consolas,monospace;"
+                          " font-size: 12px; font-weight: 500; letter-spacing: 0.14em;"
+                          " text-transform: uppercase; text-decoration: none;"
+                          " transition: background 150ms;")}
+          cta-label]]]]])))
 
 ;; ---------------------------------------------------------------------------
 ;; ALWAYS AT MT. ZION
 ;; ---------------------------------------------------------------------------
 
-(def ^:private default-activities
-  [{:name "Pickleball"           :when "Wed · 6:30 PM"       :desc "Open play in Fellowship Hall. Paddles provided; all skill levels welcome."}
-   {:name "Tai Chi"              :when "Tue · 9:00 AM"       :desc "Gentle movement and breath, led in the Education Wing."}
-   {:name "Youth Group"          :when "Sun · 6:00 PM"       :desc "Middle and high school students gather for games, dinner, and discussion."}
-   {:name "Choir Rehearsal"      :when "Wed · 7:00 PM"       :desc "Sanctuary choir prepares for Sunday worship. New voices always welcome."}
-   {:name "Bible Study"          :when "Thu · 10:00 AM"      :desc "Pastor Jim leads a small-group study in the church library. Coffee provided."}
-   {:name "Community Food Drive" :when "First Sat · 9–11 AM" :desc "Sort and distribute donations for Rowan Helping Ministries."}])
+(def ^:private default-activity-blurb
+  (str "Tai Chi, pickleball, Scouts, choir practice, the lectionary group, JOY Club — "
+       "there's something happening at Mt. Zion nearly every day of the week."))
 
 (defn always-at-mtz-section
+  "Copy on the left third, activity graphics on the right two thirds.
+
+  Cards come from CMS `feature` rows with page_slug \"home-activities\", so
+  graphics are added and reordered in the admin rather than in this file. Items
+  without an image are skipped — a grey placeholder box reads as an unfinished
+  site, which is the impression this redesign exists to fix."
   ([] (always-at-mtz-section nil))
-  ([activities]
-   (let [items (or (seq activities) default-activities)]
+  ([{:keys [cards blurb]}]
+   (let [cards (filter :image-url cards)
+         copy  [:div
+                [:p {:class "mtz-kicker"} "Every Week"]
+                [:h2 {:class "mtz-h2" :style "margin-bottom: 16px;"} "Always at Mt. Zion"]
+                [:p {:class "mtz-mute"
+                     :style "font-size: 18px; margin: 0 0 20px; font-family: var(--mtz-serif-body); line-height: 1.55;"}
+                 (or (not-empty blurb) default-activity-blurb)]
+                [:a {:class "mtz-arrow-link" :href "/activities"} "See all activities →"]]]
      [:section {:id "always" :class "mtz-section" :style "padding-top: 72px; padding-bottom: 72px;"}
-      [:div {:style "margin-bottom: 40px;"}
-       [:h2 {:class "mtz-h2" :style "margin-bottom: 8px;"} "Always at Mt. Zion"]
-       [:p {:class "mtz-mute" :style "font-size: 18px; margin: 0; font-family: var(--mtz-serif-body);"}
-        "Regular activities throughout the week."]]
-      [:div {:style "display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px;"}
-       (for [a items]
-         [:article {:class "mtz-card" :style "border: 0; background: transparent;"}
-          [:div {:class "mtz-img" :style "aspect-ratio: 5/4; border-radius: 6px; margin-bottom: 18px;"}
-           (if (:image-url a)
-             [:img {:src (:image-url a) :alt (:name a)
-                    :style "position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 6px;"}]
-             [:span {:class "mtz-img-label"} (str (str/lower-case (:name a)) " · photo")])]
-          [:h3 {:class "mtz-h3" :style "font-size: 24px; margin-bottom: 6px;"} (:name a)]
-          [:p {:class "mtz-mono"
-               :style "font-size: 12.5px; letter-spacing: 0.12em; color: var(--mtz-mint-dark); margin: 0 0 10px; font-weight: 600; text-transform: uppercase;"}
-           (:when a)]
-          [:p {:style "color: var(--mtz-ink-soft); margin: 0; font-size: 15.5px; line-height: 1.55;"} (:desc a)]])]])))
+      (if (seq cards)
+        [:div {:class "mtz-always-grid"}
+         copy
+         [:div {:class "mtz-always-cards"}
+          (for [c cards]
+            [:img {:src (:image-url c) :alt (or (not-empty (:name c)) "Mt. Zion activity")}])]]
+        ;; No graphics yet — show the copy full width rather than an empty column.
+        [:div {:style "max-width: 640px;"} copy])])))
 
 ;; ---------------------------------------------------------------------------
 ;; NEWS & ANNOUNCEMENTS
@@ -258,19 +282,30 @@
        [:div {:class "mtz-grid mtz-grid--3"}
         (for [n items]
           [:article {:class "mtz-card"}
-           (if (:image-url n)
+           ;; No image, no box — see the same decision in news.clj/post-card.
+           (when (:image-url n)
              [:img {:src (:image-url n) :alt (:title n)
-                    :style "width: 100%; aspect-ratio: 16/10; object-fit: cover;"}]
-             [:div {:class "mtz-img"
-                    :style "aspect-ratio: 16/10; border-radius: 0; border-left: 0; border-right: 0; border-top: 0;"}
-              [:span {:class "mtz-img-label"} "image · 800×500"]])
+                    :style "width: 100%; aspect-ratio: 16/10; object-fit: cover;"}])
            [:div {:class "mtz-card-body"}
             [:p {:class "mtz-card-meta"} (str (:tag n) " · " (:date n))]
-            [:h3 {:class "mtz-h3" :style "font-size: 22px; margin-bottom: 10px;"} (:title n)]
-            [:p {:style "color: var(--mtz-ink-soft); font-size: 15px; margin: 0;"} (:excerpt n)]]])]]])))
+            [:h3 {:class "mtz-h3" :style "font-size: 22px; margin-bottom: 10px;"}
+             (if (:url n)
+               [:a {:href (:url n) :style "color: inherit;"} (:title n)]
+               (:title n))]
+            [:p {:style "color: var(--mtz-ink-soft); font-size: 15px; margin: 0;"} (:excerpt n)]
+            (when (:url n)
+              [:a {:class "mtz-arrow-link" :href (:url n)
+                   :style "margin-top: 12px; display: inline-flex;"}
+               "Read more →"])]])]]])))
 
 ;; ---------------------------------------------------------------------------
-;; ABOUT TEASER
+;; ABOUT TEASER — PARKED, not currently on the home page.
+;;
+;; Removed 2026-08 pending the history work. As written it promised a "growing
+;; digital archive" that does not exist, linked to /about#archive (an anchor that
+;; was never added), and carried the home page's last grey placeholder. Kept here
+;; so it can be reinstated with real content and a real archive behind it — add
+;; `(about-teaser-section)` back to `home-page` below.
 ;; ---------------------------------------------------------------------------
 
 (defn about-teaser-section []
@@ -279,8 +314,8 @@
     [:div {:class "mtz-img" :style "aspect-ratio: 4/5; min-height: 0;"}
      [:span {:class "mtz-img-label"} "archival photo · ca. 1910"]]
     [:div
-     [:p {:class "mtz-kicker"} "Our Story · 168 Years"]
-     [:h2 {:class "mtz-h2"} "A congregation that has gathered on this hill since 1858."]
+     [:p {:class "mtz-kicker"} (str "Our Story · " (church/years-since-founding) " Years")]
+     [:h2 {:class "mtz-h2"} (str "A congregation that has gathered on this hill since " church/founded-year ".")]
      [:p {:class "mtz-prose" :style "color: var(--mtz-ink-soft);"}
       "From a one-room log meetinghouse to the sanctuary that stands today, "
       "Mount Zion's story is told in the people who have shown up — week after "
@@ -333,8 +368,8 @@
   ([data]
    (list
     (whats-coming-up-section   (:features data))
-    (this-sunday-compact-section (:this-sunday data))
+    (worship-sanctuary-section (:worship data))
     (always-at-mtz-section     (:activities data))
     (news-section              (:news data))
-    (about-teaser-section)
+    ;; (about-teaser-section)  — parked until the history work; see above.
     (outreach-section          (:outreach data)))))

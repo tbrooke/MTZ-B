@@ -1,16 +1,18 @@
 (ns com.mtzion.app.about
   (:require [com.biffweb.sqlite :as biff.sqlite]
+            [com.mtzion.model.church :as church]
+            [com.mtzion.model.normalize :as norm]
             [com.mtzion.ui.base :as base]
             [lambdaisland.hiccup :as hiccup]))
 
 (defn- page-content []
   (list
    [:section {:class "mtz-section"}
-    [:p {:class "mtz-kicker"} "Est. 1858 · China Grove, NC"]
+    [:p {:class "mtz-kicker"} (str "Est. " church/founded-year " · China Grove, NC")]
     [:h1 {:class "mtz-h1" :style "max-width: 760px;"} "About Mount Zion UCC"]
     [:p {:class "mtz-lede" :style "max-width: 680px;"}
-     "A United Church of Christ congregation that has welcomed the community of "
-     "China Grove for more than 165 years."]
+     (str "A United Church of Christ congregation that has welcomed the community of "
+          "China Grove for more than " (church/approx-years-since-founding) " years.")]
     [:hr {:class "mtz-rule"}]]
 
    [:section {:class "mtz-section"}
@@ -19,9 +21,9 @@
       [:span {:class "mtz-img-label"} "archival photo · ca. 1910"]]
      [:div
       [:p {:class "mtz-kicker"} "Our Story"]
-      [:h2 {:class "mtz-h2"} "A congregation on this hill since 1755."]
+      [:h2 {:class "mtz-h2"} (str "A congregation on this hill since " church/founded-year ".")]
       [:p {:class "mtz-prose" :style "color: var(--mtz-ink-soft);"}
-       "Mount Zion was founded in 1858 by a small group of German Reformed settlers "
+       (str "Mount Zion was founded in " church/founded-year " by a small group of German Reformed settlers ")
        "in what was then a rural crossroads community. The original log meetinghouse "
        "gave way to a series of larger sanctuaries as the congregation grew — the "
        "current building dates to 1954."]
@@ -29,8 +31,10 @@
        "In 1957 the congregation joined the United Church of Christ at its formation, "
        "embracing an open and affirming theology that continues to define us today. "
        "We are a community shaped by history and oriented toward welcome."]
-      [:a {:class "mtz-arrow-link" :href "/about#archive" :style "margin-top: 16px; display: inline-flex;"}
-       "Search the archive →"]]]]
+      ;; A "Search the archive →" link lived here, pointing at /about#archive —
+      ;; an anchor that never existed, promising an archive that does not exist
+      ;; yet. Reinstate it with the history work.
+      ]]]
 
    [:section {:class "mtz-section--cream"}
     [:div {:class "mtz-section-inner"}
@@ -66,8 +70,17 @@
       [:a {:class "mtz-btn mtz-btn--ghost" :href "/worship"} "Plan Your Visit"]]]]))
 
 (defn about [ctx]
-  (let [db-page (first (biff.sqlite/execute ctx {:select :* :from :page :where [:= :slug "about"]}))]
-    (base/page "About — Mount Zion UCC"
+  ;; Two things are load-bearing here:
+  ;; 1. snake-keys — biff.sqlite/execute returns NAMESPACE-QUALIFIED keys
+  ;;    (:page/body), so reading (:body row) off the raw result was always nil
+  ;;    and this override silently never worked.
+  ;; 2. published = 1 — a DB body REPLACES the whole designed page, so a draft
+  ;;    must never be read here.
+  (let [db-page (norm/snake-keys
+                 (first (biff.sqlite/execute ctx {:select :* :from :page
+                                                  :where  [:and [:= :slug "about"]
+                                                           [:= :published 1]]})))]
+    (base/page ctx "About — Mount Zion UCC"
                (if (seq (:body db-page))
                  [::hiccup/unsafe-html (:body db-page)]
                  (page-content)))))

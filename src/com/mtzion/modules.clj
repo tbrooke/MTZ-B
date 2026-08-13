@@ -16,6 +16,7 @@
             [com.mtzion.app.landing :as landing]
             [com.mtzion.app.news :as news-page]
             [com.mtzion.app.outreach :as outreach]
+            [com.mtzion.app.pages :as pages]
             [com.mtzion.app.preschool :as preschool]
             [com.mtzion.app.sermons :as sermons]
             [com.mtzion.app.worship :as worship]
@@ -36,7 +37,9 @@
     :biff.admin/get-users get-users}))
 
 (def modules
-  [(biff.ring/module)
+  ;; pages/ring-module stands in for (biff.ring/module): same handler, plus a
+  ;; fallback that serves CMS pages on 404. See com.mtzion.app.pages.
+  [pages/ring-module
    (biff.background/module)
    (biff.fx/module)
    (biff.graph/module)

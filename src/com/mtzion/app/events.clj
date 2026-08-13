@@ -1,26 +1,26 @@
 (ns com.mtzion.app.events
-  (:require [clojure.string :as str]
-            [com.biffweb.sqlite :as biff.sqlite]
+  (:require [com.biffweb.sqlite :as biff.sqlite]
+            [com.mtzion.model.event :as event]
+            [com.mtzion.model.normalize :as norm]
             [com.mtzion.ui.base :as base]
             [lambdaisland.hiccup :as hiccup]))
 
-(defn- normalize [rows]
-  (mapv (fn [row]
-          (into {} (map (fn [[k v]] [(keyword (str/replace (name k) "-" "_")) v]) row)))
-        rows))
+(def ^:private normalize norm/snake-keys-all)
+(def ^:private now-epoch norm/now-epoch)
 
-(defn- now-epoch [] (.getEpochSecond (java.time.Instant/now)))
-
+;; start_at/end_at are church wall-clock instants (see model.normalize), so they
+;; must be rendered in Eastern. Rendering them in UTC showed every event 4-5
+;; hours late.
 (defn- format-date [epoch]
   (when epoch
     (-> (java.time.Instant/ofEpochSecond epoch)
-        (java.time.LocalDate/ofInstant java.time.ZoneOffset/UTC)
+        (java.time.LocalDate/ofInstant norm/eastern)
         (.format (java.time.format.DateTimeFormatter/ofPattern "EEEE, MMMM d, yyyy")))))
 
 (defn- format-time [epoch]
   (when epoch
     (-> (java.time.Instant/ofEpochSecond epoch)
-        (java.time.LocalTime/ofInstant java.time.ZoneOffset/UTC)
+        (java.time.LocalTime/ofInstant norm/eastern)
         (.format (java.time.format.DateTimeFormatter/ofPattern "h:mm a")))))
 
 (defn- cf-img-url [ctx image-id]
@@ -115,18 +115,16 @@
      [:a {:class "mtz-btn mtz-btn--ghost" :href "/calendar.ics"} "Subscribe (.ics)"]]]))
 
 (defn events [ctx]
-  (let [n-ep           (now-epoch)
-        rows           (normalize (biff.sqlite/execute ctx {:select   :*
-                                                            :from     :event
-                                                            :where    [:and [:= :published 1]
-                                                                       [:>= :start_at n-ep]]
-                                                            :order-by [[:start_at :asc]]}))
-        featured-events (normalize (biff.sqlite/execute ctx {:select   :*
-                                                             :from     :event
-                                                             :where    [:and [:= :published 1]
-                                                                        [:= :featured 1]]
-                                                             :order-by [[:start_at :asc]]}))]
-    (base/page "Events — Mount Zion UCC" (page-content ctx rows featured-events))))
+  (let [n-ep            (now-epoch)
+        ;; upcoming-where keeps recurring events (whose start_at is in the past
+        ;; by design) in the list; next-occurrences then dates each one correctly.
+        upcoming-src    (normalize (biff.sqlite/execute ctx {:select :*
+                                                             :from   :event
+                                                             :where  [:and [:= :published 1]
+                                                                      (event/upcoming-where n-ep)]}))
+        rows            (event/next-occurrences upcoming-src n-ep)
+        featured-events (filter #(= 1 (:featured %)) rows)]
+    (base/page ctx "Events — Mount Zion UCC" (page-content ctx rows featured-events))))
 
 (def module
   {:biff.ring/routes

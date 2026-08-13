@@ -37,6 +37,15 @@
  :mailersend/from-name "Mount Zion UCC"
  :mailersend/reply-to #biff/env MAILERSEND_REPLY_TO
 
+ ;; Where contact-form submissions are delivered (the church office).
+ ;; Falls back to :mailersend/reply-to when unset.
+ :mtz/contact-to #biff/env CONTACT_TO
+
+ ;; Cloudflare Web Analytics site token. NOT a secret — it is visible in the
+ ;; page source by design. Unset means no beacon is emitted at all, so local
+ ;; development and tests never report traffic.
+ :mtz/analytics-token #biff/env CF_ANALYTICS_TOKEN
+
  :biff.auth/turnstile-site-key #biff/env TURNSTILE_SITE_KEY
  :biff.auth/turnstile-secret #biff/secret TURNSTILE_SECRET_KEY
 

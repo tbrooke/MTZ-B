@@ -1,6 +1,7 @@
 (ns com.mtzion.app.outreach
   (:require [com.biffweb.sqlite :as biff.sqlite]
             [com.mtzion.app.home-sections :as home-sections]
+            [com.mtzion.model.normalize :as norm]
             [com.mtzion.ui.base :as base]
             [lambdaisland.hiccup :as hiccup]))
 
@@ -53,8 +54,14 @@
           [:p {:style "color: var(--mtz-ink-soft); margin: 0; font-size: 15px;"} desc]]])]]]))
 
 (defn outreach [ctx]
-  (let [db-page (first (biff.sqlite/execute ctx {:select :* :from :page :where [:= :slug "outreach"]}))]
-    (base/page "Outreach — Mount Zion UCC"
+  ;; See about.clj: snake-keys strips the :page/ namespace biff.sqlite/execute
+  ;; adds (without it the body reads as nil and the override does nothing), and
+  ;; published = 1 keeps drafts from replacing the designed page.
+  (let [db-page (norm/snake-keys
+                 (first (biff.sqlite/execute ctx {:select :* :from :page
+                                                  :where  [:and [:= :slug "outreach"]
+                                                           [:= :published 1]]})))]
+    (base/page ctx "Outreach — Mount Zion UCC"
                (if (seq (:body db-page))
                  [::hiccup/unsafe-html (:body db-page)]
                  (page-content)))))

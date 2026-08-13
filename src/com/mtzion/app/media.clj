@@ -5,6 +5,7 @@
             [com.mtzion.lib.middleware :refer [wrap-signed-in]]
             [com.mtzion.lib.r2 :as r2]
             [com.mtzion.lib.ui :as ui]
+            [com.mtzion.model.normalize :as norm]
             [com.mtzion.ui.admin :as adm]
             [hato.client :as http]
             [lambdaisland.hiccup :as hiccup]))
@@ -55,17 +56,13 @@
 ;; Sermons (Cloudflare Stream)
 ;; ---------------------------------------------------------------------------
 
-(defn- now-epoch [] (.getEpochSecond (java.time.Instant/now)))
+(def ^:private now-epoch norm/now-epoch)
 
 (defn- exec
   "Wrapper around biff.sqlite/execute that returns rows with unqualified
   snake_case keys, matching the DB column names used throughout this file."
   [ctx honey]
-  (mapv (fn [row]
-          (into {} (map (fn [[k v]]
-                          [(keyword (str/replace (name k) "-" "_")) v])
-                        row)))
-        (biff.sqlite/execute ctx honey)))
+  (norm/snake-keys-all (biff.sqlite/execute ctx honey)))
 (defn- new-id [] (str (random-uuid)))
 
 (defn- save-sermon-pdf [ctx date-str param-file suffix]
@@ -76,14 +73,8 @@
           (r2/put! ctx key "application/pdf" in (.length f)))
         (r2/public-url ctx key)))))
 
-(defn- epoch->date [epoch]
-  (when epoch
-    (-> (java.time.Instant/ofEpochSecond epoch) .toString (subs 0 10))))
-
-(defn- parse-date-epoch [s]
-  (when (seq s)
-    (try (.getEpochSecond (java.time.Instant/parse (str s "T00:00:00Z")))
-         (catch Exception _ nil))))
+(def ^:private epoch->date      norm/epoch->date-str)
+(def ^:private parse-date-epoch norm/local-date->epoch)
 
 (defn- stream-embed-url [video-id]
   (str "https://iframe.cloudflarestream.com/" video-id))
@@ -103,13 +94,14 @@
                      (if (empty? rows)
                        [:p {:class "adm-hint"} "No sermons yet."]
                        [:table {:class "adm-table"}
-                        [:thead [:tr [:th "Title"] [:th "Date"] [:th "Scripture"] [:th "Status"] [:th ""]]]
+                        [:thead [:tr [:th "Title"] [:th "Date"] [:th "Call to Worship"] [:th "Gospel"] [:th "Status"] [:th ""]]]
                         [:tbody
                          (for [r rows]
                            [:tr
                             [:td (:title r)]
                             [:td (or (epoch->date (:sermon_date r)) "—")]
-                            [:td (or (:scripture r) "—")]
+                            [:td (or (:scripture_cw r) "—")]
+                            [:td (or (:scripture_gospel r) "—")]
                             [:td (adm/badge (= 1 (:published r)))]
                             [:td
                              [:div {:class "adm-actions"}
@@ -125,8 +117,12 @@
    (adm/field {:label "Date"}
               [:input {:type "date" :name "sermon_date" :class "adm-input"
                        :value (or (epoch->date (:sermon_date s)) "")}])
-   (adm/field {:label "Scripture" :hint "e.g. John 3:16"}
-              (adm/text-input {:name "scripture" :value (or (:scripture s) "")}))
+   (adm/field {:label "Series" :hint "Slug for a multi-week theme, e.g. apostles-creed-2026 — leave blank for standalone sermons"}
+              (adm/text-input {:name "series" :value (or (:series s) "")}))
+   (adm/field {:label "Call to Worship" :hint "e.g. Acts 7:54–60"}
+              (adm/text-input {:name "scripture_cw" :value (or (:scripture_cw s) "")}))
+   (adm/field {:label "Gospel Reading" :hint "e.g. John 14:8–14"}
+              (adm/text-input {:name "scripture_gospel" :value (or (:scripture_gospel s) "")}))
    (adm/field {:label "Description / Pastor's Note"}
               [:textarea {:name "description" :class "adm-textarea" :rows "4"}
                (or (:description s) "")])
@@ -231,7 +227,9 @@
            :values [{:id                (new-id)
                      :title             title
                      :sermon_date       (parse-date-epoch date-str)
-                     :scripture         (or (:scripture params) "")
+                     :scripture_cw      (not-empty (str/trim (or (:scripture_cw params) "")))
+                     :scripture_gospel  (not-empty (str/trim (or (:scripture_gospel params) "")))
+                     :series            (not-empty (str/trim (or (:series params) "")))
                      :description       (or (:description params) "")
                      :video_id          video-id
                      :bulletin_path     bulletin-path
@@ -255,7 +253,9 @@
           {:update :sermon
            :set    {:title             title
                     :sermon_date       (parse-date-epoch date-str)
-                    :scripture         (or (:scripture params) "")
+                    :scripture_cw      (not-empty (str/trim (or (:scripture_cw params) "")))
+                    :scripture_gospel  (not-empty (str/trim (or (:scripture_gospel params) "")))
+                    :series            (not-empty (str/trim (or (:series params) "")))
                     :description       (or (:description params) "")
                     :video_id          (or new-vid (:video_id existing))
                     :bulletin_path     bulletin-path

@@ -1,6 +1,7 @@
 (ns com.mtzion.app.activities
   (:require [com.biffweb.sqlite :as biff.sqlite]
             [com.mtzion.app.home-sections :as home-sections]
+            [com.mtzion.model.normalize :as norm]
             [com.mtzion.ui.base :as base]
             [lambdaisland.hiccup :as hiccup]))
 
@@ -44,11 +45,14 @@
      [:a {:class "mtz-btn mtz-btn--primary" :href "/contact"} "Contact Us"]]]))
 
 (defn activities [ctx]
-  (let [cards (biff.sqlite/execute ctx {:select   :*
-                                        :from     :feature
-                                        :where    [:and [:= :placement "activities"] [:= :published 1]]
-                                        :order-by [[:sort_order :asc]]})]
-    (base/page "Activities — Mount Zion UCC" (page-content cards))))
+  ;; snake-keys is required — activity-card reads :subtitle/:title/:body, but
+  ;; execute returns :feature/subtitle etc.
+  (let [cards (norm/snake-keys-all
+               (biff.sqlite/execute ctx {:select   :*
+                                         :from     :feature
+                                         :where    [:and [:= :page_slug "activities"] [:= :published 1]]
+                                         :order-by [[:sort_order :asc]]}))]
+    (base/page ctx "Activities — Mount Zion UCC" (page-content cards))))
 
 (def module
   {:biff.ring/routes

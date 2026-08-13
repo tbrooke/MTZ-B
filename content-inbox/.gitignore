@@ -1,0 +1,6 @@
+# Church content drops are data, not source. The contract and examples ARE committed.
+*
+!.gitignore
+!examples/
+!examples/**
+!CONTRACT.md
