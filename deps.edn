@@ -1,13 +1,13 @@
 {:paths ["src" "resources" "target/resources"]
  :deps {org.clojure/clojure {:mvn/version "1.12.0"}
-        io.github.jacobobryant/biff-core {:git/sha "d9630f7024ac0009206fa89dde0f03651fdda5ab"}
+        com.biffweb/core {:local/root "vendor/biff-core"}     ; upstream repo deleted — see vendor/biff-core/VENDORED.md
         io.github.jacobobryant/biff-background {:git/sha "0a963e3048b98828717d8e6c3db42cae0f1c749d"}
         io.github.jacobobryant/biff-ring {:git/sha "939cf7be17e87bc708071bd6f2d4d9b9b33733b9"}
         com.lambdaisland/hiccup {:mvn/version "0.14.67"}
         metosin/malli {:mvn/version "0.16.3"}
         hato/hato {:mvn/version "1.0.0"}
         cheshire/cheshire {:mvn/version "5.13.0"}
-        io.github.jacobobryant/biff-config {:git/sha "f7289e16e0a0c257d4bcfaabc18d45251f1bc422"}
+        com.biffweb/config {:local/root "vendor/biff-config"} ; upstream repo deleted — see vendor/biff-config/VENDORED.md
         nrepl/nrepl {:mvn/version "1.1.1"}
         org.clojure/tools.logging {:mvn/version "1.3.0"}
         org.clojure/tools.namespace {:mvn/version "1.5.0"}

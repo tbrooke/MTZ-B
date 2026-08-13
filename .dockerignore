@@ -1,0 +1,24 @@
+# Never bake local state or secrets into the image.
+storage/
+config.env
+config.prod.env
+access_token*
+*.token
+
+.git
+.github
+target/
+node_modules/
+.cpcache/
+.lsp/
+.clj-kondo/.cache/
+.nrepl-port
+
+content-inbox/
+!content-inbox/CONTRACT.md
+!content-inbox/examples/
+
+*.zip
+.DS_Store
+design_handoff_*/
+dev-notes/

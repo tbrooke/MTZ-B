@@ -1,0 +1,42 @@
+# Production stack for trust. Follows the convention already used on that box:
+# bind to 127.0.0.1 only, and let the host nginx terminate TLS and proxy in.
+#
+#   nginx ──► 127.0.0.1:3100  (this app)
+#             127.0.0.1:3000  (the old Alfresco mtz-cms, left running)
+#
+# Flipping between them is one line in nginx — see deploy/flip.sh.
+
+services:
+  mtz-b:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mtz-b:${MTZ_TAG:-latest}
+    container_name: mtz-b
+    restart: unless-stopped
+
+    # Never published beyond loopback. TLS and the public interface are nginx's job.
+    ports:
+      - "127.0.0.1:${MTZ_PORT:-3100}:8080"
+
+    # Read on the host at `up` time and injected as environment variables, so
+    # secrets are never copied into the image or the compose file.
+    env_file:
+      - config.env
+
+    environment:
+      # Public base URL, used for absolute links.
+      BASE_URL: ${MTZ_BASE_URL:-https://mtzcg.com}
+      # nginx terminates TLS; the app itself speaks plain HTTP over loopback.
+      SECURE: "false"
+
+    # SQLite and uploads live on the host, so the container stays disposable.
+    # Rebuild, roll back, or delete the image without touching the data.
+    volumes:
+      - ./storage:/app/storage
+
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
