@@ -19,3 +19,18 @@ bin/tailwindcss
 config.env
 config.prod.env
 node_modules/
+
+# Loose credential files — never commit. Secrets belong in config.env (also
+# ignored) or the MtZion 1Password vault.
+access_token*
+*.token
+*_token.txt
+*secret*.txt
+
+# Editor / OS noise
+.DS_Store
+.lsp/
+.clj-kondo/.cache/
+
+# Design handoff archives — the extracted folder is what's useful, not the zip
+*.zip
