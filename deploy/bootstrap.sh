@@ -28,8 +28,20 @@ mkdir -p "$APP_DIR/storage/sqlite" "$APP_DIR/storage/uploads"
 # A bind mount keeps host ownership, and the container runs unprivileged as
 # uid $CONTAINER_UID. Without this the app cannot write and saves fail at runtime.
 if [ "$(stat -c %u "$APP_DIR/storage")" != "$CONTAINER_UID" ]; then
-  echo "    chowning to $CONTAINER_UID (needs sudo)"
-  sudo chown -R "$CONTAINER_UID:$CONTAINER_UID" "$APP_DIR/storage"
+  echo "    chowning to $CONTAINER_UID"
+  # The docker daemon already runs as root, so a throwaway container can do this
+  # without sudo. That matters when the script runs over a non-interactive ssh,
+  # where a sudo password prompt would simply hang.
+  if sudo -n true 2>/dev/null; then
+    sudo chown -R "$CONTAINER_UID:$CONTAINER_UID" "$APP_DIR/storage"
+  elif docker info >/dev/null 2>&1; then
+    docker run --rm -v "$APP_DIR/storage:/s" alpine:3.20 \
+      chown -R "$CONTAINER_UID:$CONTAINER_UID" /s
+  else
+    echo "    need either passwordless sudo or docker. Run by hand:" >&2
+    echo "      sudo chown -R $CONTAINER_UID:$CONTAINER_UID $APP_DIR/storage" >&2
+    exit 1
+  fi
 fi
 echo "    ok — owned by uid $(stat -c %u "$APP_DIR/storage")"
 

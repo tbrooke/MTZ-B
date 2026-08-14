@@ -94,7 +94,15 @@ ssh "$REMOTE" "
 echo "==> Fixing ownership"
 # The container runs as uid $CONTAINER_UID; a bind mount keeps host ownership,
 # so without this the app cannot write and every save fails at runtime.
-ssh -t "$REMOTE" "sudo chown -R $CONTAINER_UID:$CONTAINER_UID '$APP_DIR/storage'"
+# Done through docker rather than sudo: the daemon is already root, and sudo
+# would prompt for a password that a non-interactive ssh cannot supply.
+ssh "$REMOTE" "
+  if sudo -n true 2>/dev/null; then
+    sudo chown -R $CONTAINER_UID:$CONTAINER_UID '$APP_DIR/storage'
+  else
+    docker run --rm -v '$APP_DIR/storage:/s' alpine:3.20 \
+      chown -R $CONTAINER_UID:$CONTAINER_UID /s
+  fi" >/dev/null
 
 if [ "$was_running" = "yes" ]; then
   echo "==> Restarting the container"
