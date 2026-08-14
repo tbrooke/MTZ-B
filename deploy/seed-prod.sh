@@ -16,7 +16,7 @@
 set -euo pipefail
 
 REMOTE="${REMOTE:-tmb@trust}"
-APP_DIR="${APP_DIR:-/home/tmb/mtz-b}"
+APP_DIR="${APP_DIR:-/home/tmb/MTZ-B}"
 LOCAL_DB="${LOCAL_DB:-storage/sqlite/main.db}"
 REMOTE_DB="$APP_DIR/storage/sqlite/main.db"
 CONTAINER_UID=10001          # must match the `mtz` user in the Dockerfile

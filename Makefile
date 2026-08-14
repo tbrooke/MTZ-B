@@ -1,5 +1,5 @@
 REMOTE    := tmb@trust
-APP_DIR   := /home/tmb/mtz-b
+APP_DIR   := /home/tmb/MTZ-B
 COMPOSE   := docker compose
 
 # Local development ──────────────────────────────────────────────────────────

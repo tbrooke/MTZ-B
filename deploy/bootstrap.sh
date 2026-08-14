@@ -3,8 +3,10 @@
 # One-time server setup. RUN THIS ON trust, not on the laptop.
 #
 #   ssh tmb@trust
-#   git clone https://github.com/tbrooke/MTZ-B.git ~/mtz-b
-#   cd ~/mtz-b && ./deploy/bootstrap.sh
+#   git clone https://github.com/tbrooke/MTZ-B.git ~/MTZ-B
+#   cd ~/MTZ-B && ./deploy/bootstrap.sh
+#
+# The directory name does not matter — this script locates itself.
 #
 # Safe to re-run: every step checks before acting, and nothing here touches the
 # running Alfresco site or the live nginx configuration. Making the new site
