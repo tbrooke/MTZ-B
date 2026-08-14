@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 #
-# Switch mtzcg.com between the new app and the old Alfresco site.
+# Switch mtzcg.com between the current app and the previous one.
 #
 #   sudo deploy/flip.sh new      -> 127.0.0.1:3100  (mtz-b)
-#   sudo deploy/flip.sh old      -> 127.0.0.1:3000  (mtz-cms, Alfresco)
+#   sudo deploy/flip.sh old      -> 127.0.0.1:3000  (mtz-cms, previous Biff build)
 #   deploy/flip.sh status        -> what is live right now (no sudo needed)
 #
 # Safe by construction: it refuses to point nginx at a port nothing is
@@ -24,7 +24,7 @@ current_port() {
 label_for() {
   case "$1" in
     "$NEW_PORT") echo "mtz-b (new Biff app)" ;;
-    "$OLD_PORT") echo "mtz-cms (old Alfresco site)" ;;
+    "$OLD_PORT") echo "mtz-cms (previous Biff build, May 2026)" ;;
     *)           echo "unknown" ;;
   esac
 }
