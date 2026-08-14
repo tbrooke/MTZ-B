@@ -76,33 +76,32 @@ if [ "$was_running" = "yes" ]; then
   ssh "$REMOTE" "cd '$APP_DIR' && docker compose stop mtz-b" >/dev/null
 fi
 
-if [ "${remote_state%%:*}" = "exists" ]; then
-  echo "==> Backing up the database being replaced"
-  ssh "$REMOTE" "cp '$REMOTE_DB' '$REMOTE_DB.replaced-\$(date +%Y%m%d-%H%M%S)'"
-fi
-
 echo "==> Copying"
-ssh "$REMOTE" "mkdir -p '$APP_DIR/storage/sqlite' '$APP_DIR/storage/uploads'"
-scp -q "$snapshot" "$REMOTE:$REMOTE_DB.incoming"
-# Remove stale -wal/-shm belonging to the old database, or SQLite will try to
-# replay them against the new file.
-ssh "$REMOTE" "
-  rm -f '$REMOTE_DB-wal' '$REMOTE_DB-shm'
-  mv '$REMOTE_DB.incoming' '$REMOTE_DB'
-"
+# storage/ belongs to uid $CONTAINER_UID, so the ssh user cannot write into it —
+# not the database, not a backup, not even a temp file. Stage the upload in the
+# repo root (which the ssh user does own) and let a throwaway root container do
+# the placement, the same trick used for the chown.
+scp -q "$snapshot" "$REMOTE:$APP_DIR/.seed-incoming.db"
 
-echo "==> Fixing ownership"
-# The container runs as uid $CONTAINER_UID; a bind mount keeps host ownership,
-# so without this the app cannot write and every save fails at runtime.
-# Done through docker rather than sudo: the daemon is already root, and sudo
-# would prompt for a password that a non-interactive ssh cannot supply.
-ssh "$REMOTE" "
-  if sudo -n true 2>/dev/null; then
-    sudo chown -R $CONTAINER_UID:$CONTAINER_UID '$APP_DIR/storage'
-  else
-    docker run --rm -v '$APP_DIR/storage:/s' alpine:3.20 \
-      chown -R $CONTAINER_UID:$CONTAINER_UID /s
-  fi" >/dev/null
+echo "==> Placing"
+stamp=$(date +%Y%m%d-%H%M%S)
+ssh "$REMOTE" "docker run --rm \
+  -v '$APP_DIR:/app' \
+  -e ROWS='$remote_rows' -e STAMP='$stamp' -e OWNER='$CONTAINER_UID' \
+  alpine:3.20 sh -c '
+    set -e
+    mkdir -p /app/storage/sqlite /app/storage/uploads
+    # Only worth backing up if it actually holds content; an empty file is noise.
+    if [ -f /app/storage/sqlite/main.db ] && [ \"\$ROWS\" -gt 0 ]; then
+      cp /app/storage/sqlite/main.db \
+         /app/storage/sqlite/main.db.replaced-\$STAMP
+    fi
+    # Stale -wal/-shm belong to the OLD database; left in place SQLite would try
+    # to replay them against the new file.
+    rm -f /app/storage/sqlite/main.db-wal /app/storage/sqlite/main.db-shm
+    mv /app/.seed-incoming.db /app/storage/sqlite/main.db
+    chown -R \$OWNER:\$OWNER /app/storage
+  '" >/dev/null
 
 if [ "$was_running" = "yes" ]; then
   echo "==> Restarting the container"
@@ -110,12 +109,17 @@ if [ "$was_running" = "yes" ]; then
 fi
 
 echo "==> Verifying"
-remote_after=$(ssh "$REMOTE" "sudo -n cat /dev/null 2>/dev/null; sqlite3 '$REMOTE_DB' \"
-  SELECT (SELECT COUNT(*) FROM event) || ' events, ' ||
-         (SELECT COUNT(*) FROM post)  || ' posts, ' ||
-         (SELECT COUNT(*) FROM sermon)|| ' sermons, ' ||
-         (SELECT COUNT(*) FROM page)  || ' pages, ' ||
-         (SELECT COUNT(*) FROM feature)|| ' features';\" 2>/dev/null" || echo "unreadable")
+# Read it the way the app does — through the app image, which runs as uid
+# $CONTAINER_UID and ships sqlite3. The ssh user cannot open the file at all now.
+remote_after=$(ssh "$REMOTE" "docker run --rm \
+  -v '$APP_DIR/storage:/app/storage' --entrypoint sqlite3 mtz-b:latest \
+  /app/storage/sqlite/main.db \"
+    SELECT (SELECT COUNT(*) FROM event) || ' events, ' ||
+           (SELECT COUNT(*) FROM post)  || ' posts, ' ||
+           (SELECT COUNT(*) FROM sermon)|| ' sermons, ' ||
+           (SELECT COUNT(*) FROM page)  || ' pages, ' ||
+           (SELECT COUNT(*) FROM feature)|| ' features';\" 2>/dev/null" \
+  || echo "unreadable")
 
 echo "    local      : $local_rows"
 echo "    production : $remote_after"
