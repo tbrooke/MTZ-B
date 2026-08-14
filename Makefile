@@ -57,6 +57,10 @@ status:   ; ssh $(REMOTE) '$(APP_DIR)/deploy/flip.sh status'
 flip:     ; ssh -t $(REMOTE) 'sudo $(APP_DIR)/deploy/flip.sh new'
 rollback: ; ssh -t $(REMOTE) 'sudo $(APP_DIR)/deploy/flip.sh old'
 
+## seed-prod: one-time — copy THIS machine's database up as production's starting point
+.PHONY: seed-prod
+seed-prod: ; ./deploy/seed-prod.sh
+
 # Backups ────────────────────────────────────────────────────────────────────
 #
 # Dev and production databases are deliberately independent — there is no sync.
