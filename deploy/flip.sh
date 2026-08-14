@@ -34,9 +34,29 @@ port_is_live() {
   curl -fsS -o /dev/null --max-time 4 "http://127.0.0.1:$1/" 2>/dev/null
 }
 
+wired() { [ -f "$UPSTREAM_FILE" ]; }
+
+not_wired_msg() {
+  cat >&2 <<EOF
+$UPSTREAM_FILE does not exist, so nothing can be flipped yet.
+
+The one-time nginx wiring has not been done. Until it is, mtzcg.com keeps
+proxying straight to :3000 and this script has nothing to rewrite:
+
+    sudo cp $(cd "$(dirname "$0")" && pwd)/nginx/mtz-upstream.conf /etc/nginx/conf.d/
+    sudo sed -i '73s|http://127.0.0.1:3000|http://mtz_site|' \\
+      /etc/nginx/sites-available/mtzcg.com
+    sudo nginx -t && sudo systemctl reload nginx
+EOF
+}
+
 status() {
+  if ! wired; then
+    echo "  nginx upstream : NOT WIRED — mtzcg.com still proxies directly to :3000"
+  else
   local p; p="$(current_port)"
   echo "  nginx upstream : 127.0.0.1:$p  — $(label_for "$p")"
+  fi
   for port in "$NEW_PORT" "$OLD_PORT"; do
     if port_is_live "$port"; then
       echo "  port $port      : responding    ($(label_for "$port"))"
@@ -54,6 +74,11 @@ case "${1:-status}" in
   new|old)
     target_port=$NEW_PORT
     [ "$1" = "old" ] && target_port=$OLD_PORT
+
+    if ! wired; then
+      not_wired_msg
+      exit 4
+    fi
 
     if [ "$(id -u)" -ne 0 ]; then
       echo "This needs root to write nginx config and reload. Re-run with sudo." >&2
