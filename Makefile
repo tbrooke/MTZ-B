@@ -12,11 +12,48 @@ test:  ; clj -M:run test
 dev:   ; clj -M:run dev
 
 # Content import (runs wherever the database is) ─────────────────────────────
+#
+# LOCAL targets hit the dev database on this laptop. Since seeding, dev and
+# production have diverged — real bulletins belong in production, so use the
+# push-* targets below for anything that should appear on mtzcg.com.
 
 .PHONY: import import-apply contract
 import:       ; clj -M:run import
 import-apply: ; clj -M:run import --apply
 contract:     ; clj -M:run content-doc
+
+# Content import against PRODUCTION ──────────────────────────────────────────
+#
+# The runtime image carries only the uberjar — no clojure, no deps.edn — so the
+# task is invoked through clojure.main on the jar's own classpath. Every
+# namespace is in there; only the -main entry point differs.
+#
+#   make push-content FILE=content-inbox/2026-08-16-bulletin.edn   copy it up
+#   make import-prod                                               dry run
+#   make import-prod-apply                                         commit
+#
+# Dry run stays the default here exactly as it is locally: import-prod writes
+# nothing, and the diff is meant to be read before applying.
+
+.PHONY: push-content import-prod import-prod-apply
+INGEST = docker exec mtz-b java -cp /app/mtzion.jar clojure.main -e
+
+push-content:
+	@test -n "$(FILE)" || { echo "usage: make push-content FILE=<path to .edn>"; exit 64; }
+	scp $(FILE) $(REMOTE):$(APP_DIR)/content-inbox/
+	@# content-inbox is bind-mounted and the container runs as uid 10001, so a
+	@# file owned by the ssh user cannot be archived by --apply.
+	ssh $(REMOTE) "docker run --rm -v $(APP_DIR)/content-inbox:/c alpine:3.20 \
+	  chown -R 10001:10001 /c"
+	@echo "Dropped. Next: make import-prod"
+
+import-prod:
+	ssh $(REMOTE) '$(INGEST) "(require (quote com.mtzion.content.ingest)) \
+	  ((resolve (quote com.mtzion.content.ingest/import-task)))"'
+
+import-prod-apply:
+	ssh $(REMOTE) '$(INGEST) "(require (quote com.mtzion.content.ingest)) \
+	  ((resolve (quote com.mtzion.content.ingest/import-task)) \"--apply\")"'
 
 # Deployment ─────────────────────────────────────────────────────────────────
 #

@@ -34,6 +34,10 @@ services:
     # Rebuild, roll back, or delete the image without touching the data.
     volumes:
       - ./storage:/app/storage
+      # The bulletin/slides import drop box. Mounted read-write because --apply
+      # archives the input and writes a receipt into content-inbox/applied/.
+      # Without this the importer runs but can never see a dropped file.
+      - ./content-inbox:/app/content-inbox
 
     logging:
       driver: json-file
