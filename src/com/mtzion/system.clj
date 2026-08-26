@@ -8,12 +8,14 @@
   (:require [com.biffweb.config :as config]
             [com.biffweb.core :as biff.core]
             [com.biffweb.sqlite :as biff.sqlite]
+            [com.mtzion.model.content :as content]
             [com.mtzion.modules :as modules]))
 
 (def ^:private components
   ;; Order matters: config supplies :biff.sqlite/db-path.
   [config/use-aero-config
-   biff.sqlite/use-sqlite])
+   biff.sqlite/use-sqlite
+   content/use-status-backfill])
 
 (defn start []
   (biff.core/start {} #'modules/modules components))

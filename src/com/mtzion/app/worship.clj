@@ -29,7 +29,7 @@
 (defn- page-content [ctx]
   (let [sermons (normalize (biff.sqlite/execute ctx {:select   :*
                                                      :from     :sermon
-                                                     :where    [:= :published 1]
+                                                     :where    [:= :status "published"]
                                                      :order-by [[:sermon_date :desc]]}))
         latest  (first sermons)
         ;; current series = series with the most recent future (or latest) sermon
@@ -127,7 +127,7 @@
 (defn worship-theme [ctx]
   (let [sermons      (normalize (biff.sqlite/execute ctx {:select   :*
                                                           :from     :sermon
-                                                          :where    [:= :published 1]
+                                                          :where    [:= :status "published"]
                                                           :order-by [[:sermon_date :desc]]}))
         ;; find the current (most recently active) series
         series-slug  (some :series sermons)
@@ -135,7 +135,7 @@
                        (normalize (biff.sqlite/execute ctx {:select   :*
                                                             :from     :sermon
                                                             :where    [:and
-                                                                       [:= :published 1]
+                                                                       [:= :status "published"]
                                                                        [:= :series series-slug]]
                                                             :order-by [[:sermon_date :asc]]})))
         ;; overview feature for this page
@@ -143,7 +143,7 @@
                                                           :from   :feature
                                                           :where  [:and
                                                                    [:= :page_slug "current-theme"]
-                                                                   [:= :published 1]]
+                                                                   [:= :status "published"]]
                                                           :order-by [[:sort_order :asc]]}))
         overview     (first features)
         today-epoch  (.getEpochSecond (java.time.Instant/now))]

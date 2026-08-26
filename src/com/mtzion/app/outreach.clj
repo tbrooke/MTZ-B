@@ -56,11 +56,11 @@
 (defn outreach [ctx]
   ;; See about.clj: snake-keys strips the :page/ namespace biff.sqlite/execute
   ;; adds (without it the body reads as nil and the override does nothing), and
-  ;; published = 1 keeps drafts from replacing the designed page.
+  ;; status = "published" keeps drafts from replacing the designed page.
   (let [db-page (norm/snake-keys
                  (first (biff.sqlite/execute ctx {:select :* :from :page
                                                   :where  [:and [:= :slug "outreach"]
-                                                           [:= :published 1]]})))]
+                                                           [:= :status "published"]]})))]
     (base/page ctx "Outreach — Mount Zion UCC"
                (if (seq (:body db-page))
                  [::hiccup/unsafe-html (:body db-page)]

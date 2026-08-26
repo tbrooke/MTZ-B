@@ -6,7 +6,7 @@
 
   1. **Never delete.** There is no prune. Removing stale content stays a
      deliberate human action in the admin panel.
-  2. **Never touch published state on UPDATE.** Only an INSERT sets draft state.
+  2. **Never touch publish status on UPDATE.** Only an INSERT sets draft state.
      Otherwise re-dropping a corrected bulletin would silently un-publish
      something the pastor had already approved.
 
@@ -15,6 +15,7 @@
   (:require [clojure.string :as str]
             [com.biffweb.sqlite :as biff.sqlite]
             [com.mtzion.content.hiccup :as ch]
+            [com.mtzion.model.content :as content]
             [com.mtzion.model.normalize :as norm]))
 
 (defn- exec [ctx honey]
@@ -103,9 +104,8 @@
 
 (defn- import-meta
   "Provenance, plus anything the agent proposed that the importer refuses to
-  apply directly. `post` has no published column — draft-ness IS
-  published_at IS NULL — so the extracted date is parked here for the admin form
-  to prefill rather than thrown away."
+  apply directly. A proposed publication date is editorial, so it is parked here
+  for the editor's form to prefill rather than applied or thrown away."
   [item source]
   (pr-str (cond-> {:source source :at (norm/now-epoch)}
             (:published-on item) (assoc :proposed-published-on (:published-on item)))))
@@ -185,25 +185,16 @@
 ;; Applying
 ;; ---------------------------------------------------------------------------
 
-(def ^:private draft-on-insert
-  "How each table expresses 'not published yet'."
-  {:event   {:published 0}
-   :page    {:published 0}
-   :feature {:published 0}
-   :sermon  {:published 0}
-   ;; post has no published column — a NULL published_at IS the draft state
-   :post    {:published_at nil}})
-
 (defn- insert-values [{:keys [id table row meta]}]
   (let [now (norm/now-epoch)]
     (merge row
-           (get draft-on-insert table)
+           (content/defaults table)
            {:id id :import_key nil :import_meta meta}
            (when (contains? #{:event :post :feature :sermon} table) {:created_at now})
            (when (contains? #{:page :feature} table) {:updated_at now}))))
 
 (defn- update-values [{:keys [row meta table]}]
-  ;; Deliberately omits published / published_at — see the namespace docstring.
+  ;; Deliberately omits status / published_at — see the namespace docstring.
   (merge row
          {:import_meta meta}
          (when (contains? #{:page :feature} table) {:updated_at (norm/now-epoch)})))
@@ -268,9 +259,7 @@
             :create
             (str (format "  %-8s %-34s CREATE\n" label key)
                  (format "    %-16s %s\n" "title" (pr-str title))
-                 (format "    %-16s %s"
-                         (if (= table :post) "published_at" "published")
-                         (if (= table :post) "NULL   <- draft" "0      <- draft")))
+                 (format "    %-16s %s" "status" "draft"))
 
             :update
             (str (format "  %-8s %-34s UPDATE%s\n" label key
@@ -278,7 +267,7 @@
                  (if (seq changes)
                    (str/join "\n" (map (fn [[c ch]] (fmt-change c ch)) changes))
                    "    (no field changes; stamping import_key)")
-                 (format "\n    %-16s %s" "published" "unchanged — human-controlled"))
+                 (format "\n    %-16s %s" "status" "unchanged — human-controlled"))
 
             :unchanged
             (format "  %-8s %-34s UNCHANGED" label key)))

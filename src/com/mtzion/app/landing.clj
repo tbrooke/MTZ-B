@@ -97,31 +97,31 @@
         ;; forever — and are invisible in the admin list, which hides past events.
         featured-src     (exec ctx {:select :*
                                     :from   :event
-                                    :where  [:and [:= :featured 1] [:= :published 1]
+                                    :where  [:and [:= :featured 1] [:= :status "published"]
                                              (event/upcoming-where n-ep)]})
         featured-events  (take 2 (event/next-occurrences featured-src n-ep))
         latest-posts     (exec ctx {:select   :*
                                     :from     :post
-                                    :where    [:is-not :published_at nil]
+                                    :where    [:= :status "published"]
                                     :order-by [[:published_at :desc]]
                                     :limit    3})
         worship-feature  (first (exec ctx {:select   :*
                                            :from     :feature
                                            :where    [:and
                                                       [:= :page_slug "home-worship"]
-                                                      [:= :published 1]]
+                                                      [:= :status "published"]]
                                            :limit    1}))
         activity-cards   (exec ctx {:select   :*
                                     :from     :feature
                                     :where    [:and
                                                [:= :page_slug "home-activities"]
-                                               [:= :published 1]]
+                                               [:= :status "published"]]
                                     :order-by [[:sort_order :asc] [:title :asc]]})
         hero-feature     (first (exec ctx {:select :*
                                            :from   :feature
                                            :where  [:and
                                                     [:= :page_slug "home-hero"]
-                                                    [:= :published 1]]
+                                                    [:= :status "published"]]
                                            :limit  1}))
         ;; feature column -> hero slot. Blank values fall through to
         ;; hero-defaults, so a half-filled row still renders a complete hero.

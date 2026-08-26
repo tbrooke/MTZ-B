@@ -74,12 +74,12 @@
   ;; 1. snake-keys — biff.sqlite/execute returns NAMESPACE-QUALIFIED keys
   ;;    (:page/body), so reading (:body row) off the raw result was always nil
   ;;    and this override silently never worked.
-  ;; 2. published = 1 — a DB body REPLACES the whole designed page, so a draft
+  ;; 2. status = "published" — a DB body REPLACES the whole designed page, so a draft
   ;;    must never be read here.
   (let [db-page (norm/snake-keys
                  (first (biff.sqlite/execute ctx {:select :* :from :page
                                                   :where  [:and [:= :slug "about"]
-                                                           [:= :published 1]]})))]
+                                                           [:= :status "published"]]})))]
     (base/page ctx "About — Mount Zion UCC"
                (if (seq (:body db-page))
                  [::hiccup/unsafe-html (:body db-page)]

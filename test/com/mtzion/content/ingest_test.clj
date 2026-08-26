@@ -6,6 +6,7 @@
             [com.mtzion.content.ingest :as ingest]
             [com.mtzion.content.plan :as plan]
             [com.mtzion.content.schema :as cs]
+            [com.mtzion.model.content :as content]
             [com.mtzion.model.normalize :as norm]
             [com.mtzion.test-util :refer [with-temp-ctx]]))
 
@@ -52,15 +53,15 @@
 (deftest applies-as-drafts
   (with-temp-ctx [ctx]
     (apply-file! ctx example-file)
-    (testing "everything lands unpublished"
-      (is (= 0 (:published (row ctx :event "back-to-school-blessing-2026"))))
-      (is (= 0 (:published (row ctx :feature "home-fall-kickoff-2026"))))
-      (is (= 0 (:published (row ctx :sermon "sermon-2026-08-09")))))
-    (testing "a post's draft state is a NULL published_at, not a column"
+    (testing "everything lands as a draft"
+      (is (= content/draft (:status (row ctx :event "back-to-school-blessing-2026"))))
+      (is (= content/draft (:status (row ctx :feature "home-fall-kickoff-2026"))))
+      (is (= content/draft (:status (row ctx :sermon "sermon-2026-08-09"))))
+      (is (= content/draft (:status (row ctx :post "council-notes-2026-08")))))
+    (testing "a proposed publication date is parked, not applied"
       (let [p (row ctx :post "council-notes-2026-08")]
         (is (nil? (:published_at p)))
-        (testing "and the extracted date is preserved for the admin form"
-          (is (re-find #"2026-08-09" (:import_meta p))))))))
+        (is (re-find #"2026-08-09" (:import_meta p)))))))
 
 (deftest converts-values-correctly
   (with-temp-ctx [ctx]
@@ -101,11 +102,10 @@
   ;; un-publish something a human already approved.
   (with-temp-ctx [ctx]
     (apply-file! ctx example-file)
-    (biff.sqlite/execute ctx {:update :event :set {:published 1}
-                              :where [:= :import_key "back-to-school-blessing-2026"]})
+    (content/publish! ctx :event (:id (row ctx :event "back-to-school-blessing-2026")))
     (biff.sqlite/execute ctx {:update :post :set {:published_at 1786579200}
                               :where [:= :import_key "council-notes-2026-08"]})
-    (testing "re-import with an edit still leaves published state alone"
+    (testing "re-import with an edit still leaves publish status alone"
       (let [{:keys [envelope]} (ingest/read-envelope example-file)
             edited (update envelope :items
                            (fn [items]
@@ -115,7 +115,7 @@
                                    items)))
             ops (plan/build ctx (:items edited) "test" nil)]
         (ingest/apply-ops! ctx ops)
-        (is (= 1 (:published (row ctx :event "back-to-school-blessing-2026")))
+        (is (= content/published (:status (row ctx :event "back-to-school-blessing-2026")))
             "still published")
         (is (= "Fellowship Hall" (:location (row ctx :event "back-to-school-blessing-2026")))
             "but the edit did land")
@@ -149,7 +149,8 @@
           :values [{:id "hand-made" :title "Back-to-School Blessing"
                     :description "" :location ""
                     :start_at (norm/local-datetime->epoch "2026-08-16T10:30")
-                    :all_day 0 :recurrence "none" :featured 0 :published 1
+                    :all_day 0 :recurrence "none" :featured 0
+                    :published 1 :status "published"
                     :created_at 1}]})
     (let [{:keys [envelope]} (ingest/read-envelope example-file)
           ops (plan/build ctx (:items envelope) "test" nil)
@@ -163,7 +164,7 @@
           "the hand-made row was adopted, not duplicated")
       (is (= "hand-made" (:id (row ctx :event "back-to-school-blessing-2026")))
           "and it is the same row, now stamped with the import key")
-      (is (= 1 (:published (row ctx :event "back-to-school-blessing-2026")))
+      (is (= content/published (:status (row ctx :event "back-to-school-blessing-2026")))
           "adoption does not un-publish"))))
 
 (deftest never-deletes
@@ -187,7 +188,7 @@
       (is (= 0 status))
       (is (str/includes? output "DRY RUN"))
       (is (str/includes? output "CREATE"))
-      (is (str/includes? output "<- draft"))
+      (is (str/includes? output "status           draft"))
       (is (zero? (count (q ctx {:select :* :from :event})))
           "the database was not touched"))))
 

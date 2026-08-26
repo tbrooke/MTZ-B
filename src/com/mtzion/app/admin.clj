@@ -4,6 +4,7 @@
             [com.mtzion.lib.middleware :refer [wrap-signed-in]]
             [com.mtzion.lib.r2 :as r2]
             [com.mtzion.lib.ui :as ui]
+            [com.mtzion.model.content :as content]
             [com.mtzion.model.event :as event]
             [com.mtzion.model.nav :as model.nav]
             [com.mtzion.model.normalize :as normalize]
@@ -167,7 +168,7 @@
         ms         (.toEpochSecond (.atStartOfDay first-day normalize/eastern))
         me         (.toEpochSecond (.atStartOfDay (.plusMonths first-day 1) normalize/eastern))
         all-evs    (exec ctx {:select [:start_at :recurrence :recur_until] :from :event
-                              :where  [:= :published 1]})
+                              :where  [:= :status "published"]})
         evs        (event/expand-in-range all-evs ms me)
         event-days (into #{} (map #(-> (java.time.Instant/ofEpochSecond (:start_at %))
                                        (java.time.LocalDate/ofInstant normalize/eastern)
@@ -240,7 +241,7 @@
         n-feats  (count-table ctx :feature)
         upcoming-src (exec ctx
                            {:select [:title :start_at :recurrence :recur_until] :from :event
-                            :where  [:and [:= :published 1] (event/upcoming-where n-ep)]})
+                            :where  [:and [:= :status "published"] (event/upcoming-where n-ep)]})
         upcoming-exp (event/next-occurrences upcoming-src n-ep)
         upcoming     (take 3 upcoming-exp)
         n-events     (count upcoming-exp)
@@ -313,7 +314,7 @@
    (adm/field {:label "Status"}
               [:label {:class "adm-check-row"}
                [:input {:type "checkbox" :name "published" :value "1"
-                        :checked (not= "0" (str (:published f "1")))}]
+                        :checked (not= content/draft (:status f content/published))}]
                "Published"])
    (adm/submit-row {:cancel-href "/admin/features"})])
 
@@ -338,7 +339,7 @@
                             [:td (:page_slug r)]
                             [:td (:title r)]
                             [:td (when (= 1 (:show_on_home r)) "✓")]
-                            [:td (adm/badge (= 1 (:published r)))]
+                            [:td (adm/badge (= content/published (:status r)))]
                             [:td
                              [:div {:class "adm-actions"}
                               [:a {:href (str "/admin/features/" (:id r) "/edit") :class "adm-link"} "Edit"]
@@ -366,6 +367,7 @@
                    :cta_url      (or (:cta_url params) "")
                    :image_id     (not-empty (:image_id params))
                    :published    (if (:published params) 1 0)
+                   :status       (if (:published params) content/published content/draft)
                    :sort_order   (parse-int-param params :sort_order 0)
                    :updated_at   (now-epoch)
                    :created_at   (now-epoch)}]})
@@ -396,6 +398,7 @@
                :image_id     (not-empty (:image_id params))
                :sort_order   (parse-int-param params :sort_order 0)
                :published    (if (:published params) 1 0)
+               :status       (if (:published params) content/published content/draft)
                :updated_at   (now-epoch)}
          :where [:= :id (:id path-params)]})
   {:status 303 :headers {"location" "/admin/features"}})
@@ -459,7 +462,7 @@
                                    [:span {:class "adm-badge"} "News"]
                                    [:span {:class "adm-badge adm-badge--green"} "Blog"])]
                             [:td (:title r)]
-                            [:td (if (:published_at r)
+                            [:td (if (= content/published (:status r))
                                    (epoch->date (:published_at r))
                                    (adm/badge false))]
                             [:td
@@ -490,6 +493,8 @@
                      :body         (or (:body params) "")
                      :show_on_home (if (:show_on_home params) 1 0)
                      :published_at (parse-date-epoch (:published_at params))
+                     :status       (if (parse-date-epoch (:published_at params))
+                                     content/published content/draft)
                      :created_at   (now-epoch)}]}))
   {:status 303 :headers {"location" "/admin/posts"}})
 
@@ -517,7 +522,9 @@
                  :image_id     (not-empty (:image_id params))
                  :body         (or (:body params) "")
                  :show_on_home (if (:show_on_home params) 1 0)
-                 :published_at (parse-date-epoch (:published_at params))}
+                 :published_at (parse-date-epoch (:published_at params))
+                 :status       (if (parse-date-epoch (:published_at params))
+                                 content/published content/draft)}
            :where [:= :id (:id path-params)]}))
   {:status 303 :headers {"location" "/admin/posts"}})
 
@@ -573,7 +580,7 @@
                 "Featured on home page"]
                [:label {:class "adm-check-row"}
                 [:input {:type "checkbox" :name "published" :value "1"
-                         :checked (not= 0 (:published e 1))}]
+                         :checked (not= content/draft (:status e content/published))}]
                 "Published"]])
    (adm/submit-row {:cancel-href "/admin/events"})])
 
@@ -638,7 +645,7 @@
        [:td (or (not-empty (:location r)) "—")]
        [:td (:recurrence r "none")]
        [:td (when (= 1 (:featured r)) "★")]
-       [:td (adm/badge (= 1 (:published r)))]
+       [:td (adm/badge (= content/published (:status r)))]
        [:td
         [:div {:class "adm-actions"}
          [:a {:href (str "/admin/events/" (:id r) "/edit") :class "adm-link"} "Edit"]
@@ -705,6 +712,7 @@
                    :image_id (not-empty (:image_id params))
                    :featured (if (:featured params) 1 0)
                    :published (if (:published params) 1 0)
+                   :status    (if (:published params) content/published content/draft)
                    :created_at (now-epoch)}]})
   {:status 303 :headers {"location" "/admin/events"}})
 
@@ -732,7 +740,8 @@
                :recur_until (parse-date-epoch (:recur_until params))
                :image_id (not-empty (:image_id params))
                :featured (if (:featured params) 1 0)
-               :published (if (:published params) 1 0)}
+               :published (if (:published params) 1 0)
+               :status    (if (:published params) content/published content/draft)}
          :where [:= :id (:id path-params)]})
   {:status 303 :headers {"location" "/admin/events"}})
 
@@ -794,7 +803,7 @@
    (adm/field {:label "Status"}
               [:label {:class "adm-check-row"}
                [:input {:type "checkbox" :name "published" :value "1"
-                        :checked (not= 0 (:published p 1))}]
+                        :checked (not= content/draft (:status p content/published))}]
                "Published"])
    (adm/submit-row {:cancel-href "/admin/pages"})])
 
@@ -831,7 +840,7 @@
                                [:td [:code {:class "adm-hint"} (str "/" slug)]]
                                [:td (if r (nav-cell r) [:em {:class "adm-hint"} "—"])]
                                [:td (or (some-> (:nav_order r) str) [:em {:class "adm-hint"} "—"])]
-                               [:td (if r (adm/badge (= 1 (:published r))) [:em {:class "adm-hint"} "static"])]
+                               [:td (if r (adm/badge (= content/published (:status r))) [:em {:class "adm-hint"} "static"])]
                                [:td (if r (epoch->date (:updated_at r)) [:em {:class "adm-hint"} "default"])]
                                [:td [:a {:href (str "/admin/pages/" slug "/edit") :class "adm-link"} "Edit"]]]))
                           (for [r custom]
@@ -841,7 +850,7 @@
                              [:td [:code {:class "adm-hint"} (model.nav/page-path r)]]
                              [:td (nav-cell r)]
                              [:td (or (some-> (:nav_order r) str) [:em {:class "adm-hint"} "—"])]
-                             [:td (adm/badge (= 1 (:published r)))]
+                             [:td (adm/badge (= content/published (:status r)))]
                              [:td (epoch->date (:updated_at r))]
                              [:td
                               [:div {:class "adm-actions"}
@@ -871,7 +880,7 @@
     (when (some #{v} model.nav/top-level-slugs) v)))
 
 (def ^:private page-upsert-cols
-  [:title :nav_label :nav_order :parent_slug :body :published :updated_at])
+  [:title :nav_label :nav_order :parent_slug :body :published :status :updated_at])
 
 (defn pages-update [{:keys [params path-params] :as ctx}]
   (let [slug (str/trim (:slug path-params))]
@@ -885,6 +894,7 @@
                      :parent_slug (parse-parent params)
                      :body        (or (:body params) "")
                      :published   (if (:published params) 1 0)
+                     :status      (if (:published params) content/published content/draft)
                      :updated_at  (now-epoch)}]
            :on-conflict :slug
            :do-update-set page-upsert-cols}))
@@ -923,6 +933,7 @@
                        :parent_slug (parse-parent params)
                        :body        (or (:body params) "")
                        :published   (if (:published params) 1 0)
+                       :status      (if (:published params) content/published content/draft)
                        :updated_at  (now-epoch)}]
              :on-conflict :slug
              :do-update-set page-upsert-cols})))

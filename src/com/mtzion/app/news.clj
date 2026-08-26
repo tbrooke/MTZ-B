@@ -55,7 +55,7 @@
   (let [posts (norm/snake-keys-all
                (biff.sqlite/execute ctx {:select   :*
                                          :from     :post
-                                         :where    [:is-not :published_at nil]
+                                         :where    [:= :status "published"]
                                          :order-by [[:published_at :desc]]}))]
     (list
      [:section {:class "mtz-section"}
@@ -125,7 +125,7 @@
            (first (biff.sqlite/execute ctx {:select :* :from :post
                                             :where  [:and
                                                      [:= :slug (:slug path-params)]
-                                                     [:is-not :published_at nil]]})))]
+                                                     [:= :status "published"]]})))]
     (if p
       (base/page ctx (str (:title p) " — Mount Zion UCC") (post-detail-content p))
       (-> (base/page ctx "Not Found — Mount Zion UCC"

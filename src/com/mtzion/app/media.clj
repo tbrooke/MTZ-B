@@ -5,6 +5,7 @@
             [com.mtzion.lib.middleware :refer [wrap-signed-in]]
             [com.mtzion.lib.r2 :as r2]
             [com.mtzion.lib.ui :as ui]
+            [com.mtzion.model.content :as content]
             [com.mtzion.model.normalize :as norm]
             [com.mtzion.ui.admin :as adm]
             [hato.client :as http]
@@ -102,7 +103,7 @@
                             [:td (or (epoch->date (:sermon_date r)) "—")]
                             [:td (or (:scripture_cw r) "—")]
                             [:td (or (:scripture_gospel r) "—")]
-                            [:td (adm/badge (= 1 (:published r)))]
+                            [:td (adm/badge (= content/published (:status r)))]
                             [:td
                              [:div {:class "adm-actions"}
                               [:a {:href (str "/admin/sermons/" (:id r) "/edit") :class "adm-link"} "Edit"]
@@ -166,7 +167,7 @@
    (adm/field {:label "Status"}
               [:label {:class "adm-check-row"}
                [:input {:type "checkbox" :name "published" :value "1"
-                        :checked (not= 0 (:published s 1))}]
+                        :checked (not= content/draft (:status s content/published))}]
                "Published"])
    (adm/submit-row {:cancel-href "/admin/sermons"})])
 
@@ -235,6 +236,7 @@
                      :bulletin_path     bulletin-path
                      :presentation_path pres-path
                      :published         (if (:published params) 1 0)
+                     :status            (if (:published params) content/published content/draft)
                      :created_at        (now-epoch)}]}))
   {:status 303 :headers {"location" "/admin/sermons"}})
 
@@ -260,7 +262,8 @@
                     :video_id          (or new-vid (:video_id existing))
                     :bulletin_path     bulletin-path
                     :presentation_path pres-path
-                    :published         (if (:published params) 1 0)}
+                    :published         (if (:published params) 1 0)
+                    :status            (if (:published params) content/published content/draft)}
            :where  [:= :id (:id path-params)]}))
   {:status 303 :headers {"location" "/admin/sermons"}})
 

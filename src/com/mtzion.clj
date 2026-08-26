@@ -8,6 +8,7 @@
             [com.biffweb.ring :as biff.ring]
             [com.biffweb.sqlite :as biff.sqlite]
             [com.mtzion.lib.email :as email]
+            [com.mtzion.model.content :as content]
             [com.mtzion.modules :as modules]
             [nrepl.server :as nrepl])
   (:gen-class))
@@ -21,6 +22,9 @@
   [config/use-aero-config
    biff.admin/use-alerts
    biff.sqlite/use-sqlite
+   ;; Must follow use-sqlite: that is what creates the `status` column this
+   ;; backfills. Idempotent, so it is a no-op on every boot after the first.
+   content/use-status-backfill
    biff.background/use-scheduled-tasks
    biff.background/use-queues
    biff.ring/use-jetty])

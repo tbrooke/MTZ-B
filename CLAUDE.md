@@ -67,8 +67,53 @@ All defined in `schema.clj` (`extra-sql`) and mirrored in `resources/schema.sql`
 | `post` | Blog posts — "Pastor Jim Reflects" |
 | `event` | Events with recurrence support |
 | `page` | DB overrides for static pages (about, worship, etc.) |
-| `file` | Uploaded documents (bulletins, slides) — stored on disk |
+| `file` | Uploaded documents (bulletins, slides) — stored in Cloudflare R2 |
 | `sermon` | Sermon records with Cloudflare Stream video_id |
+
+## Publish state: one `status` column, five tables
+
+`feature`, `post`, `event`, `page` and `sermon` each carry
+`status TEXT` — exactly one of `draft`, `published`, `archived` — plus
+`published_at` (when it first went live) and `archived_at`.
+
+**Public read queries filter on `[:= :status "published"]`.** Nothing else.
+Before this there were four dialects of "not live yet" (three `published INTEGER`
+columns, and on `post` the convention that a NULL `published_at` meant draft);
+that is gone.
+
+Go through `com.mtzion.model.content` rather than writing the column by hand:
+
+```clojure
+(content/live ctx :event)                 ; published rows — what the site sees
+(content/ls   ctx :post {:status "draft"})
+(content/publish! ctx :event id)          ; also stamps published_at, once
+(content/archive! ctx :post id)           ; the replacement for Delete
+(content/restore! ctx :post id)           ; back to draft, never straight to live
+```
+
+Two rules the namespace enforces, both deliberate:
+
+- **`save!` never changes publish state.** Status moves only through the
+  transition fns, so editing an item can't put it on the site by accident.
+  Same rule the importer follows.
+- **New content is always a draft.** `content/defaults` is merged into every
+  insert.
+
+### The `published` column is vestigial
+
+The old `published INTEGER` still exists on the four tables that had it, and is
+still written in lockstep with `status`, purely so a deploy can be rolled back.
+**Nothing reads it.** It gets dropped once the console replaces `/admin`.
+
+### Migrating an existing database
+
+`status` is nullable with no default on purpose. `content/use-status-backfill`
+is a Biff component ordered directly after `biff.sqlite/use-sqlite` (in both
+`com.mtzion/components` and `com.mtzion.system`); it derives `status` for rows
+that predate the column, guarded by `status IS NULL`, so it is a no-op on every
+boot after the first. Giving the column `DEFAULT 'draft'` instead would have had
+sqlite3def fill every existing row with 'draft' on the way up — i.e. blank the
+live site.
 
 ## Admin panel routes
 
@@ -195,7 +240,7 @@ Weekly loop:
 
 - **Everything imports as a draft.** `:published` is not part of the contract.
 - **Re-importing never un-publishes.** Only INSERT sets publish state; UPDATE
-  never touches `published` / `published_at`.
+  never touches `status` / `published_at`.
 - **Never deletes.** Removing an item from the EDN leaves the row alone.
 - **Idempotent.** Re-dropping an unchanged file plans zero writes.
 - **All-or-nothing per file**, in a transaction. Validation failure = zero writes.
@@ -236,19 +281,16 @@ connect to nREPL on port 7888 and call `(clojure.tools.namespace.repl/refresh)`.
 
 ## File uploads
 
-Bulletins, slide decks, and other documents are uploaded via `/admin/files` and stored on disk.
+Bulletins, slide decks, and other documents are uploaded via `/admin/files` and
+stored in **Cloudflare R2** (`com.mtzion.lib.r2`), not on disk. `files-upload`
+PUTs the object under `files/<uuid>-<name>` and stores R2's public URL in the
+`file` row; `files-delete` removes the object as well as the row.
 
-- Upload directory configured via `UPLOAD_DIR` env var (default: `storage/uploads`)
-- Files served publicly at `/uploads/:filename` (path-traversal sanitised in handler)
+- Config: `R2_BUCKET`, `R2_ACCESS_KEY_ID`, `R2_SECRET_KEY`, `R2_PUBLIC_URL`
 - SQLite `file` table stores label, category, url, size_bytes, uploaded_at
 
-**On the VPS**: set `UPLOAD_DIR=/home/app/storage/uploads` in `config.prod.env`.
-Optionally serve directly via nginx to bypass the app:
-```nginx
-location /uploads/ {
-    alias /home/app/storage/uploads/;
-}
-```
+`UPLOAD_DIR` (`:mtz/upload-dir`) is still declared in `config.edn` but nothing
+reads it any more — it is a leftover of the pre-R2 disk implementation.
 
 ## Deployment
 

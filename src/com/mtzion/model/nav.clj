@@ -26,7 +26,7 @@
   (->> (normalize (biff.sqlite/execute
                    ctx {:select   :*
                         :from     :page
-                        :where    [:and [:= :published 1]
+                        :where    [:and [:= :status "published"]
                                    [:is-not :nav_label nil]
                                    [:!= :nav_label ""]]
                         :order-by [[:nav_order :asc] [:slug :asc]]}))
@@ -40,6 +40,6 @@
   [ctx slug parent]
   (let [p (first (normalize (biff.sqlite/execute
                              ctx {:select :* :from :page
-                                  :where  [:and [:= :slug slug] [:= :published 1]]})))]
+                                  :where  [:and [:= :slug slug] [:= :status "published"]]})))]
     (when (and p (= (not-empty (or (:parent_slug p) "")) (not-empty (or parent ""))))
       p)))

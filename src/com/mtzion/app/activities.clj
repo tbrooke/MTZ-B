@@ -50,7 +50,7 @@
   (let [cards (norm/snake-keys-all
                (biff.sqlite/execute ctx {:select   :*
                                          :from     :feature
-                                         :where    [:and [:= :page_slug "activities"] [:= :published 1]]
+                                         :where    [:and [:= :page_slug "activities"] [:= :status "published"]]
                                          :order-by [[:sort_order :asc]]}))]
     (base/page ctx "Activities — Mount Zion UCC" (page-content cards))))
 

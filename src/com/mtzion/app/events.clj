@@ -120,7 +120,7 @@
         ;; by design) in the list; next-occurrences then dates each one correctly.
         upcoming-src    (normalize (biff.sqlite/execute ctx {:select :*
                                                              :from   :event
-                                                             :where  [:and [:= :published 1]
+                                                             :where  [:and [:= :status "published"]
                                                                       (event/upcoming-where n-ep)]}))
         rows            (event/next-occurrences upcoming-src n-ep)
         featured-events (filter #(= 1 (:featured %)) rows)]

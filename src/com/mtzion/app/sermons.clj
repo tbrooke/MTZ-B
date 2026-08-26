@@ -83,11 +83,11 @@
 (defn sundays-list [{:keys [query-params] :as ctx}]
   (let [page        (max 1 (try (Integer/parseInt (get query-params "page" "1")) (catch Exception _ 1)))
         offset      (* (dec page) per-page)
-        total       (:n (first (biff.sqlite/execute ctx ["SELECT COUNT(*) AS n FROM sermon WHERE published = 1"])))
+        total       (:n (first (biff.sqlite/execute ctx ["SELECT COUNT(*) AS n FROM sermon WHERE status = 'published'"])))
         total-pages (max 1 (int (Math/ceil (/ (double (or total 0)) per-page))))
         sermons     (normalize (biff.sqlite/execute ctx {:select   :*
                                                          :from     :sermon
-                                                         :where    [:= :published 1]
+                                                         :where    [:= :status "published"]
                                                          :order-by [[:sermon_date :desc]]
                                                          :limit    per-page
                                                          :offset   offset}))]
@@ -134,7 +134,7 @@
                                                       :from   :sermon
                                                       :where  [:and
                                                                [:= :id (:id path-params)]
-                                                               [:= :published 1]]})))]
+                                                               [:= :status "published"]]})))]
     (if-not s
       {:status 404 :body "Sermon not found"}
       (base/page ctx (str (:title s) " — Mount Zion UCC")
