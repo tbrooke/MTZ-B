@@ -10,6 +10,7 @@
             [com.mtzion.app.admin :as content-admin]
             [com.mtzion.app.media :as media]
             [com.mtzion.app.auth :as auth]
+            [com.mtzion.app.console :as console]
             [com.mtzion.app.contact :as contact]
             [com.mtzion.app.events :as events-page]
             [com.mtzion.app.hello :as hello]
@@ -47,6 +48,7 @@
    schema/module
    admin-module
    content-admin/module
+   console/module
    media/module
    landing/module
    about/module

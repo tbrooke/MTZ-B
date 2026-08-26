@@ -61,6 +61,7 @@
       body TEXT NOT NULL DEFAULT '',
       image_id TEXT,
       show_on_home INTEGER NOT NULL DEFAULT 0,
+      author TEXT,
       published_at INTEGER,
       status TEXT,
       archived_at INTEGER,

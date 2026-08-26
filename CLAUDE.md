@@ -64,7 +64,7 @@ All defined in `schema.clj` (`extra-sql`) and mirrored in `resources/schema.sql`
 |-------|---------|
 | `user` | Admin users (BCrypt password) |
 | `feature` | Home page content slots (placement, title, subtitle, body, CTA) |
-| `post` | Blog posts — "Pastor Jim Reflects" |
+| `post` | Blog posts, news and reflections; `author` is a free-text byline |
 | `event` | Events with recurrence support |
 | `page` | DB overrides for static pages (about, worship, etc.) |
 | `file` | Uploaded documents (bulletins, slides) — stored in Cloudflare R2 |
@@ -114,6 +114,49 @@ that predate the column, guarded by `status IS NULL`, so it is a no-op on every
 boot after the first. Giving the column `DEFAULT 'draft'` instead would have had
 sqlite3def fill every existing row with 'draft' on the way up — i.e. blank the
 live site.
+
+## The console (`/console`)
+
+The task-shaped replacement for `/admin`, built alongside it — both read and
+write the same rows, so neither can drift while the migration is in progress.
+`/admin` stays fully working until the console covers everything it does.
+
+| Route | State |
+|---|---|
+| `/console` | dashboard — three pane cards |
+| `/console/writing` | **built** — blog / news / reflections, list + editor |
+| `/console/archive` | **built** — everything archived, across all five types |
+| `/console/site` | placeholder → `/admin/pages` |
+| `/console/calendar` | placeholder → `/admin/events` |
+| `/console/inbox` | placeholder — bulletin review queue |
+| `/console/media` | placeholder → `/admin/images` |
+
+Every pane is the same shape: **listing on the left, editor on the right**.
+
+### The status pill is the control
+
+`con/status-pill` renders the current state *and* toggles it — reading it and
+changing it are the same gesture, which is why there is no separate Publish
+button. It posts to `…/:id/status`, swaps itself, and swaps the matching
+listing row's dot via `hx-swap-oob` so the two halves of the screen agree
+without a reload.
+
+### Autosave
+
+`resources/public/js/console.js` — **plain JS, deliberately not in the esbuild
+bundle**, so editing it does not require `npm run build`. It debounces 1.5s and
+posts the whole form to `…/:id/autosave`. ProseMirror is contenteditable, so its
+`input` events bubble to the form: one listener covers title, body and details.
+
+Autosave only runs for a post that already exists (the form carries
+`data-autosave` only then) — a brand-new post has nowhere to save to yet.
+
+### Fragments must not carry a doctype
+
+`hiccup/render` prepends `<!DOCTYPE html>` unless told otherwise. Every HTMX
+endpoint here goes through `console/fragment`, which passes
+`{:doctype? false}`. (`media.clj`'s image browser predates this and still emits
+one; harmless, but don't copy it.)
 
 ## Admin panel routes
 

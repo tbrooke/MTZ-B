@@ -51,7 +51,11 @@
   :legacy-published? marks the tables that still carry the vestigial
   `published` column — `post` never had one."
   {:post    {:table :post    :label "Post"    :title-col :title
-             :order [[:created_at :desc]]  :legacy-published? false}
+             :order [[:created_at :desc]]  :legacy-published? false
+             ;; On a post the publication date is editorial — it is the date
+             ;; printed on the article, chosen by hand, not a derived flag. So
+             ;; unlike every other status column it stays editable through save!.
+             :editorial-cols #{:published_at}}
    :event   {:table :event   :label "Event"   :title-col :title
              :order [[:start_at :desc]]    :legacy-published? true}
    :feature {:table :feature :label "Section" :title-col :title
@@ -185,18 +189,25 @@
   (cond-> {:status draft}
     (:legacy-published? (spec type)) (assoc :published 0)))
 
+(def ^:private status-cols #{:status :published :published_at :archived_at})
+
 (defn save!
   "Inserts or updates one row from a map of column values.
 
   On insert, `defaults` are merged UNDER the caller's map, so a caller that
-  knows what it wants can still say so. On update, status columns are dropped
-  outright — publish state changes only through the transitions above, never as
-  a side effect of saving an edit. That is the same rule the importer follows."
+  knows what it wants can still say so. On update, status columns are dropped —
+  publish state changes only through the transitions above, never as a side
+  effect of saving an edit. That is the same rule the importer follows.
+
+  The exception is a type's `:editorial-cols`, which are status columns only by
+  storage: `post.published_at` is the date printed on the article, so the editor
+  has to be able to change it without that meaning 'publish this'."
   [ctx type id cols]
-  (let [{:keys [table]} (spec type)]
+  (let [{:keys [table editorial-cols]} (spec type)
+        protected (apply disj status-cols editorial-cols)]
     (if (get-one ctx type id)
       (exec ctx {:update table
-                 :set    (apply dissoc cols [:id :status :published :published_at :archived_at])
+                 :set    (apply dissoc cols :id protected)
                  :where  [:= :id id]})
       (exec ctx {:insert-into table
                  :values [(merge (defaults type) cols {:id id})]}))

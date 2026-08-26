@@ -108,6 +108,10 @@
     [:p {:class "mtz-kicker"}
      (str "News · " (or (format-month-year (:published_at p)) ""))]
     [:h1 {:class "mtz-h1" :style "max-width: 760px;"} (:title p)]
+    ;; The byline is free text, deliberately not tied to a login: Pastor Jim gets
+    ;; the credit whether or not he ever signs in to write it himself.
+    (when (seq (:author p))
+      [:p {:class "mtz-byline"} (str "by " (:author p))])
     (when (seq (:excerpt p))
       [:p {:class "mtz-lede" :style "max-width: 640px;"} (:excerpt p)])
     [:hr {:class "mtz-rule"}]]
