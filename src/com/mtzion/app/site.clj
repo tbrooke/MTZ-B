@@ -11,6 +11,7 @@
   code."
   (:require [clojure.string :as str]
             [com.mtzion.lib.middleware :refer [wrap-signed-in]]
+            [com.mtzion.content.defaults :as defaults]
             [com.mtzion.lib.ui :as ui]
             [com.mtzion.model.content :as content]
             [com.mtzion.model.nav :as model.nav]
@@ -80,15 +81,28 @@
 
        :else [:span {:class "con-tree-empty"} "empty"])]))
 
-(defn- tree [ctx sel]
+(defn- site-flip
+  "Same gesture as the flip chip on the public site: two sites, one console.
+  Everything else about the pane stays put — only the outline changes."
+  [site]
+  [:div {:class "con-flip"}
+   (for [{:keys [key label]} outline/sites]
+     [:a {:href  (str "/console/site" (when (= :preschool key) "?site=preschool"))
+          :class (str "con-flip-item" (when (= key site) " is-active"))}
+      label])])
+
+(defn- tree [ctx sel site]
   (let [nav-pages (model.nav/nav-pages ctx)]
     [:aside {:class "con-list"}
      [:div {:class "con-list-head"}
       [:h1 {:class "con-list-title"} "Site"]]
+     (site-flip site)
      [:p {:class "con-tree-hint"}
-      "The site as it is laid out. Pick a part of a page to edit it."]
+      (if (= :preschool site)
+        "The preschool site has its own design and its own outline."
+        "The site as it is laid out. Pick a part of a page to edit it.")]
      [:div {:class "con-rows con-tree"}
-      (for [entry outline/tree
+      (for [entry (outline/pages site)
             :let [pk (outline/page-key entry)]]
         (list
          [:div {:class "con-tree-page"}
@@ -126,6 +140,9 @@
        (con/field {:label "Image" :hint "Cloudflare image ID — copy it from Media"}
                   (con/text-input {:name "image_id" :value (or (:image_id row) "")
                                    :placeholder "a4df1d13-4c92-…"})))
+     (when (has? :meta)
+       (con/field {:label "Meta" :hint "A short line — separate parts with ·"}
+                  (con/text-input {:name "meta" :value (or (:meta row) "")})))
      (when (has? :cta)
        (list
         (con/field {:label "Button label" :hint "Leave both blank for no button"}
@@ -175,6 +192,7 @@
    :image_id   (not-empty (:image_id params))
    :cta_label  (or (:cta_label params) "")
    :cta_url    (or (:cta_url params) "")
+   :meta       (or (:meta params) "")
    :updated_at (normalize/now-epoch)})
 
 (defn- page-cols [{:keys [params]} slug existing]
@@ -211,7 +229,24 @@
                "Each one is a heading, some text, and optionally an image and a button."))]
 
      (if (empty? rows)
-       [:p {:class "con-rows-empty"} "Nothing here yet. Add a section to start."]
+       (if-let [shipped (and (:defaults? section) (defaults/rows (:slug section)))]
+         [:div
+          [:p {:class "con-rows-empty"}
+           (str "This section still shows the " (count shipped)
+                " items that came with the design. Take them over and they become "
+                "ordinary content you can edit, reorder and add to.")]
+          [:div {:class "con-stack"}
+           (for [d shipped]
+             [:div {:class "con-stack-row con-stack-row--shipped"}
+              [:span {:class "con-tree-empty"} "shipped"]
+              [:span {:class "con-stack-main"}
+               [:span {:class "con-row-title"} (:title d)]
+               [:span {:class "con-row-meta"} (or (:subtitle d) (:meta d) "")]]])]
+          [:form {:method "post" :action (str base "/adopt") :style "margin-top:20px;"}
+           (ui/anti-forgery-field)
+           [:button {:type "submit" :class "con-btn con-btn--primary"}
+            "Take these over"]]]
+         [:p {:class "con-rows-empty"} "Nothing here yet. Add a section to start."])
        [:div {:class "con-stack"}
         (map-indexed
          (fn [i r]
@@ -254,16 +289,23 @@
     "Shows up on " [:a {:href (:path entry) :target "_blank"} (:path entry)]]])
 
 (defn- slot-view [ctx entry section pk]
-  (let [row  (slot-row ctx section)
-        base (base-url pk (:key section))]
+  (let [row      (slot-row ctx section)
+        base     (base-url pk (:key section))
+        ;; With no row yet, prefill from the copy that ships with the design, so
+        ;; Save adopts it instead of blanking the section.
+        prefill  (or row (when (:defaults? section) (defaults/one (:slug section))))]
     (editor-shell
      {:title      (:label section)
-      :note       (:note section)
+      :note       (cond-> (:note section)
+                    (and (nil? row) (:defaults? section))
+                    (str (when (:note section) " ")
+                         "This still shows the text that came with the design — "
+                         "save it to take it over."))
       :action     base
-      :row        row
+      :row        prefill
       :status-url (when row (str base "/status"))
       :preview    (:path entry)
-      :fields     (field-inputs (:fields section) row)
+      :fields     (field-inputs (:fields section) prefill)
       :body?      (some #{:body} (:fields section))})))
 
 (defn- body-view [ctx entry section pk]
@@ -305,15 +347,18 @@
 ;; Handlers
 ;; ---------------------------------------------------------------------------
 
-(defn- render [ctx sel content]
+(defn- site-param [{:keys [query-params]}]
+  (if (= "preschool" (get query-params "site")) :preschool :church))
+
+(defn- render [ctx sel site content]
   (con/page "Site" {:active :site}
             [:div {:class "con-pane"}
-             (tree ctx sel)
+             (tree ctx sel site)
              content]
             [:script {:src "/js/console.js" :defer "true"}]))
 
 (defn site [ctx]
-  (render ctx nil
+  (render ctx nil (site-param ctx)
           (con/empty-state
            "The site, laid out"
            [:p "Every menu item, the pages under it, and the parts of each page you can edit."]
@@ -326,7 +371,7 @@
         s       (outline/find-section page section)]
     (if-not (and entry s)
       {:status 404 :body "No such part of the site"}
-      (render ctx [page section]
+      (render ctx [page section] (outline/site-of entry)
               (cond
                 id                    (or (row-view ctx entry s page id)
                                           (con/empty-state "That section is gone"
@@ -376,6 +421,24 @@
                         :created_at (normalize/now-epoch)
                         :updated_at (normalize/now-epoch)})
         {:status 303 :headers {"location" (str (base-url page section) "/" id)}}))))
+
+(defn adopt
+  "Copies the shipped design copy into the database as ordinary rows. After
+  this the defaults no longer apply to that section — what the console shows is
+  what the page shows."
+  [{:keys [path-params] :as ctx}]
+  (let [{:keys [page section]} path-params
+        s (outline/find-section page section)]
+    (when (and s (:defaults? s) (empty? (list-rows ctx s)))
+      (doseq [[i d] (map-indexed vector (defaults/rows (:slug s)))]
+        (content/save! ctx :feature (new-id)
+                       (merge {:page_slug (:slug s) :title "" :subtitle "" :body ""
+                               :cta_label "" :cta_url "" :meta ""}
+                              d
+                              {:sort_order i
+                               :created_at (normalize/now-epoch)
+                               :updated_at (normalize/now-epoch)}))))
+    {:status 303 :headers {"location" (base-url page section)}}))
 
 (defn move
   "Up/down rather than drag-and-drop: it works without JavaScript, and a list of
@@ -432,6 +495,7 @@
      ["/:page/:section"
       ["" {:get leaf :post save :name ::leaf}]
       ["/new"    {:post add-row :name ::add-row :conflicting true}]
+      ["/adopt"  {:post adopt   :name ::adopt   :conflicting true}]
       ["/status" {:post status  :name ::status  :conflicting true}]
       ["/:id" {:get leaf :post save :name ::row :conflicting true}]
       ["/:id/status"  {:post status  :name ::row-status}]

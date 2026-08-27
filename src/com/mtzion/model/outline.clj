@@ -26,7 +26,7 @@
 
 (def all-fields [:title :subtitle :body :image :cta])
 
-(def tree
+(def church-tree
   [{:label "Home" :path "/" :page-slug nil
     :sections
     [{:key "hero" :label "Hero" :kind :slot :slug "home-hero"
@@ -105,13 +105,58 @@
       :note (str "Added below the form and office details, above the map. "
                  "The form itself is part of the design.")}]}
 
-   {:label "Preschool" :path "/preschool" :page-slug "preschool"
+   ])
+
+(def preschool-tree
+  "The preschool site is a separate design with a separate audience, so it gets
+  its own outline behind the flip rather than a branch of the church one.
+
+  Every leaf here falls back to the copy that ships with the design, so an
+  untouched section still renders exactly as it always has. `:defaults` names
+  the slug in com.mtzion.content.defaults that the console can copy in to start
+  editing."
+  [{:label "Preschool" :path "/preschool" :page-slug "preschool" :site :preschool
     :sections
-    [{:key "static" :label "Every word is in code" :kind :static
-      :note (str "The preschool page has its own design and reads nothing from "
-                 "the database — not even a page body. Changing its text is a "
-                 "code change today. Retiring that is a planned piece of work; "
-                 "it is listed here so the tree does not pretend otherwise.")}]}])
+    [{:key "hero" :label "Hero" :kind :slot :slug "ps-hero" :defaults? true
+      :fields [:title :subtitle :body :image :cta]
+      :note (str "Heading is the big line beside the artwork; Kicker is the small "
+                 "line above the paragraph. Leave the image blank for the "
+                 "original artwork.")}
+     {:key "welcome" :label "Director's note" :kind :slot :slug "ps-welcome" :defaults? true
+      :fields [:title :subtitle :body :meta]
+      :note "Meta is the signature — name · role · since, separated by ·"}
+     {:key "programs" :label "Classrooms" :kind :list :slug "ps-programs" :defaults? true
+      :fields [:title :subtitle :body :meta]
+      :note (str "One card per classroom. Kicker is the age band; Meta is the two "
+                 "lines at the bottom, separated by ·. They number themselves in "
+                 "this order.")}
+     {:key "day" :label "A day in the life — heading" :kind :slot :slug "ps-day" :defaults? true
+      :fields [:title :subtitle :meta]
+      :note "Meta is the pull quote on the coloured panel."}
+     {:key "schedule" :label "The daily schedule" :kind :list :slug "ps-schedule" :defaults? true
+      :fields [:title :subtitle :meta]
+      :note "Kicker is the time, Heading is what happens, Meta is where."}
+     {:key "values" :label "What we believe" :kind :list :slug "ps-values" :defaults? true
+      :fields [:title :body]
+      :note "Numbered by position — reorder them and they renumber themselves."}
+     {:key "enroll" :label "Enrollment" :kind :slot :slug "ps-enroll" :defaults? true
+      :fields [:title :subtitle :body :cta]}
+     {:key "enroll-facts" :label "Enrollment facts" :kind :list :slug "ps-enroll-facts"
+      :defaults? true
+      :fields [:title :meta]
+      :note "The Hours / Calendar / License row. Heading is the label, Meta the value."}]}])
+
+(def trees
+  {:church    church-tree
+   :preschool preschool-tree})
+
+(def sites
+  [{:key :church    :label "Church"    :path "/"}
+   {:key :preschool :label "Preschool" :path "/preschool"}])
+
+(def tree
+  "Both trees, for anything that needs to walk every leaf."
+  (into church-tree preschool-tree))
 
 ;; ---------------------------------------------------------------------------
 ;; Lookup
@@ -122,6 +167,14 @@
   it gets a literal."
   [entry]
   (or (:page-slug entry) "home"))
+
+(defn site-of
+  "Which tree an entry belongs to. The church tree is the default."
+  [entry]
+  (or (:site entry) :church))
+
+(defn pages [site]
+  (get trees site church-tree))
 
 (defn find-page [pk]
   (first (filter #(= pk (page-key %)) tree)))

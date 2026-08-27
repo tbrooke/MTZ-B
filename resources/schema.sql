@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS feature (
       image_id TEXT,
       cta_label TEXT,
       cta_url TEXT,
+      meta TEXT,
       sort_order INTEGER NOT NULL DEFAULT 0,
       published INTEGER NOT NULL DEFAULT 1,
       status TEXT,

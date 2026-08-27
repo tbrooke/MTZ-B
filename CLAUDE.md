@@ -167,12 +167,49 @@ answers "can I add another section?":
 | `:list` | MANY rows, one uniform layout, editor's order. **Unlimited** — this is where "add a section" lives. |
 | `:body` | The page's own Tiptap body on the `page` row. Only `about` and `outreach` templates read one. |
 | `:link` | Rendered on this page but owned by another pane; sends you there instead of opening a second editor onto the same rows. |
-| `:static` | The page reads nothing from the database. Declared so the tree doesn't pretend otherwise (Preschool). |
+| `:static` | The page reads nothing from the database. Declared so the tree doesn't pretend otherwise. |
 
 `:fields` is what the template actually **reads**, and the editor renders only
 those. That is the fix for one universal twelve-field form serving rows that
 mean completely different things — `/admin/features` offered Image and Sort
 Order for `current-theme`, which renders neither.
+
+### Two sites, one console
+
+`outline/church-tree` and `outline/preschool-tree`, switched by a flip in the
+Site pane that mirrors the public site's flip chip (`?site=preschool`). Only the
+outline changes; the rest of the console is the same. Page keys are unique
+across both trees, so a leaf URL stays unambiguous and needs no site segment.
+
+### Shipped copy, and adopting it
+
+`com.mtzion.content.defaults` holds the text that ships with a design, keyed by
+the same `page_slug` the outline declares. A template asks the CMS first and
+falls back to it, so an untouched page renders exactly as it always did. A leaf
+marked `:defaults? true` offers:
+
+- **slots** — the editor prefills from the shipped copy, so Save adopts it
+  rather than blanking the section;
+- **lists** — a "Take these over" button (`…/adopt`) that copies the shipped
+  rows in as drafts.
+
+Once a row exists for a slug the defaults stop applying to it. This is the
+incremental path off static text: a page is adopted one section at a time, not
+rewritten. The whole preschool page now works this way — verified byte-for-byte
+identical to the static version it replaced.
+
+Two conventions that fell out of that:
+
+- **`sections/emphasis`** renders `*like this*` as `<em>`, everything else
+  escaped. The designed headings italicise a phrase mid-sentence; without this a
+  plain text input would flatten them.
+- **`defaults/split-meta` splits on `|`, not `·`** — `·` appears inside the copy
+  itself (`Ages 2 – 3 | T / Th · ½ day` is two cells, the second containing a
+  middot).
+
+The preschool classroom cards number from **02**, which is how the designed page
+has always numbered them. Preserved deliberately rather than quietly corrected,
+and asserted in a test so nobody "fixes" it by accident.
 
 ### The generic sections region
 

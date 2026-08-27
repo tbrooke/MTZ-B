@@ -11,7 +11,8 @@
   you do in the console rather than a thing you ask a developer for.
 
   Storage is the `feature` table, which already had every column this needs."
-  (:require [com.mtzion.model.content :as content]
+  (:require [clojure.string :as str]
+            [com.mtzion.model.content :as content]
             [lambdaisland.hiccup :as hiccup]))
 
 (defn image-url
@@ -21,6 +22,26 @@
   (when (seq image-id)
     (str "https://imagedelivery.net/" (:cf/images-hash ctx) "/" image-id "/"
          (or variant "public"))))
+
+(defn emphasis
+  "A short heading that may italicise part of itself: *like this*.
+
+  The designed headings carry emphasis mid-sentence (\"Where little ones *grow,
+  play,* and find their place\"), and losing it flattens the type. A plain text
+  input plus one convention keeps that editable without handing an editor raw
+  HTML — everything outside the asterisks is escaped."
+  [s]
+  (when (seq s)
+    (let [esc (fn [t] (-> t (str/replace "&" "&amp;")
+                          (str/replace "<" "&lt;")
+                          (str/replace ">" "&gt;")))
+          parts (str/split s #"\*" -1)]
+      [::hiccup/unsafe-html
+       (str/join (map-indexed (fn [i part]
+                                (if (odd? i)
+                                  (str "<em>" (esc part) "</em>")
+                                  (esc part)))
+                              parts))])))
 
 (defn rows
   "Published sections for one page slug, in the order the editor set."

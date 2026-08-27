@@ -1632,3 +1632,32 @@ a.con-card-row:hover { color: var(--con-terra); }
 }
 .con-move:hover:not(:disabled) { background: var(--con-panel); color: var(--con-ink); }
 .con-move:disabled { opacity: 0.3; cursor: default; }
+
+/* ---------- console: church / preschool flip ---------- */
+
+.con-flip {
+  display: flex;
+  margin: 0 18px 14px;
+  border: 1px solid var(--con-rule-firm);
+  border-radius: 5px;
+  overflow: hidden;
+  background: var(--con-panel);
+}
+.con-flip-item {
+  flex: 1;
+  text-align: center;
+  padding: 7px 10px;
+  font-family: var(--adm-mono);
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--con-ink-mute);
+  text-decoration: none;
+  transition: background 120ms ease, color 120ms ease;
+}
+.con-flip-item + .con-flip-item { border-left: 1px solid var(--con-rule-firm); }
+.con-flip-item:hover { color: var(--con-ink); background: rgba(0,0,0,0.03); }
+.con-flip-item.is-active { background: var(--con-ink); color: #fff; }
+
+.con-stack-row--shipped { opacity: 0.62; }
+.con-stack-row--shipped .con-stack-main { cursor: default; }

@@ -21,6 +21,7 @@
             [com.mtzion.app.landing :as landing]
             [com.mtzion.app.news :as news]
             [com.mtzion.app.outreach :as outreach]
+            [com.mtzion.app.preschool :as preschool]
             [com.mtzion.app.worship :as worship]
             [com.mtzion.model.content :as content]
             [com.mtzion.model.normalize :as normalize]
@@ -37,8 +38,7 @@
    "news"       #'news/news
    "outreach"   #'outreach/outreach
    "contact"    #'contact/contact-get
-   ;; Preschool declares no editable leaves — see the :static entry in the tree.
-   "preschool"  nil})
+   "preschool"  #'preschool/preschool})
 
 (defn- render [ctx pk]
   (when-let [h (get page-handlers pk)]
