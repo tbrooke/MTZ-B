@@ -126,7 +126,7 @@ write the same rows, so neither can drift while the migration is in progress.
 | `/console` | dashboard — three pane cards |
 | `/console/writing` | **built** — blog / news / reflections, list + editor |
 | `/console/archive` | **built** — everything archived, across all five types |
-| `/console/site` | placeholder → `/admin/pages` |
+| `/console/site` | **built** — the site outline, tree + leaf editor |
 | `/console/calendar` | placeholder → `/admin/events` |
 | `/console/inbox` | placeholder — bulletin review queue |
 | `/console/media` | placeholder → `/admin/images` |
@@ -150,6 +150,54 @@ posts the whole form to `…/:id/autosave`. ProseMirror is contenteditable, so i
 
 Autosave only runs for a post that already exists (the form carries
 `data-autosave` only then) — a brand-new post has nowhere to save to yet.
+
+## The site outline (`/console/site`)
+
+Menu item → page → the editable parts of that page. Declared in
+`com.mtzion.model.outline`, **not derived** — the page templates ask for named
+slots (`landing.clj` for `home-hero`, `worship.clj` for `current-theme`) and
+those names are addresses in code, not rows anything can be read off.
+
+Five kinds of leaf, and the `:slot` / `:list` distinction is the one that
+answers "can I add another section?":
+
+| Kind | Means |
+|---|---|
+| `:slot` | ONE row, in a place the design lays out by hand. A second row under that slug is **ignored**. |
+| `:list` | MANY rows, one uniform layout, editor's order. **Unlimited** — this is where "add a section" lives. |
+| `:body` | The page's own Tiptap body on the `page` row. Only `about` and `outreach` templates read one. |
+| `:link` | Rendered on this page but owned by another pane; sends you there instead of opening a second editor onto the same rows. |
+| `:static` | The page reads nothing from the database. Declared so the tree doesn't pretend otherwise (Preschool). |
+
+`:fields` is what the template actually **reads**, and the editor renders only
+those. That is the fix for one universal twelve-field form serving rows that
+mean completely different things — `/admin/features` offered Image and Sort
+Order for `current-theme`, which renders neither.
+
+### The generic sections region
+
+`com.mtzion.ui.sections/region` renders every published `feature` filed under a
+page's slug, in `sort_order`. Seven templates splice it in just before their
+closing CTA. Storage is the `feature` table, which already had every column.
+
+Slugs are deliberately distinct where a page has both a designed list and a
+generic one: `/activities` uses `activities` for the seasonal-programme cards
+and **`activities-extra`** for console-added sections, so adding a section
+doesn't silently add a card to the programme grid.
+
+### The drift guard
+
+`outline_test.clj` seeds a section under every declared `:list` slug, renders
+the real page handler, and asserts the text appears. A leaf that offers an
+editor whose words never show up is the failure it catches — it caught a real
+one on the first run (the tree offered a Page body editor on six pages whose
+templates never read `page.body`).
+
+Two template quirks the tests encode, both intentional:
+- Home's `home-activities` cards are **image-only**. A row without an image is
+  skipped by design, and its heading becomes the `img` alt text.
+- `/activities` calls `always-at-mtz-section` with no arguments, so the graphics
+  strip renders copy-only there. Not a bug introduced by the console.
 
 ### Fragments must not carry a doctype
 

@@ -276,6 +276,7 @@
    "home-activities"  ; landing.clj — "Always at Mt. Zion" graphics
    "current-theme"    ; worship.clj — sermon series banner
    "activities"       ; activities.clj — seasonal programme cards
+   "activities-extra" ; activities.clj — console-added sections
    "about" "worship" "events" "news" "outreach" "contact" "preschool"])
 
 (defn- all-page-slugs [ctx]

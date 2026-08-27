@@ -20,6 +20,7 @@
             [com.mtzion.app.pages :as pages]
             [com.mtzion.app.preschool :as preschool]
             [com.mtzion.app.sermons :as sermons]
+            [com.mtzion.app.site :as site]
             [com.mtzion.app.worship :as worship]
             [com.mtzion.model.schema :as schema]
             [com.mtzion.model.user :as model.user]))
@@ -49,6 +50,7 @@
    admin-module
    content-admin/module
    console/module
+   site/module
    media/module
    landing/module
    about/module

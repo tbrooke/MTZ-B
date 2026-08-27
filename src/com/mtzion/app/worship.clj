@@ -3,6 +3,7 @@
             [com.biffweb.sqlite :as biff.sqlite]
             [com.mtzion.model.normalize :as norm]
             [com.mtzion.ui.base :as base]
+            [com.mtzion.ui.sections :as sections]
             [lambdaisland.hiccup :as hiccup]))
 
 (def ^:private normalize norm/snake-keys-all)
@@ -82,6 +83,9 @@
          "Choir rehearsal schedule →"]]
        [:div {:class "mtz-img" :style "aspect-ratio:4/3; min-height:0;"}
         [:span {:class "mtz-img-label"} "choir · sanctuary"]]]]
+
+     ;; Sections added in the console — unlimited, in the editor's order.
+     (sections/region ctx "worship")
 
      [:section {:class "mtz-section--tint"}
       [:div {:class "mtz-section-inner" :style "text-align:center;"}

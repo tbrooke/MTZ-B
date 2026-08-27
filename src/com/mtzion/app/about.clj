@@ -3,9 +3,10 @@
             [com.mtzion.model.church :as church]
             [com.mtzion.model.normalize :as norm]
             [com.mtzion.ui.base :as base]
+            [com.mtzion.ui.sections :as sections]
             [lambdaisland.hiccup :as hiccup]))
 
-(defn- page-content []
+(defn- page-content [ctx]
   (list
    [:section {:class "mtz-section"}
     [:p {:class "mtz-kicker"} (str "Est. " church/founded-year " · China Grove, NC")]
@@ -60,6 +61,9 @@
       [:p {:class "mtz-mono" :style "font-size: 12px; letter-spacing: 0.12em; color: var(--mtz-mint-dark); margin: 0 0 12px; text-transform: uppercase;"} "Senior Pastor"]
       [:p {:style "color: var(--mtz-ink-soft); margin: 0; font-size: 15px;"} "Pastor Jim has served Mt Zion since 2008 and leads our weekly worship, Bible study, and pastoral care."]]]]
 
+   ;; Sections added in the console — unlimited, in the editor's order.
+   (sections/region ctx "about")
+
    [:section {:class "mtz-section--tint"}
     [:div {:class "mtz-section-inner" :style "text-align: center;"}
      [:h2 {:class "mtz-h2" :style "margin-bottom: 16px;"} "Come as you are."]
@@ -81,9 +85,12 @@
                                                   :where  [:and [:= :slug "about"]
                                                            [:= :status "published"]]})))]
     (base/page ctx "About — Mount Zion UCC"
+               ;; A DB body replaces the DESIGNED page, but not the sections
+               ;; added below it — those are additive either way.
                (if (seq (:body db-page))
-                 [::hiccup/unsafe-html (:body db-page)]
-                 (page-content)))))
+                 (list [::hiccup/unsafe-html (:body db-page)]
+                       (sections/region ctx "about"))
+                 (page-content ctx)))))
 
 (def module
   {:biff.ring/routes

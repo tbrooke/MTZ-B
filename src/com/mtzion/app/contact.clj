@@ -4,7 +4,8 @@
             [com.mtzion.lib.contact :as contact]
             [com.mtzion.lib.email :as email]
             [com.mtzion.lib.ui :as ui]
-            [com.mtzion.ui.base :as base]))
+            [com.mtzion.ui.base :as base]
+            [com.mtzion.ui.sections :as sections]))
 
 (def ^:private label-style
   (str "display: block; font-family: var(--mtz-sans-menu); font-size: 13px; font-weight: 600; "
@@ -90,6 +91,9 @@
       [:h2 {:class "mtz-h2" :style "margin-bottom: 32px;"} "Send Us a Message"]
       (contact-form ctx opts)]
      (office-details)]]
+
+   ;; Sections added in the console — unlimited, in the editor's order.
+   (sections/region ctx "contact")
 
    ;; Only loaded when Turnstile is configured, so local development pulls
    ;; nothing from Cloudflare.

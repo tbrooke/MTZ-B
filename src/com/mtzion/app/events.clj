@@ -3,6 +3,7 @@
             [com.mtzion.model.event :as event]
             [com.mtzion.model.normalize :as norm]
             [com.mtzion.ui.base :as base]
+            [com.mtzion.ui.sections :as sections]
             [lambdaisland.hiccup :as hiccup]))
 
 (def ^:private normalize norm/snake-keys-all)
@@ -106,6 +107,9 @@
        (map #(event-row % ctx) events)]
       [:p {:class "mtz-mute" :style "padding: 32px 0;"}
        "No upcoming events at the moment. Check back soon."])]
+
+   ;; Sections added in the console — unlimited, in the editor's order.
+   (sections/region ctx "events")
 
    [:section {:class "mtz-section--cream"}
     [:div {:class "mtz-section-inner" :style "text-align: center;"}

@@ -3,6 +3,7 @@
             [com.mtzion.app.home-sections :as home-sections]
             [com.mtzion.model.normalize :as norm]
             [com.mtzion.ui.base :as base]
+            [com.mtzion.ui.sections :as sections]
             [lambdaisland.hiccup :as hiccup]))
 
 (defn- activity-card [f]
@@ -16,7 +17,7 @@
      [:div {:style "color: var(--mtz-ink-soft); margin: 0; font-size: 15px;"}
       [::hiccup/unsafe-html (:body f)]])])
 
-(defn- page-content [cards]
+(defn- page-content [ctx cards]
   (list
    [:section {:class "mtz-section"}
     [:p {:class "mtz-kicker"} "Open to All · No Membership Required"]
@@ -37,6 +38,9 @@
        [:div {:class "mtz-grid mtz-grid--2" :style "gap: 32px;"}
         (map activity-card cards)]]])
 
+   ;; Sections added in the console — unlimited, in the editor's order.
+   (sections/region ctx "activities-extra")
+
    [:section {:class "mtz-section--tint"}
     [:div {:class "mtz-section-inner" :style "text-align: center;"}
      [:h2 {:class "mtz-h2" :style "margin-bottom: 16px;"} "Get Involved"]
@@ -52,7 +56,7 @@
                                          :from     :feature
                                          :where    [:and [:= :page_slug "activities"] [:= :status "published"]]
                                          :order-by [[:sort_order :asc]]}))]
-    (base/page ctx "Activities — Mount Zion UCC" (page-content cards))))
+    (base/page ctx "Activities — Mount Zion UCC" (page-content ctx cards))))
 
 (def module
   {:biff.ring/routes

@@ -387,13 +387,6 @@
               [:div {:class "con-single"}
                (con/not-built-yet title blurb href label)])))
 
-(def site-pane
-  (placeholder "Site" :site
-               (str "This becomes the outline of the site — menu items, the pages under "
-                    "them, and the editable sections of each page. Until then, pages and "
-                    "home page sections are still edited in /admin.")
-               "/admin/pages" "Edit pages in /admin →"))
-
 (def calendar-pane
   (placeholder "Calendar" :calendar
                (str "This becomes the month grid and event editor in one view. Until then, "
@@ -428,7 +421,6 @@
       ["/:id/autosave" {:post writing-autosave :name ::writing-autosave}]
       ["/:id/status"   {:post writing-status   :name ::writing-status}]
       ["/:id/archive"  {:post writing-archive  :name ::writing-archive}]]
-     ["/site"     {:get site-pane     :name ::site}]
      ["/calendar" {:get calendar-pane :name ::calendar}]
      ["/inbox"    {:get inbox-pane    :name ::inbox}]
      ["/media"    {:get media-pane    :name ::media}]

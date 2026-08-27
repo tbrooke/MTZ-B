@@ -3,9 +3,10 @@
             [com.mtzion.app.home-sections :as home-sections]
             [com.mtzion.model.normalize :as norm]
             [com.mtzion.ui.base :as base]
+            [com.mtzion.ui.sections :as sections]
             [lambdaisland.hiccup :as hiccup]))
 
-(defn- page-content []
+(defn- page-content [ctx]
   (list
    [:section {:class "mtz-section"}
     [:p {:class "mtz-kicker"} "Serving Rowan County & Beyond"]
@@ -51,7 +52,10 @@
           note]
          [:div {:style "flex: 1;"}
           [:h3 {:class "mtz-h3" :style "font-size: 20px; margin-bottom: 6px;"} name]
-          [:p {:style "color: var(--mtz-ink-soft); margin: 0; font-size: 15px;"} desc]]])]]]))
+          [:p {:style "color: var(--mtz-ink-soft); margin: 0; font-size: 15px;"} desc]]])]]]
+
+   ;; Sections added in the console — unlimited, in the editor's order.
+   (sections/region ctx "outreach")))
 
 (defn outreach [ctx]
   ;; See about.clj: snake-keys strips the :page/ namespace biff.sqlite/execute
@@ -63,8 +67,9 @@
                                                            [:= :status "published"]]})))]
     (base/page ctx "Outreach — Mount Zion UCC"
                (if (seq (:body db-page))
-                 [::hiccup/unsafe-html (:body db-page)]
-                 (page-content)))))
+                 (list [::hiccup/unsafe-html (:body db-page)]
+                       (sections/region ctx "outreach"))
+                 (page-content ctx)))))
 
 (def module
   {:biff.ring/routes
