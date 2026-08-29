@@ -14,6 +14,7 @@
             [com.mtzion.content.defaults :as defaults]
             [com.mtzion.lib.ui :as ui]
             [com.mtzion.model.content :as content]
+            [com.mtzion.model.media :as media]
             [com.mtzion.model.nav :as model.nav]
             [com.mtzion.model.normalize :as normalize]
             [com.mtzion.model.outline :as outline]
@@ -140,6 +141,11 @@
        (con/field {:label "Image" :hint "Cloudflare image ID — copy it from Media"}
                   (con/text-input {:name "image_id" :value (or (:image_id row) "")
                                    :placeholder "a4df1d13-4c92-…"})))
+     (when (has? :album)
+       (con/field {:label "Photo album"
+                   :hint  "Names an album from Media — the section then shows every photo in it"}
+                  (con/text-input {:name "album" :value (or (:album row) "")
+                                   :list "con-album-list" :placeholder "vbs-2026"})))
      (when (has? :meta)
        (con/field {:label "Meta" :hint "A short line — separate parts with ·"}
                   (con/text-input {:name "meta" :value (or (:meta row) "")})))
@@ -150,6 +156,13 @@
         (con/field {:label "Button link"}
                    (con/text-input {:name "cta_url" :value (or (:cta_url row) "")})))))))
 
+(defn- album-datalist
+  "Suggestions for the Album field, so a gallery section can only ever name an
+  album that exists."
+  [ctx]
+  [:datalist {:id "con-album-list"}
+   (for [{a :album} (media/albums ctx)] [:option {:value a}])])
+
 (defn- body-editor [row]
   [:div {:class "con-body-editor"}
    [:div {:data-tiptap "body" :class "tiptap-wrapper"}]
@@ -158,7 +171,7 @@
 (defn- editor-shell
   "Every leaf editor is the same frame: what it is, where it shows up, the
   status pill, Save."
-  [{:keys [title note action row status-url preview extra-actions fields body?]}]
+  [{:keys [title note action row status-url preview extra-actions fields body? album-list]}]
   [:section {:class "con-editor"}
    [:form {:method "post" :action action :class "con-form" :id "con-post-form"}
     (ui/anti-forgery-field)
@@ -174,7 +187,8 @@
     (when note [:p {:class "con-leaf-note"} note])
 
     [:div {:class "con-details-grid con-details-grid--open"} fields]
-    (when body? (body-editor row))]
+    (when body? (body-editor row))
+    album-list]
 
    (when preview
      [:p {:class "con-editor-foot"}
@@ -193,6 +207,7 @@
    :cta_label  (or (:cta_label params) "")
    :cta_url    (or (:cta_url params) "")
    :meta       (or (:meta params) "")
+   :album      (not-empty (str/trim (or (:album params) "")))
    :updated_at (normalize/now-epoch)})
 
 (defn- page-cols [{:keys [params]} slug existing]
@@ -306,7 +321,8 @@
       :status-url (when row (str base "/status"))
       :preview    (:path entry)
       :fields     (field-inputs (:fields section) prefill)
-      :body?      (some #{:body} (:fields section))})))
+      :body?      (some #{:body} (:fields section))
+      :album-list (album-datalist ctx)})))
 
 (defn- body-view [ctx entry section pk]
   (let [row  (body-row ctx section)
@@ -336,6 +352,7 @@
         :preview    (:path entry)
         :fields     (field-inputs (:fields section) row)
         :body?      true
+        :album-list (album-datalist ctx)
         :extra-actions
         [:button {:type "submit" :class "con-btn con-btn--quiet"
                   :formaction (str base "/" id "/archive")

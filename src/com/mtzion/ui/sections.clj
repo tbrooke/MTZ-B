@@ -13,6 +13,7 @@
   Storage is the `feature` table, which already had every column this needs."
   (:require [clojure.string :as str]
             [com.mtzion.model.content :as content]
+            [com.mtzion.model.media :as media]
             [lambdaisland.hiccup :as hiccup]))
 
 (defn image-url
@@ -67,16 +68,34 @@
    (when (seq (:title f))
      [:h2 {:class "mtz-h2" :style "margin-bottom: 20px;"} (:title f)])))
 
+(defn gallery
+  "Every image in an album, as a grid. The editor never says how many — they
+  added photos to the album, and this shows what is there."
+  [ctx album]
+  (let [imgs (media/ls ctx {:album album})]
+    (when (seq imgs)
+      [:div {:class "mtz-gallery"}
+       (for [i imgs]
+         [:img {:src (image-url ctx (:id i) "public")
+                :alt (or (:alt_text i) (:label i) "")
+                :loading "lazy"}])])))
+
 (defn section
   "One section. With an image it becomes two columns, alternating side so a run
   of them does not read as a stack of identical blocks; without one it is a
-  single measured column."
+  single measured column. Naming an album turns it into a gallery instead."
   [ctx f index]
   (let [img  (image-url ctx (:image_id f) "public")
         alt? (odd? index)]
     [:section {:class (if alt? "mtz-section--cream" "mtz-section")}
      [:div {:class "mtz-section-inner"}
-      (if img
+      (if (seq (:album f))
+        [:div
+         (heading-block f)
+         (body-block f)
+         (gallery ctx (:album f))
+         (cta-block f)]
+        (if img
         [:div {:class "mtz-grid mtz-grid--2"
                :style "gap: 56px; align-items: center;"}
          [:div {:style (str "order: " (if alt? 2 1) ";")}
@@ -86,10 +105,10 @@
          [:div {:style (str "order: " (if alt? 1 2) ";")}
           [:img {:src img :alt (or (:title f) "")
                  :style "width: 100%; height: auto; border-radius: 6px; display: block;"}]]]
-        [:div {:style "max-width: 720px;"}
-         (heading-block f)
-         (body-block f)
-         (cta-block f)])]]))
+          [:div {:style "max-width: 720px;"}
+           (heading-block f)
+           (body-block f)
+           (cta-block f)]))]]))
 
 (defn region
   "Every section filed under `page-slug`, or nil when there are none — so a page

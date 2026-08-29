@@ -24,7 +24,7 @@
   completely different things."
   (:require [com.mtzion.model.nav :as model.nav]))
 
-(def all-fields [:title :subtitle :body :image :cta])
+(def all-fields [:title :subtitle :body :image :album :cta])
 
 (def church-tree
   [{:label "Home" :path "/" :page-slug nil

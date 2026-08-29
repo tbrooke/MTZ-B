@@ -1811,3 +1811,62 @@ a.con-card-row:hover { color: var(--con-terra); }
   border-radius: 5px; padding: 12px 14px; margin: 0 0 14px;
   overflow-x: auto; color: var(--con-ink-soft);
 }
+
+/* ---------- console: media library ---------- */
+
+.con-media { padding: 20px 22px 60px; min-width: 0; }
+.con-rail-heading {
+  font-family: var(--adm-mono); font-size: 9.5px; letter-spacing: 0.11em;
+  text-transform: uppercase; color: var(--con-ink-mute);
+  margin: 18px 18px 4px;
+}
+
+.con-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 10px;
+}
+.con-tile {
+  display: flex; flex-direction: column; gap: 5px;
+  text-decoration: none; color: inherit;
+  border: 1px solid var(--con-rule); border-radius: 5px;
+  overflow: hidden; background: var(--con-panel);
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+}
+.con-tile:hover { border-color: var(--con-ink-mute); box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+.con-tile.is-selected { border-color: var(--con-terra); box-shadow: 0 0 0 1px var(--con-terra); }
+.con-tile-img { width: 100%; aspect-ratio: 1; object-fit: cover; display: block; }
+.con-tile-label {
+  font-size: 11px; color: var(--con-ink-soft); padding: 0 8px 7px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.con-detail-img {
+  width: 100%; max-height: 320px; object-fit: contain;
+  background: var(--con-sunk); border: 1px solid var(--con-rule);
+  border-radius: 5px; display: block;
+}
+.con-file { padding: 9px 10px; }
+
+.con-idbox {
+  margin-top: 22px; padding-top: 16px;
+  border-top: 1px solid var(--con-rule);
+  display: flex; flex-direction: column; gap: 6px;
+}
+.con-idbox-input {
+  font-family: var(--adm-mono); font-size: 12px;
+  background: var(--con-sunk); cursor: pointer;
+}
+
+/* ---------- public: gallery ---------- */
+
+.mtz-gallery {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+  margin: 28px 0 0;
+}
+.mtz-gallery img {
+  width: 100%; aspect-ratio: 4/3; object-fit: cover;
+  display: block; border-radius: 6px;
+  border: 1px solid var(--mtz-rule);
+}

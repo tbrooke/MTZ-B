@@ -129,7 +129,7 @@ write the same rows, so neither can drift while the migration is in progress.
 | `/console/site` | **built** — the site outline, tree + leaf editor |
 | `/console/calendar` | **built** — month grid, day list and event editor in one view |
 | `/console/inbox` | **built** — the bulletin review queue |
-| `/console/media` | placeholder → `/admin/images` |
+| `/console/media` | **built** — searchable library, albums, batch upload |
 
 Every pane is the same shape: **listing on the left, editor on the right**.
 
@@ -150,6 +150,40 @@ posts the whole form to `…/:id/autosave`. ProseMirror is contenteditable, so i
 
 Autosave only runs for a post that already exists (the form carries
 `data-autosave` only then) — a brand-new post has nowhere to save to yet.
+
+## Media (`/console/media`)
+
+Cloudflare Images is still the store. `image` is a **local index over it**,
+keyed by the Cloudflare id itself so the two cannot drift. The old screen called
+the API on every render, 100 at a time, which is why nothing could be searched,
+grouped or joined against.
+
+`com.mtzion.lib.cloudflare` holds the API primitives (they were private to
+`app/media.clj`, so the console could not reach them without a second copy of
+the delivery-URL shape — which has already been got wrong once by omitting the
+account hash).
+
+- **Upload is reachable from the pane, not from inside something else.** One
+  batch shares an album, kind and date, so a set of photos from one event stays
+  together before anyone has decided what to write about them.
+- **`media/sync!` is additive.** It walks Cloudflare and indexes anything it
+  does not know; it never deletes a row and never overwrites one, so it cannot
+  clobber a label somebody edited. It also reads the metadata the old `/admin`
+  upload form wrote, so pre-existing images arrive with their label and date.
+- **Deleting an image really deletes it**, from Cloudflare and the index —
+  unlike content, which archives. A file in a CDN costs storage and an
+  unreferenced one is not history worth keeping.
+
+### Galleries are ordinary sections
+
+`feature.album` — a section that names an album renders every image in it, in
+place of its own layout. Nobody decides in advance how many photos that is:
+filing a fourth photo into the album puts it on the page without the section
+being touched. The Album field appears wherever `:fields` includes `:album`,
+which is every generic **Sections** list.
+
+Album values are trimmed to nil (`media/tidy`): `"  "` would otherwise be stored
+and show up in the rail as an album of its own.
 
 ## The Calendar pane (`/console/calendar`)
 

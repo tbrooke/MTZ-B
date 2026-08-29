@@ -388,12 +388,6 @@
               [:div {:class "con-single"}
                (con/not-built-yet title blurb href label)])))
 
-(def media-pane
-  (placeholder "Media" :media
-               (str "This becomes one upload dialog and a searchable library with albums. "
-                    "Until then, images are uploaded and browsed in /admin.")
-               "/admin/images" "Image library in /admin →"))
-
 ;; ---------------------------------------------------------------------------
 ;; Module
 ;; ---------------------------------------------------------------------------
@@ -409,7 +403,6 @@
       ["/:id/autosave" {:post writing-autosave :name ::writing-autosave}]
       ["/:id/status"   {:post writing-status   :name ::writing-status}]
       ["/:id/archive"  {:post writing-archive  :name ::writing-archive}]]
-     ["/media"    {:get media-pane    :name ::media}]
      ["/archive"
       ["" {:get archive-list :name ::archive}]
       ["/:type/:id/restore" {:post archive-restore :name ::archive-restore}]

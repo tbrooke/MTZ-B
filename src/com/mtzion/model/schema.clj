@@ -43,6 +43,7 @@
       cta_label TEXT,
       cta_url TEXT,
       meta TEXT,
+      album TEXT,
       sort_order INTEGER NOT NULL DEFAULT 0,
       published INTEGER NOT NULL DEFAULT 1,
       status TEXT,
@@ -177,6 +178,24 @@
       decided_at INTEGER
     ) STRICT;"
    "CREATE INDEX IF NOT EXISTS inbox_item_state ON inbox_item (state, received_at);"
+   ;; A local index over Cloudflare Images. Cloudflare remains the store; this
+   ;; exists so the library can be searched, filtered and grouped without an API
+   ;; call per page render, and so an image can belong to an album — which is
+   ;; what makes a gallery possible at all.
+   ;;
+   ;; `id` IS the Cloudflare image id, so the two cannot drift apart.
+   "CREATE TABLE IF NOT EXISTS image (
+      id TEXT PRIMARY KEY NOT NULL,
+      label TEXT NOT NULL DEFAULT '',
+      album TEXT,
+      category TEXT NOT NULL DEFAULT 'photo',
+      alt_text TEXT,
+      taken_on INTEGER,
+      uploaded_at INTEGER NOT NULL,
+      width INTEGER,
+      height INTEGER
+    ) STRICT;"
+   "CREATE INDEX IF NOT EXISTS image_album ON image (album, uploaded_at);"
    "CREATE UNIQUE INDEX IF NOT EXISTS feature_import_key ON feature (import_key);"
    "CREATE UNIQUE INDEX IF NOT EXISTS post_import_key ON post (import_key);"
    "CREATE UNIQUE INDEX IF NOT EXISTS event_import_key ON event (import_key);"
