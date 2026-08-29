@@ -334,8 +334,9 @@
         recent   (take 5 (content/ls ctx :post {:status #{content/draft content/published}}))
         n-ep     (now-epoch)
         upcoming (take 5 (event/next-occurrences
-                          (content/live ctx :event {:where (event/upcoming-where n-ep)
-                                                    :order [[:start_at :asc]]})
+                          (event/with-skips
+                           ctx (content/live ctx :event {:where (event/upcoming-where n-ep)
+                                                         :order [[:start_at :asc]]}))
                           n-ep))]
     (con/page "Console" {:active nil}
               [:div {:class "con-dash"}
@@ -387,12 +388,6 @@
               [:div {:class "con-single"}
                (con/not-built-yet title blurb href label)])))
 
-(def calendar-pane
-  (placeholder "Calendar" :calendar
-               (str "This becomes the month grid and event editor in one view. Until then, "
-                    "events are still edited in /admin.")
-               "/admin/events" "Edit events in /admin →"))
-
 (def inbox-pane
   (placeholder "Inbox" :inbox
                (str "This becomes the review queue for content extracted from the Sunday "
@@ -421,7 +416,6 @@
       ["/:id/autosave" {:post writing-autosave :name ::writing-autosave}]
       ["/:id/status"   {:post writing-status   :name ::writing-status}]
       ["/:id/archive"  {:post writing-archive  :name ::writing-archive}]]
-     ["/calendar" {:get calendar-pane :name ::calendar}]
      ["/inbox"    {:get inbox-pane    :name ::inbox}]
      ["/media"    {:get media-pane    :name ::media}]
      ["/archive"

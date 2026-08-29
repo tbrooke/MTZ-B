@@ -119,6 +119,22 @@
       uploaded_at INTEGER NOT NULL
     ) STRICT;"
    "CREATE UNIQUE INDEX IF NOT EXISTS event_title_start ON event (title, start_at);"
+   ;; One cancelled occurrence of a recurring event. A recurring event is a
+   ;; single row whose occurrences are computed at render time, so "no Bible
+   ;; study on the 24th" has nowhere else to live.
+   ;;
+   ;; occurrence_at is the epoch the occurrence WOULD have had — the value
+   ;; expansion produces — which is what makes the lookup a plain map access.
+   ;; Moving an occurrence rather than cancelling it is the natural extension:
+   ;; add a moved_to column and emit that instead of skipping.
+   "CREATE TABLE IF NOT EXISTS event_exception (
+      id TEXT PRIMARY KEY NOT NULL,
+      event_id TEXT NOT NULL,
+      occurrence_at INTEGER NOT NULL,
+      created_at INTEGER NOT NULL,
+      UNIQUE(event_id, occurrence_at)
+    ) STRICT;"
+   "CREATE INDEX IF NOT EXISTS event_exception_event ON event_exception (event_id);"
    "CREATE TABLE IF NOT EXISTS sermon (
       id TEXT PRIMARY KEY NOT NULL,
       title TEXT NOT NULL,

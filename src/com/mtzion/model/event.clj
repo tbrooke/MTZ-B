@@ -1,8 +1,14 @@
 (ns com.mtzion.model.event
   "Shared event query + recurrence logic used by both the admin panel and the
   public site. Keeping this in one place prevents the admin list and the public
-  pages from disagreeing about which events are 'upcoming'."
-  (:require [com.mtzion.model.normalize :as norm]))
+  pages from disagreeing about which events are 'upcoming'.
+
+  The expansion itself is pure — it reads `:skips` off the event rather than
+  querying — so `with-skips` is the one function that touches the database, and
+  every caller that expands occurrences should go through it. A cancelled week
+  that still showed on the public calendar would be worse than no cancelling."
+  (:require [com.biffweb.sqlite :as biff.sqlite]
+            [com.mtzion.model.normalize :as norm]))
 
 (def now-epoch norm/now-epoch)
 
@@ -49,13 +55,19 @@
 (defn occurrences-in-range
   "Returns coll of ev maps (with :start_at set to the occurrence epoch) for all
   occurrences of ev within [from-epoch, to-epoch).
-  Non-recurring events are returned as-is when start_at falls in the range."
+  Non-recurring events are returned as-is when start_at falls in the range.
+
+  `:skips` on ev, when present, is a set of occurrence epochs to leave out —
+  the church cancelled that one week. Attaching it to the event keeps this
+  namespace pure: the caller loads the exceptions, this decides what renders."
   [ev from-epoch to-epoch]
   (let [recurrence (:recurrence ev "none")
         base       (or (:start_at ev) 0)
         until      (:recur_until ev)]
     (if (= recurrence "none")
-      (when (and (>= base from-epoch) (< base to-epoch)) [ev])
+      (when (and (>= base from-epoch) (< base to-epoch)
+                 (not (contains? (:skips ev) base)))
+        [ev])
       ;; +86400 because until is UTC midnight of its day: an occurrence later on
       ;; that same local day is still within range.
       (when (and (pos? base) (or (nil? until) (>= (+ until 86400) from-epoch)))
@@ -74,10 +86,11 @@
                   (or (>= t to-epoch)
                       (and until-date (.isAfter (.toLocalDate ldt) until-date))) acc
                   (>= t from-epoch)
-                  (let [nxt (advance-recurrence ldt recurrence)]
-                    (if nxt
-                      (recur nxt (conj acc (assoc ev :start_at t)) (inc n))
-                      (conj acc (assoc ev :start_at t))))
+                  (let [nxt  (advance-recurrence ldt recurrence)
+                        acc' (if (contains? (:skips ev) t)
+                               acc
+                               (conj acc (assoc ev :start_at t)))]
+                    (if nxt (recur nxt acc' (inc n)) acc'))
                   :else
                   (let [nxt (advance-recurrence ldt recurrence)]
                     (if nxt (recur nxt acc (inc n)) acc)))))))))))
@@ -99,3 +112,87 @@
   (->> events
        (keep #(next-occurrence % after-epoch))
        (sort-by :start_at)))
+
+;; ---------------------------------------------------------------------------
+;; Describing a recurrence
+;; ---------------------------------------------------------------------------
+
+(def ^:private recurrence-words
+  {"none"     "Does not repeat"
+   "daily"    "Every day"
+   "weekly"   "Every week"
+   "biweekly" "Every two weeks"
+   "monthly"  "Every month"
+   "yearly"   "Every year"})
+
+(defn- weekday-of [epoch]
+  (-> (java.time.Instant/ofEpochSecond epoch)
+      (java.time.LocalDate/ofInstant norm/eastern)
+      .getDayOfWeek
+      (.getDisplayName java.time.format.TextStyle/FULL java.util.Locale/US)))
+
+(defn describe
+  "A recurrence in words: \"Every week on Tuesday, until 21 December\".
+
+  `weekly` in a table column tells an editor nothing about when the thing
+  actually happens, which is the whole question they came to answer."
+  [{:keys [recurrence start_at recur_until] :as _ev}]
+  (let [r (or recurrence "none")]
+    (if (= r "none")
+      (recurrence-words r)
+      (str (get recurrence-words r r)
+           (when (and start_at (#{"weekly" "biweekly"} r))
+             (str " on " (weekday-of start_at)))
+           (when recur_until
+             (str ", until "
+                  (-> (java.time.Instant/ofEpochSecond recur_until)
+                      (java.time.LocalDate/ofInstant java.time.ZoneOffset/UTC)
+                      (.format (java.time.format.DateTimeFormatter/ofPattern "d MMMM yyyy")))))))))
+
+;; ---------------------------------------------------------------------------
+;; Cancelled occurrences
+;; ---------------------------------------------------------------------------
+
+(defn- exec [ctx honey]
+  (norm/snake-keys-all (biff.sqlite/execute ctx honey)))
+
+(defn skips-by-event
+  "{event-id #{occurrence-epoch ...}} for the given events (all of them when
+  `ids` is omitted)."
+  ([ctx] (skips-by-event ctx nil))
+  ([ctx ids]
+   (->> (exec ctx (cond-> {:select :* :from :event_exception}
+                    (seq ids) (assoc :where [:in :event_id (vec ids)])))
+        (group-by :event_id)
+        (reduce-kv (fn [m k v] (assoc m k (into #{} (map :occurrence_at) v))) {}))))
+
+(defn with-skips
+  "Attaches each event's cancelled occurrences before expansion. Call this on
+  any collection of event rows you are about to expand."
+  [ctx events]
+  (let [by-id (skips-by-event ctx (keep :id events))]
+    (mapv (fn [ev] (cond-> ev
+                     (seq (get by-id (:id ev))) (assoc :skips (get by-id (:id ev)))))
+          events)))
+
+(defn skip!
+  "Cancels one occurrence. Idempotent — the unique index means asking twice is
+  the same as asking once."
+  [ctx event-id occurrence-at]
+  (exec ctx {:insert-into :event_exception
+             :values [{:id (str (random-uuid))
+                       :event_id event-id
+                       :occurrence_at occurrence-at
+                       :created_at (norm/now-epoch)}]
+             :on-conflict [:event_id :occurrence_at]
+             :do-nothing true})
+  nil)
+
+(defn unskip! [ctx event-id occurrence-at]
+  (exec ctx {:delete-from :event_exception
+             :where [:and [:= :event_id event-id]
+                     [:= :occurrence_at occurrence-at]]})
+  nil)
+
+(defn skips-for [ctx event-id]
+  (get (skips-by-event ctx [event-id]) event-id #{}))

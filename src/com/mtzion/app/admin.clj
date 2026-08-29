@@ -169,7 +169,7 @@
         me         (.toEpochSecond (.atStartOfDay (.plusMonths first-day 1) normalize/eastern))
         all-evs    (exec ctx {:select [:start_at :recurrence :recur_until] :from :event
                               :where  [:= :status "published"]})
-        evs        (event/expand-in-range all-evs ms me)
+        evs        (event/expand-in-range (event/with-skips ctx all-evs) ms me)
         event-days (into #{} (map #(-> (java.time.Instant/ofEpochSecond (:start_at %))
                                        (java.time.LocalDate/ofInstant normalize/eastern)
                                        .getDayOfMonth) evs))
@@ -242,7 +242,7 @@
         upcoming-src (exec ctx
                            {:select [:title :start_at :recurrence :recur_until] :from :event
                             :where  [:and [:= :status "published"] (event/upcoming-where n-ep)]})
-        upcoming-exp (event/next-occurrences upcoming-src n-ep)
+        upcoming-exp (event/next-occurrences (event/with-skips ctx upcoming-src) n-ep)
         upcoming     (take 3 upcoming-exp)
         n-events     (count upcoming-exp)
         r-post   (latest-title ctx :post :created_at)
@@ -600,7 +600,7 @@
         ms        (.toEpochSecond (.atStartOfDay first-day normalize/eastern))
         me        (.toEpochSecond (.atStartOfDay (.plusMonths first-day 1) normalize/eastern))
         all-evs   (exec ctx {:select [:start_at :title :id :recurrence :recur_until] :from :event})
-        evs       (event/expand-in-range all-evs ms me)
+        evs       (event/expand-in-range (event/with-skips ctx all-evs) ms me)
         ev-map    (group-by #(-> (java.time.Instant/ofEpochSecond (:start_at %))
                                  (java.time.LocalDate/ofInstant normalize/eastern)
                                  .getDayOfMonth) evs)
@@ -685,7 +685,7 @@
                        :else
                        (let [all-rows (exec ctx {:select :* :from :event
                                                  :where  (event/upcoming-where n-ep)})
-                             rows     (event/next-occurrences all-rows n-ep)]
+                             rows     (event/next-occurrences (event/with-skips ctx all-rows) n-ep)]
                          (if (empty? rows)
                            [:p {:class "adm-empty"} "No upcoming events. "
                             [:a {:href "/admin/events?view=all" :class "adm-link"} "View all events, including past"]]

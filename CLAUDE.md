@@ -127,7 +127,7 @@ write the same rows, so neither can drift while the migration is in progress.
 | `/console/writing` | **built** — blog / news / reflections, list + editor |
 | `/console/archive` | **built** — everything archived, across all five types |
 | `/console/site` | **built** — the site outline, tree + leaf editor |
-| `/console/calendar` | placeholder → `/admin/events` |
+| `/console/calendar` | **built** — month grid, day list and event editor in one view |
 | `/console/inbox` | placeholder — bulletin review queue |
 | `/console/media` | placeholder → `/admin/images` |
 
@@ -150,6 +150,42 @@ posts the whole form to `…/:id/autosave`. ProseMirror is contenteditable, so i
 
 Autosave only runs for a post that already exists (the form carries
 `data-autosave` only then) — a brand-new post has nowhere to save to yet.
+
+## The Calendar pane (`/console/calendar`)
+
+Grid picks the day, day picks the event, event opens beside them — one screen
+where `/admin/events` had three URLs. Drafts show in the pane (so you can see
+what is lined up) but not on the site; archived events leave both.
+
+### Cancelling one occurrence
+
+A recurring event is a **single row** whose occurrences are computed at render
+time, so "no Bible study on the 24th" had nowhere to live. `event_exception`
+holds one row per cancelled occurrence, keyed by the epoch that occurrence
+*would* have had — the value expansion produces, which makes the lookup a plain
+set membership.
+
+The expansion in `model/event` stays pure: it reads `:skips` off the event map.
+**`event/with-skips` is the one function that touches the database, and every
+caller that expands occurrences must go through it** — landing, `/events`, both
+console panes and all four sites in legacy `/admin` do. A cancelled week that
+still showed publicly would be worse than no cancelling at all.
+
+Moving an occurrence rather than cancelling it is the natural extension: add a
+`moved_to` column and emit that instead of skipping. Deliberately not built yet.
+
+### Recurrence in words
+
+`event/describe` renders "Every week on Tuesday, until 29 September 2026". A
+bare `weekly` in a table column never answered the question an editor actually
+has, and the editor also lists the next eight occurrences so a mis-set repeat is
+visible immediately rather than next month.
+
+### Creating a duplicate
+
+`(title, start_at)` is UNIQUE — the importer relies on it to adopt a hand-made
+row. `calendar-create` looks for that pair first and reuses the row rather than
+letting the constraint surface as a 500.
 
 ## The site outline (`/console/site`)
 

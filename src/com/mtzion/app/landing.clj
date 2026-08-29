@@ -99,7 +99,7 @@
                                     :from   :event
                                     :where  [:and [:= :featured 1] [:= :status "published"]
                                              (event/upcoming-where n-ep)]})
-        featured-events  (take 2 (event/next-occurrences featured-src n-ep))
+        featured-events  (take 2 (event/next-occurrences (event/with-skips ctx featured-src) n-ep))
         latest-posts     (exec ctx {:select   :*
                                     :from     :post
                                     :where    [:= :status "published"]

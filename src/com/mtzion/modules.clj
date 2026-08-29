@@ -10,6 +10,7 @@
             [com.mtzion.app.admin :as content-admin]
             [com.mtzion.app.media :as media]
             [com.mtzion.app.auth :as auth]
+            [com.mtzion.app.calendar :as calendar]
             [com.mtzion.app.console :as console]
             [com.mtzion.app.contact :as contact]
             [com.mtzion.app.events :as events-page]
@@ -51,6 +52,7 @@
    content-admin/module
    console/module
    site/module
+   calendar/module
    media/module
    landing/module
    about/module

@@ -126,7 +126,7 @@
                                                              :from   :event
                                                              :where  [:and [:= :status "published"]
                                                                       (event/upcoming-where n-ep)]}))
-        rows            (event/next-occurrences upcoming-src n-ep)
+        rows            (event/next-occurrences (event/with-skips ctx upcoming-src) n-ep)
         featured-events (filter #(= 1 (:featured %)) rows)]
     (base/page ctx "Events — Mount Zion UCC" (page-content ctx rows featured-events))))
 
