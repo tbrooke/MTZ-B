@@ -351,7 +351,7 @@
   (if (= "preschool" (get query-params "site")) :preschool :church))
 
 (defn- render [ctx sel site content]
-  (con/page "Site" {:active :site}
+  (con/page "Site" (con/nav ctx :site)
             [:div {:class "con-pane"}
              (tree ctx sel site)
              content]

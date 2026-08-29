@@ -18,10 +18,18 @@
 (defn- row [ctx table k]
   (first (q ctx {:select :* :from table :where [:= :import_key k]})))
 
+(defn- apply-ops!
+  "Applies planned ops the way accepting them in the inbox does — one at a time,
+  through plan/apply-op!. The importer no longer writes content rows itself; it
+  stages, and these tests cover the planning and applying that acceptance runs."
+  [ctx ops]
+  (doseq [op ops :when (not= :unchanged (:action op))]
+    (plan/apply-op! #(biff.sqlite/execute ctx %) op)))
+
 (defn- apply-file! [ctx file]
   (let [{:keys [envelope]} (ingest/read-envelope file)
         ops (plan/build ctx (:items envelope) "test" nil)]
-    (ingest/apply-ops! ctx ops)
+    (apply-ops! ctx ops)
     ops))
 
 ;; ---------------------------------------------------------------------------
@@ -93,7 +101,7 @@
       (testing "a second run plans no writes at all"
         (is (every? #(= :unchanged (:action %)) ops)
             (pr-str (map (juxt :key :action :changes) ops))))
-      (ingest/apply-ops! ctx ops)
+      (apply-ops! ctx ops)
       (testing "and changes nothing"
         (is (= before (q ctx {:select :* :from :event :order-by [[:import_key :asc]]})))))))
 
@@ -114,7 +122,7 @@
                                       %)
                                    items)))
             ops (plan/build ctx (:items edited) "test" nil)]
-        (ingest/apply-ops! ctx ops)
+        (apply-ops! ctx ops)
         (is (= content/published (:status (row ctx :event "back-to-school-blessing-2026")))
             "still published")
         (is (= "Fellowship Hall" (:location (row ctx :event "back-to-school-blessing-2026")))
@@ -136,7 +144,7 @@
           op     (first (filter #(= "back-to-school-blessing-2026" (:key %)) ops))]
       (is (= :update (:action op)))
       (is (contains? (:changes op) :start_at))
-      (ingest/apply-ops! ctx ops)
+      (apply-ops! ctx ops)
       (is (= "2026-08-16T11:00"
              (norm/epoch->local-datetime-str
               (:start_at (row ctx :event "back-to-school-blessing-2026"))))))))
@@ -158,7 +166,7 @@
       (is (= :update (:action op)))
       (is (:adopting op) "matched on (title, start_at)")
       (is (= "hand-made" (:id op)) "the existing row is reused")
-      (ingest/apply-ops! ctx ops)
+      (apply-ops! ctx ops)
       (is (= 1 (count (q ctx {:select :* :from :event
                               :where [:= :title "Back-to-School Blessing"]})))
           "the hand-made row was adopted, not duplicated")
@@ -174,7 +182,7 @@
           ;; drop an item from the file entirely
           fewer (update envelope :items #(vec (remove (fn [i] (= :sermon (:type i))) %)))
           ops   (plan/build ctx (:items fewer) "test" nil)]
-      (ingest/apply-ops! ctx ops)
+      (apply-ops! ctx ops)
       (is (some? (row ctx :sermon "sermon-2026-08-09"))
           "an item removed from the file is left alone in the database"))))
 

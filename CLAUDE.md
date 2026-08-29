@@ -128,7 +128,7 @@ write the same rows, so neither can drift while the migration is in progress.
 | `/console/archive` | **built** — everything archived, across all five types |
 | `/console/site` | **built** — the site outline, tree + leaf editor |
 | `/console/calendar` | **built** — month grid, day list and event editor in one view |
-| `/console/inbox` | placeholder — bulletin review queue |
+| `/console/inbox` | **built** — the bulletin review queue |
 | `/console/media` | placeholder → `/admin/images` |
 
 Every pane is the same shape: **listing on the left, editor on the right**.
@@ -386,8 +386,13 @@ agent against a published contract, reviewed as a diff, and published by a human
 ```bash
 clj -M:run content-doc       # regenerate content-inbox/CONTRACT.md from the schemas
 clj -M:run import            # dry run — prints a diff, writes NOTHING
-clj -M:run import --apply    # commit; archives the input + a receipt
+clj -M:run import --apply    # STAGE into the inbox; archives the input + a receipt
 ```
+
+**`--apply` does not write content rows.** It stages the items in
+`/console/inbox`, where each is accepted or dismissed individually. Accepting is
+what creates the content row, and it creates it as a draft — so there are three
+decisions between a bulletin and a published page: extract, accept, publish.
 
 Weekly loop:
 
@@ -398,7 +403,35 @@ Weekly loop:
    map, no prose, no markdown fence."*
 3. Save the output to `content-inbox/<date>-bulletin.edn`.
 4. `clj -M:run import` → read the diff → `clj -M:run import --apply`.
-5. Review and **publish** in `/admin`. Attach images/video there too.
+5. **`/console/inbox`** → Accept or Dismiss each card, or Accept all.
+6. Publish the drafts in the Writing and Calendar panes. Attach images there too.
+
+### The inbox (`com.mtzion.content.inbox`)
+
+One `inbox_item` row per staged item, grouped into a **batch** per drop.
+
+**The plan is rebuilt, never frozen.** Only the validated EDN item is stored;
+`plan/plan-item` runs again when the card is rendered and again when it is
+accepted. Freeze the plan at staging time and a row somebody created by hand on
+Saturday would be duplicated rather than adopted on Sunday — the matching order
+(`import_key` → natural key → insert) only means anything against the database
+as it is *now*.
+
+Accepting is idempotent: a decided row is inert, so a double-submitted Accept
+cannot create a second row. Dismissing writes nothing and keeps the row, so
+"we looked at that and said no" stays on the record.
+
+`+ Add by hand` stages a manually typed item through the **same contract
+schema** — a hand-added item cannot be shaped differently from an extracted one.
+
+### Careful: `--apply` deletes its input
+
+`archive!` copies the drop file into `content-inbox/applied/` and **deletes the
+original**. A test that pointed `ingest/run --apply` at
+`content-inbox/examples/bulletin.edn` therefore deleted the committed example
+from the working tree — which is exactly what happened the first time
+`inbox_test` ran. Tests that exercise `--apply` must copy to a temp file first;
+see `scratch-copy` there.
 
 ### Invariants the importer guarantees
 

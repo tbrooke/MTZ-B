@@ -15,6 +15,7 @@
             [com.mtzion.app.contact :as contact]
             [com.mtzion.app.events :as events-page]
             [com.mtzion.app.hello :as hello]
+            [com.mtzion.app.inbox :as inbox]
             [com.mtzion.app.landing :as landing]
             [com.mtzion.app.news :as news-page]
             [com.mtzion.app.outreach :as outreach]
@@ -53,6 +54,7 @@
    console/module
    site/module
    calendar/module
+   inbox/module
    media/module
    landing/module
    about/module

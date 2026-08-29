@@ -1745,3 +1745,69 @@ a.con-card-row:hover { color: var(--con-terra); }
   text-decoration: line-through;
   color: var(--con-ink-mute);
 }
+
+/* ---------- console: inbox ---------- */
+
+.con-single--wide { max-width: 1120px; }
+
+.con-batch { margin-top: 30px; }
+.con-batch-head {
+  display: flex; align-items: flex-end; justify-content: space-between;
+  gap: 18px; flex-wrap: wrap;
+  padding-bottom: 12px; margin-bottom: 16px;
+  border-bottom: 1px solid var(--con-rule-firm);
+}
+.con-batch-title {
+  font-family: var(--adm-serif); font-size: 19px; font-weight: 600;
+  letter-spacing: -0.015em; margin: 0; color: var(--con-ink);
+}
+.con-batch-meta {
+  font-family: var(--adm-mono); font-size: 10px; letter-spacing: 0.09em;
+  text-transform: uppercase; color: var(--con-ink-mute); margin: 4px 0 0;
+}
+
+.con-inbox-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 14px;
+}
+.con-inbox-card { min-height: 0; gap: 10px; }
+.con-inbox-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+}
+.con-inbox-action {
+  font-family: var(--adm-mono); font-size: 9px; letter-spacing: 0.09em;
+  text-transform: uppercase; padding: 2px 8px; border-radius: 3px; flex: none;
+}
+.con-inbox-action--create    { background: var(--con-sage-bg); color: var(--con-sage); }
+.con-inbox-action--update    { background: #F7EFDC; color: #8E661F; }
+.con-inbox-action--unchanged { background: var(--con-draft-bg); color: var(--con-ink-mute); }
+
+.con-inbox-title {
+  font-family: var(--adm-serif); font-size: 18px; font-weight: 600;
+  letter-spacing: -0.012em; line-height: 1.25; margin: 0; color: var(--con-ink);
+}
+.con-inbox-key {
+  font-family: var(--adm-mono); font-size: 10px; color: var(--con-ink-mute);
+  margin: -6px 0 0; word-break: break-all;
+}
+.con-inbox-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.con-inbox-actions form { margin: 0; }
+.con-inbox-card .con-inbox-actions { margin-top: auto; padding-top: 6px; }
+
+.con-diff {
+  margin: 0; font-size: 12.5px;
+  display: grid; grid-template-columns: auto 1fr; gap: 3px 12px;
+  border-left: 2px solid var(--con-rule); padding-left: 12px;
+}
+.con-diff dt {
+  font-family: var(--adm-mono); font-size: 10px; letter-spacing: 0.06em;
+  text-transform: uppercase; color: var(--con-ink-mute); white-space: nowrap;
+}
+.con-diff dd { margin: 0; color: var(--con-ink-soft); overflow-wrap: anywhere; }
+
+.con-cmd {
+  font-family: var(--adm-mono); font-size: 12px; line-height: 1.7;
+  background: var(--con-sunk); border: 1px solid var(--con-rule);
+  border-radius: 5px; padding: 12px 14px; margin: 0 0 14px;
+  overflow-x: auto; color: var(--con-ink-soft);
+}

@@ -1,22 +1,25 @@
 (ns com.mtzion.content.ingest
   "The `import` CLI task: read EDN from content-inbox/, validate it, show a diff,
-  and — only with --apply — commit it.
+  and — only with --apply — stage it for review.
 
-  Dry run is the default and --apply is required to write anything. Applying is
-  all-or-nothing per file: any validation error means zero writes, and any SQL
-  error rolls the whole file back."
+  --apply no longer writes content rows. It puts the items in the console's
+  inbox, where each one is looked at and accepted individually. Everything the
+  importer guaranteed still holds, because the same planning and applying code
+  runs — just later, from a button, one item at a time.
+
+  Dry run is still the default. Staging is all-or-nothing per file: any
+  validation error means zero writes, and any SQL error rolls the whole file
+  back."
   (:require [clojure.edn :as edn]
             [clojure.java.io :as io]
             [clojure.pprint :as pp]
             [clojure.string :as str]
-            [com.biffweb.sqlite.impl.execute :as biff.execute]
             [com.mtzion.content.doc :as doc]
+            [com.mtzion.content.inbox :as inbox]
             [com.mtzion.content.plan :as plan]
             [com.mtzion.content.schema :as cs]
             [com.mtzion.model.normalize :as norm]
-            [com.mtzion.system :as system]
-            [honey.sql :as hsql]
-            [next.jdbc :as jdbc]))
+            [com.mtzion.system :as system]))
 
 (def inbox-dir "content-inbox")
 (def applied-dir "content-inbox/applied")
@@ -93,30 +96,6 @@
 ;; Applying
 ;; ---------------------------------------------------------------------------
 
-(defn- tx-executor
-  "HoneySQL map -> executed against the transaction."
-  [tx]
-  (fn [honey] (jdbc/execute! tx (hsql/format honey))))
-
-(defn apply-ops!
-  "Runs every operation inside one transaction. Returns the receipt on success;
-  throws on failure, having rolled back."
-  [ctx ops]
-  ;; The in-process write lock is taken for the same reason biff.sqlite/execute
-  ;; takes it: so nothing else in this JVM interleaves a write. It is cheap and
-  ;; means the task stays correct if it is ever run from the REPL inside the
-  ;; running app rather than as a standalone CLI process.
-  (locking biff.execute/write-lock
-    (jdbc/with-transaction [tx (:biff.sqlite/write-conn ctx)]
-      (let [exec-fn (tx-executor tx)]
-        (doseq [op ops :when (not= :unchanged (:action op))]
-          (plan/apply-op! exec-fn op))
-        {:applied-at (norm/now-epoch)
-         :created (vec (for [o ops :when (= :create (:action o))]
-                         {:type (:type o) :key (:key o) :id (:id o)}))
-         :updated (vec (for [o ops :when (= :update (:action o))]
-                         {:type (:type o) :key (:key o) :id (:id o)}))}))))
-
 (defn- archive! [file receipt]
   (.mkdirs (io/file applied-dir))
   (let [name    (.getName (io/file file))
@@ -167,18 +146,26 @@
               {:status 0
                :output (str header "\n" diff
                             "\n\n  DRY RUN — nothing was written."
-                            "\n  Re-run with --apply to commit.")}
+                            "\n  Re-run with --apply to put these in the inbox.")}
               (try
-                (let [receipt (apply-ops! ctx ops)
+                (let [batch   (inbox/stage! ctx items {:source "bulletin"
+                                                       :source-ref source})
+                      receipt {:staged-at (norm/now-epoch)
+                               :batch     batch
+                               :items     (vec (for [i items]
+                                                 {:type (:type i) :key (:key i)}))}
                       dest    (archive! file receipt)]
                   {:status 0
                    :output (str header "\n" diff
-                                (format "\n\n  APPLIED. Input archived to %s" dest)
-                                "\n  Imported items are DRAFTS — publish them in /admin.")})
+                                (format "\n\n  STAGED. %d item%s waiting in the console inbox."
+                                        (count items) (if (= 1 (count items)) "" "s"))
+                                (format "\n  Input archived to %s" dest)
+                                "\n  Nothing has been written to the site yet — review them at"
+                                "\n  /console/inbox, where accepting an item creates it as a draft.")})
                 (catch Exception e
                   {:status 2
                    :output (str header "\n" diff
-                                "\n\n  FAILED — the whole file was rolled back, nothing was written."
+                                "\n\n  FAILED — the whole file was rolled back, nothing was staged."
                                 "\n  " (.getMessage e))})))))))))
 
 ;; ---------------------------------------------------------------------------
@@ -205,8 +192,9 @@
 (defn import-task
   "clj -M:run import [file...] [--apply]
 
-  Dry run by default: prints the diff and writes nothing. Pass --apply to commit.
-  Exit 0 = clean, 1 = validation failure, 2 = database error."
+  Dry run by default: prints the diff and writes nothing. Pass --apply to put
+  the items in the console's inbox for review — accepting them there is what
+  creates content. Exit 0 = clean, 1 = validation failure, 2 = database error."
   [& args]
   (let [apply? (boolean (some #{"--apply"} args))
         files  (edn-files args)

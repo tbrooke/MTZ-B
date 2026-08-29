@@ -130,6 +130,21 @@ CREATE TABLE IF NOT EXISTS sermon (
       import_key TEXT,
       import_meta TEXT
     ) STRICT;
+CREATE TABLE IF NOT EXISTS inbox_item (
+      id TEXT PRIMARY KEY NOT NULL,
+      batch_id TEXT NOT NULL,
+      source TEXT NOT NULL,
+      source_ref TEXT,
+      received_at INTEGER NOT NULL,
+      type TEXT NOT NULL,
+      import_key TEXT,
+      title TEXT NOT NULL DEFAULT '',
+      payload TEXT NOT NULL,
+      state TEXT NOT NULL DEFAULT 'new',
+      target_id TEXT,
+      decided_at INTEGER
+    ) STRICT;
+CREATE INDEX IF NOT EXISTS inbox_item_state ON inbox_item (state, received_at);
 CREATE UNIQUE INDEX IF NOT EXISTS feature_import_key ON feature (import_key);
 CREATE UNIQUE INDEX IF NOT EXISTS post_import_key ON post (import_key);
 CREATE UNIQUE INDEX IF NOT EXISTS event_import_key ON event (import_key);

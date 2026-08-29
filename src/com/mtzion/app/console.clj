@@ -195,7 +195,7 @@
 
 (defn- writing-page [ctx p posts filters]
   (con/page (if p (or (not-empty (:title p)) "Untitled") "Writing")
-            {:active :writing}
+            (con/nav ctx :writing)
             [:div {:class "con-pane"}
              (writing-list ctx posts (:id p) filters)
              (if p
@@ -273,7 +273,7 @@
 
 (defn archive-list [ctx]
   (let [rows (archived-rows ctx)]
-    (con/page "Archive" {:active :archive}
+    (con/page "Archive" (con/nav ctx :archive)
               [:div {:class "con-single"}
                [:div {:class "con-list-head con-list-head--page"}
                 [:h1 {:class "con-list-title"} "Archive"]]
@@ -338,7 +338,7 @@
                            ctx (content/live ctx :event {:where (event/upcoming-where n-ep)
                                                          :order [[:start_at :asc]]}))
                           n-ep))]
-    (con/page "Console" {:active nil}
+    (con/page "Console" (con/nav ctx nil)
               [:div {:class "con-dash"}
                [:div {:class "con-dash-head"}
                 [:h1 {:class "con-dash-title"} "Mt Zion Console"]
@@ -388,13 +388,6 @@
               [:div {:class "con-single"}
                (con/not-built-yet title blurb href label)])))
 
-(def inbox-pane
-  (placeholder "Inbox" :inbox
-               (str "This becomes the review queue for content extracted from the Sunday "
-                    "bulletin. Until then the importer writes drafts straight into the "
-                    "content tables — run clj -M:run import to see the diff.")
-               "/console/writing" "Back to Writing"))
-
 (def media-pane
   (placeholder "Media" :media
                (str "This becomes one upload dialog and a searchable library with albums. "
@@ -416,7 +409,6 @@
       ["/:id/autosave" {:post writing-autosave :name ::writing-autosave}]
       ["/:id/status"   {:post writing-status   :name ::writing-status}]
       ["/:id/archive"  {:post writing-archive  :name ::writing-archive}]]
-     ["/inbox"    {:get inbox-pane    :name ::inbox}]
      ["/media"    {:get media-pane    :name ::media}]
      ["/archive"
       ["" {:get archive-list :name ::archive}]

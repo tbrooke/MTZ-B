@@ -4,9 +4,16 @@
 
   Every pane is the same shape: a listing on the left, an editor on the right.
   One interaction to learn, three places to use it."
-  (:require [com.mtzion.lib.ui :as ui]
+  (:require [com.mtzion.content.inbox :as inbox]
+            [com.mtzion.lib.ui :as ui]
             [com.mtzion.model.content :as content]
             [lambdaisland.hiccup :as hiccup]))
+
+(defn nav
+  "Top-bar options for a pane. The inbox count belongs on every screen — the
+  point of a queue is noticing it from wherever you happen to be."
+  [ctx active]
+  {:active active :inbox-count (inbox/pending-count ctx)})
 
 (defn- fonts []
   (list

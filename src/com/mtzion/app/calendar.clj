@@ -250,7 +250,7 @@
 (defn- render [ctx first-day sel-day sel-id right]
   (let [ym   (fmt first-day "yyyy-MM")
         occs (occurrences-in-month ctx first-day)]
-    (con/page "Calendar" {:active :calendar}
+    (con/page "Calendar" (con/nav ctx :calendar)
               [:div {:class "con-pane"}
                [:aside {:class "con-list"}
                 [:div {:class "con-list-head"}
