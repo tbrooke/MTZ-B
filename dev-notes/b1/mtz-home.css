@@ -1,0 +1,310 @@
+/* === MTZ HOME v1 === */
+/* Section stylesJSON is dead in this build (every section renders
+   id="section-undefined", so StyleHelper.getSectionCss never matches), so the
+   design lives here, keyed off the classes B1App really emits:
+   .sectionFirst, .sectionBG, .sectionDark, #navbar, #headerLogo. */
+
+/* ---------- Header: white bar, dark type, the old 4-column lockup ---------- */
+/* The bar stays fixed (its wrapper holds only the header, so sticky has nothing
+   to stick within and it scrolls away). It is opaque now, so instead of the
+   content running underneath it, main is pushed down by exactly the bar height
+   and .sectionFirst loses the 160px overlay allowance it needed when the bar
+   was transparent. */
+#navbar {
+  position: fixed !important;
+  top: 0;
+  background-color: var(--mtz-bar-bg, #ffffff) !important;
+  background-image: none !important;
+  box-shadow: var(--mtz-bar-shadow, none) !important;
+  border-bottom: 1px solid #d5dbda;
+  /* a 20px margin left over from when the bar was fixed; in flow it opens a
+     strip of the grey body background between the bar and the photo */
+  margin-bottom: 0 !important;
+}
+
+/* B1 caps the wordmark with `#headerLogo { max-height: 65px }`, so raising
+   `height` alone does nothing - the cap has to be lifted too. */
+#navbar #headerLogo {
+  max-height: none !important;
+  max-width: none !important;
+  width: auto !important;
+}
+
+@media (min-width: 900px) {
+  #navbar .MuiContainer-root { max-width: min(1400px, calc(100vw - 40px)); }
+
+  /* A real grid, not flex with auto margins. The two nav groups are unequal -
+     the right one carries the Preschool chip, ~200px more than the left - and
+     under flex something has to absorb that difference: either the gaps either
+     side of the wordmark go lopsided, or a canyon opens at the far left. The
+     grid removes the choice. The wordmark gets its own track between two 1fr
+     spacers, which are equal by definition, and the chip is lifted out of flow
+     so it cannot skew where the wordmark lands; symmetric padding reserves its
+     room on both sides so the row stays centred in the bar. nav drops to
+     display:contents so its 9 links become grid items to place. */
+  #navbar div:has(> nav) {
+    display: grid;
+    grid-template-columns: repeat(4, max-content) 1fr max-content 1fr repeat(4, max-content);
+    align-items: center;
+    position: relative;
+  }
+  #navbar nav { display: contents; }
+
+  /* every item pinned to row 1: auto-placement never steps backwards, so once
+     the wordmark is placed in column 6 the links would start a second row. */
+  #navbar div:has(> nav) > *, #navbar nav > div { grid-row: 1; }
+
+  #navbar nav > div:nth-child(1) { grid-column: 1; }
+  #navbar nav > div:nth-child(2) { grid-column: 2; }
+  #navbar nav > div:nth-child(3) { grid-column: 3; }
+  #navbar nav > div:nth-child(4) { grid-column: 4; }
+  #navbar a:has(> #headerLogo) {
+    grid-column: 6;
+    justify-self: center;
+  }
+  #navbar nav > div:nth-child(5) { grid-column: 8; }
+  #navbar nav > div:nth-child(6) { grid-column: 9; }
+  #navbar nav > div:nth-child(7) { grid-column: 10; }
+  #navbar nav > div:nth-child(8) { grid-column: 11; }
+  #navbar nav > div:nth-child(9) {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+  #navbar div:has(> #nav-menu) { display: none; }
+
+  /* each link ships with padding: 0 15px 8px - 270px of dead width across the
+     bar, which is what forced the type down. Spacing comes from the grid gap. */
+  #navbar nav > div > a {
+    font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    font-weight: 600;
+    text-transform: uppercase;
+    white-space: nowrap;
+    padding: 0 !important;
+    color: #1e2625 !important;
+    text-decoration: none;
+  }
+  #navbar nav > div > a:hover { color: #1f6b64 !important; }
+
+  /* Preschool renders as the flip chip, not as a ninth menu item */
+  #navbar nav > div:nth-child(9) > a {
+    font-size: 11px !important;
+    letter-spacing: 1.54px !important;
+    border: 1px solid #d5dbda;
+    border-radius: 999px;
+    padding: 5px 14px !important;
+    color: #40514f !important;
+    background: #ffffff;
+  }
+  #navbar nav > div:nth-child(9) > a:hover {
+    border-color: #1e2625;
+    background: #eef6f4;
+    color: #1e2625 !important;
+  }
+}
+
+@media (min-width: 900px) {
+  /* the bar is opaque, so nothing needs to clear it any more */
+  .page .sectionFirst { padding-top: 40px; }
+  #navbar > div, #navbar div:has(> nav) { height: 100%; min-height: 0; }
+}
+
+@media (min-width: 900px) and (max-width: 1399px) {
+  #navbar { height: calc(96px * var(--mtz-bar-shrink, 1)) !important; }
+  main { padding-top: 96px; }
+  #navbar div:has(> nav) { column-gap: 16px; padding-left: calc(122px + var(--mtz-nav-lead, 0px)); padding-right: 122px; }
+  #navbar nav > div > a { font-size: calc(13.5px * var(--mtz-nav-shrink, 1)) !important; letter-spacing: 1.4px !important; }
+  #navbar #headerLogo { height: calc(64px * var(--mtz-logo-shrink, 1)) !important; }
+}
+
+/* Below ~1200px the eight links, the chip and the wordmark stop fitting at
+   the larger sizes; the max-content tracks do not shrink, so tighten here
+   rather than let the row overflow. Must follow the 900-1399 block to win. */
+@media (min-width: 900px) and (max-width: 1199px) {
+  #navbar div:has(> nav) { column-gap: 10px; padding-left: calc(92px + var(--mtz-nav-lead, 0px)); padding-right: 92px; }
+  #navbar nav > div > a { font-size: calc(12px * var(--mtz-nav-shrink, 1)) !important; letter-spacing: 1px !important; }
+}
+
+@media (min-width: 1400px) {
+  /* tall enough to contain the wordmark - otherwise its lower lines hang below
+     the bar and land unreadable on the page content once scrolled */
+  #navbar { height: calc(132px * var(--mtz-bar-shrink, 1)) !important; }
+  main { padding-top: 132px; }
+  #navbar div:has(> nav) { column-gap: 24px; padding-left: calc(146px + var(--mtz-nav-lead, 0px)); padding-right: 146px; }
+  #navbar nav > div > a { font-size: calc(15px * var(--mtz-nav-shrink, 1)) !important; letter-spacing: 1.8px !important; }
+  #navbar #headerLogo { height: calc(88px * var(--mtz-logo-shrink, 1)) !important; }
+}
+
+/* ---------- Scroll shrink, as on the old site ----------
+   customJS sets these custom properties on the root element past 12px of
+   scroll (the threshold base.clj used). Properties rather than a
+   .is-scrolled class because React owns the className on the header and
+   would wipe it, and because styled-jsx drops a root-element-prefixed
+   selector from this sheet entirely. main keeps the unscrolled bar height as
+   its padding, so the bar shrinking never reflows the page.
+   Old ratios: ZION 30->22 (.73), MT 18->14 (.78), bar padding 14->8. */
+#navbar { transition: height 200ms ease, background-color 200ms ease, box-shadow 200ms ease; }
+#navbar #headerLogo { transition: height 200ms ease; }
+#navbar nav > div > a { transition: font-size 200ms ease; }
+
+/* ---------- Photo bands ----------
+   Keyed to what a section IS, not where it sits, so a hero saved as a block
+   keeps its design wherever it is dropped.
+
+     .sectionBG              any section with a photo background - scrim, light copy
+     .sectionFirst.sectionBG a photo band that LEADS a page, i.e. a hero -
+                             adds height, bottom-aligned copy, display headline
+*/
+.page .sectionBG {
+  border-bottom: 1px solid #1e2625;
+  background-position: center top;
+}
+/* apphelper paints a flat 55% black over every sectionBG; the old site used a
+   gradient so the sky stays bright and the copy still reads at the bottom. */
+.page .sectionBG:before {
+  background: linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.10) 35%, rgba(0,0,0,0.65) 100%);
+  opacity: 1;
+}
+.page .sectionBG > * { position: relative; z-index: 1; width: 100%; }
+
+.page .sectionBG .eyebrow { color: rgba(255,255,255,0.85); }
+/* Written one selector per rule and at .sectionDark.sectionBG specificity on
+   purpose. The obvious form - a two-selector list at #main-content .sectionBG -
+   is present in the <style> text but never becomes a live rule, so the heading
+   silently inherited #EEEEEE from .sectionDark instead of going white. Every
+   neighbouring rule here applies, so it is that rule specifically. */
+#main-content .sectionDark.sectionBG h1 { color: #fff; }
+#main-content .sectionDark.sectionBG h2 { color: #fff; }
+#main-content .sectionDark.sectionBG h1 em { color: #bfe0db; font-style: italic; font-weight: 400; }
+#main-content .sectionDark.sectionBG h2 em { color: #bfe0db; font-style: italic; font-weight: 400; }
+.page .sectionBG .lede { color: rgba(255,255,255,0.92); }
+
+/* the hero proper */
+.page .sectionFirst.sectionBG {
+  min-height: 640px;
+  display: flex;
+  align-items: flex-end;
+  padding-top: 48px;
+  padding-bottom: 56px;
+}
+/* #main-content h1 earlier in this sheet carries an id, so this has to
+   out-specify it rather than merely follow it. */
+#main-content .sectionFirst.sectionBG h1 {
+  text-align: left;
+  margin: 0;
+  margin-left: 0;
+  margin-right: 0;
+  max-width: 900px;
+  font-size: clamp(2.6rem, 6.2vw, 78px);
+  font-weight: 500;
+  line-height: 1.02;
+}
+.page .sectionFirst.sectionBG .eyebrow { text-align: left; }
+.page .sectionFirst.sectionBG .lede {
+  font-size: 1.25rem;
+  max-width: 620px;
+  margin-top: 24px;
+  text-align: left;
+}
+/* paired call-to-action buttons are separate elements; sit them side by side */
+.page .sectionBG > div > div:has(> a.MuiButton-root) {
+  display: inline-block;
+  margin-top: 28px;
+  margin-right: 12px;
+}
+
+/* ---------- Buttons: the old .mtz-btn pair ---------- */
+.page .MuiButton-root {
+  font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-radius: 4px;
+  padding: 12px 22px;
+  box-shadow: none;
+}
+.page .MuiButton-root:hover { box-shadow: none; }
+.page a.MuiButton-contained {
+  background-color: #2e9389;
+  color: #fff;
+  border: 1px solid #2e9389;
+}
+.page a.MuiButton-contained:hover { background-color: #1f6b64; border-color: #1f6b64; }
+.page a.MuiButton-outlined {
+  background: transparent;
+  color: #1e2625;
+  border: 1px solid #1e2625;
+}
+.page a.MuiButton-outlined:hover { background: #1e2625; color: #fff; border-color: #1e2625; }
+.sectionDark a.MuiButton-outlined { color: #fff; border-color: #fff; }
+.sectionDark a.MuiButton-outlined:hover { background: #fff; color: #1e2625; border-color: #fff; }
+
+/* ---------- Eyebrow above a heading (.mtz-kicker) ---------- */
+.page .eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  font-size: 11.5px;
+  font-weight: 600;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  color: #1f6b64;
+  margin: 0 0 14px;
+}
+
+/* ---------- Arrow links (.mtz-arrow-link) ---------- */
+.page a.arrow-link {
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #1f6b64;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 2px;
+  text-decoration: none;
+}
+.page a.arrow-link:hover { color: #1e2625; }
+
+/* ---------- Headings: mid-sentence italic emphasis, as on the old site ---------- */
+#main-content .section h2 { font-size: clamp(2rem, 3.4vw, 2.75rem); font-weight: 500; margin: 0 0 20px; }
+#main-content .section h2 em { font-style: italic; font-weight: 400; color: #1f6b64; }
+.page .section h3 { font-weight: 600; }
+
+/* ---------- The lede band under the hero ---------- */
+#main-content .lede-intro {
+  font-family: "Source Serif 4", "EB Garamond", Georgia, serif;
+  font-size: clamp(1.25rem, 2vw, 26px);
+  line-height: 1.45;
+  max-width: 760px;
+  margin: 0;
+  text-wrap: pretty;
+}
+
+/* ---------- Band rhythm ---------- */
+.page .section {
+  padding-top: 96px;
+  padding-bottom: 96px;
+}
+/* The lede band is a breath between the photo and the first tinted band. Keyed
+   to the copy it contains rather than to being the second section on the page,
+   so it survives sections being added above or below it. */
+.page .section:has(.lede-intro) {
+  padding-top: 56px;
+  padding-bottom: 48px;
+}
+
+/* ---------- textWithPhoto: centre the copy against the photo instead of
+             letting it hang at the top of a 520px column ---------- */
+.page .elTextWithPhoto > div { align-items: center; }
+.page .section .elTextWithPhoto p:not(.eyebrow):not(.lede) { max-width: 640px; }
+/* event flyers are tall portrait scans and otherwise set the band height */
+.page .elTextWithPhoto img {
+  max-height: 520px;
+  width: 100%;
+  object-fit: contain;
+  object-position: center;
+}
