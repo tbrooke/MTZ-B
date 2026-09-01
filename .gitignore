@@ -18,6 +18,10 @@ bin/tailwindcss
 /storage/
 config.env
 config.prod.env
+# Timestamped copies a deploy leaves behind — same secrets, and a plain
+# `config.env` rule does not match them.
+config.env.bak-*
+config.prod.env.bak-*
 node_modules/
 
 # Loose credential files — never commit. Secrets belong in config.env (also
