@@ -181,7 +181,11 @@
 #main-content .sectionDark.sectionBG h2 em { color: #bfe0db; font-style: italic; font-weight: 400; }
 .page .sectionBG .lede { color: rgba(255,255,255,0.92); }
 
-/* the hero proper */
+/* A block declares its own role through its content. Wrapping the copy in
+   .hero-copy gets the hero box wherever the block is dropped - needed because
+   a block section never receives .sectionFirst (that is computed from position
+   in the PAGE section list) and section stylesJSON is ignored everywhere. */
+.page .sectionBG:has(.hero-copy),
 .page .sectionFirst.sectionBG {
   min-height: 640px;
   display: flex;
@@ -191,6 +195,7 @@
 }
 /* #main-content h1 earlier in this sheet carries an id, so this has to
    out-specify it rather than merely follow it. */
+#main-content .sectionBG:has(.hero-copy) h1,
 #main-content .sectionFirst.sectionBG h1 {
   text-align: left;
   margin: 0;
@@ -201,7 +206,9 @@
   font-weight: 500;
   line-height: 1.02;
 }
+.page .sectionBG:has(.hero-copy) .eyebrow,
 .page .sectionFirst.sectionBG .eyebrow { text-align: left; }
+.page .sectionBG:has(.hero-copy) .lede,
 .page .sectionFirst.sectionBG .lede {
   font-size: 1.25rem;
   max-width: 620px;
