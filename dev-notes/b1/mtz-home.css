@@ -169,13 +169,14 @@
 .page .sectionBG > * { position: relative; z-index: 1; width: 100%; }
 
 .page .sectionBG .eyebrow { color: rgba(255,255,255,0.85); }
-/* Written one selector per rule and at .sectionDark.sectionBG specificity on
-   purpose. The obvious form - a two-selector list at #main-content .sectionBG -
-   is present in the <style> text but never becomes a live rule, so the heading
-   silently inherited #EEEEEE from .sectionDark instead of going white. Every
-   neighbouring rule here applies, so it is that rule specifically. */
-#main-content .sectionDark.sectionBG h1 { color: #fff; }
-#main-content .sectionDark.sectionBG h2 { color: #fff; }
+/* Headings cannot be coloured directly here. apphelper ships
+     .elText h1..h6, .elTextWithPhoto h1..h6 { color: inherit !important }
+   and !important beats any normal declaration whatever its specificity, so the
+   only lever is the colour the heading inherits FROM - the element wrapper.
+   .sectionDark sets that to #EEEEEE, which is why headings on the photo hero
+   came out grey. em is not in that list, so it can be set directly. */
+.page .sectionDark.sectionBG .elText { color: #fff; }
+.page .sectionDark.sectionBG .elTextWithPhoto { color: #fff; }
 #main-content .sectionDark.sectionBG h1 em { color: #bfe0db; font-style: italic; font-weight: 400; }
 #main-content .sectionDark.sectionBG h2 em { color: #bfe0db; font-style: italic; font-weight: 400; }
 .page .sectionBG .lede { color: rgba(255,255,255,0.92); }
