@@ -36,12 +36,15 @@
       :fields [:subtitle :body :cta]
       :note (str "The \"Worship this Sunday\" block. The heading is fixed by the "
                  "design — Subtitle is the time line and Body is the paragraph.")}
-     {:key "activities" :label "Always at Mt. Zion" :kind :list :slug "home-activities"
-      :fields [:title :subtitle :image]
-      :note (str "The graphics strip. An image is REQUIRED — one without it is "
-                 "skipped rather than shown as an empty box. The heading is used "
-                 "as the image's alt text, and the first card's Kicker doubles as "
-                 "the paragraph beside the strip.")}
+     {:key "activities" :label "Always at Mt. Zion — the copy" :kind :slot :slug "home-activities"
+      :fields [:subtitle]
+      :note (str "Just the paragraph beside the strip; the Kicker field is it. "
+                 "The graphics themselves are activities now — see below.")}
+     {:key "activity-strip" :label "Always at Mt. Zion — the graphics" :kind :link
+      :goto "/console/calendar"
+      :note (str "Activities ticked \"Show in the home page strip\". An image is "
+                 "REQUIRED — one without it is skipped rather than shown as an "
+                 "empty box, and the name becomes the image's alt text.")}
      {:key "featured-events" :label "Featured events" :kind :link
       :goto "/console/calendar"
       :note "Events with \"Featured\" ticked. Edited in the Calendar pane."}
@@ -79,6 +82,10 @@
     [{:key "programs" :label "Seasonal & special programs" :kind :list :slug "activities"
       :fields [:title :subtitle :body]
       :note "The card grid. Subtitle is the small uppercase line above the name."}
+     {:key "weekly" :label "Week by Week" :kind :link
+      :goto "/console/calendar"
+      :note (str "Every published activity, with its schedule written out. "
+                 "Add one in the Calendar pane with Kind set to Activity.")}
      {:key "sections" :label "Sections" :kind :list :slug "activities-extra"
       :fields all-fields}]}
 

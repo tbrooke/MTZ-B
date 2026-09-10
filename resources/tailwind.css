@@ -1594,6 +1594,17 @@ a.con-card-row:hover { color: var(--con-terra); }
   text-transform: uppercase; color: var(--con-rule-firm); flex: none;
 }
 
+  /* Sections this pane cannot edit: owned by another pane, or written into the
+     template. Shown so the tree does not pretend a page has fewer parts than it
+     has, but muted so the editable ones read first. */
+  .con-tree-auto {
+    font-family: var(--adm-mono); font-size: 9px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--con-ink-mute); flex: none;
+    opacity: 0.75;
+  }
+  .con-tree-leaf.is-generated .con-tree-label { color: var(--con-ink-mute); }
+  .con-tree-leaf.is-generated .con-tree-bullet { opacity: 0.55; }
+
 /* ---------- console: leaf editor ---------- */
 
 .con-leaf-title {

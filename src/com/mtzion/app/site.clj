@@ -52,6 +52,20 @@
 ;; The tree
 ;; ---------------------------------------------------------------------------
 
+(def ^:private editable-kinds
+  "Kinds this pane can actually edit. The rest are shown so the tree does not
+  pretend a page has fewer parts than it does - but they are somebody else's to
+  change: `:link` is owned by another pane (activities live in Calendar, posts
+  in Writing), and `:static` is written into the template.
+
+  This is the distinction B1Admin draws between a custom page and a generated
+  one, except a page here is rarely all of one or the other - the home page has
+  editable slots AND generated sections side by side. So it belongs on the leaf,
+  not the page."
+  #{:slot :list :body})
+
+(defn- editable? [section] (contains? editable-kinds (:kind section)))
+
 (defn- leaf-counts
   "What each leaf currently holds, so the tree can say so without opening it."
   [ctx section]
@@ -68,7 +82,9 @@
   (let [href     (base-url pk (:key section))
         selected (= sel [pk (:key section)])
         info     (leaf-counts ctx section)]
-    [:a {:href href :class (str "con-tree-leaf" (when selected " is-selected"))}
+    [:a {:href href :class (str "con-tree-leaf"
+                                (when selected " is-selected")
+                                (when-not (editable? section) " is-generated"))}
      [:span {:class "con-tree-bullet"} (case (:kind section) :list "▾" :link "↗" "·")]
      [:span {:class "con-tree-label"} (:label section)]
      (cond
@@ -78,7 +94,11 @@
        (:status info)
        (con/status-dot (:status info))
 
-       (#{:link :static} (:kind section)) nil
+       (= :link (:kind section))
+       [:span {:class "con-tree-auto"} "elsewhere"]
+
+       (= :static (:kind section))
+       [:span {:class "con-tree-auto"} "in the design"]
 
        :else [:span {:class "con-tree-empty"} "empty"])]))
 

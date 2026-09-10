@@ -111,25 +111,30 @@
                                                       [:= :page_slug "home-worship"]
                                                       [:= :status "published"]]
                                            :limit    1}))
-        ;; The strip is fed by activities ticked "Show in the home page strip",
-        ;; so adding Tai Chi in the Calendar pane puts it here and on
-        ;; /activities at once. The hand-made `home-activities` feature rows are
-        ;; still honoured and come first, so nothing that was placed by hand
-        ;; disappears the day this ships - they simply stop being the only way.
-        activity-cards   (concat
-                          (exec ctx {:select   :*
-                                     :from     :feature
-                                     :where    [:and
-                                                [:= :page_slug "home-activities"]
-                                                [:= :status "published"]]
-                                     :order-by [[:sort_order :asc] [:title :asc]]})
-                          (exec ctx {:select   :*
-                                     :from     :event
-                                     :where    [:and
-                                                [:= :kind "activity"]
-                                                [:= :show_on_home 1]
-                                                [:= :status "published"]]
-                                     :order-by [[:title :asc]]}))
+        ;; The strip is activities ticked "Show in the home page strip", so
+        ;; adding Tai Chi in the Calendar pane puts it here and under Week by
+        ;; Week on /activities at once - one entry, both places.
+        ;;
+        ;; Items without an image are dropped downstream by design (an empty box
+        ;; reads as an unfinished site), so the tick is necessary but not
+        ;; sufficient. The editor's checkbox label says so.
+        activity-cards   (exec ctx {:select   :*
+                                    :from     :event
+                                    :where    [:and
+                                               [:= :kind "activity"]
+                                               [:= :show_on_home 1]
+                                               [:= :status "published"]]
+                                    :order-by [[:title :asc]]})
+        ;; The copy beside the strip. Still a `home-activities` feature row so it
+        ;; stays editable, but no longer smuggled in as the first card's kicker -
+        ;; the cards are events now and have nowhere to put it. Falls back to the
+        ;; shipped sentence, which is what that row currently holds anyway.
+        activity-blurb   (some (comp not-empty :subtitle)
+                               (exec ctx {:select :*
+                                          :from   :feature
+                                          :where  [:and
+                                                   [:= :page_slug "home-activities"]
+                                                   [:= :status "published"]]}))
         hero-feature     (first (exec ctx {:select :*
                                            :from   :feature
                                            :where  [:and
@@ -167,9 +172,7 @@
                                              {:name      (:title f)
                                               :image-url (cf-img-url ctx (:image_id f) "public")})
                                            activity-cards)
-                               ;; the first card's subtitle doubles as the section blurb,
-                               ;; so the copy is editable in the admin too
-                               :blurb (some (comp not-empty :subtitle) activity-cards)}
+                               :blurb activity-blurb}
                   :news     (when (seq latest-posts)
                               (map (fn [p]
                                      {:tag       "News"
