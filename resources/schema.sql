@@ -68,6 +68,14 @@ CREATE TABLE IF NOT EXISTS event (
       recur_until INTEGER,
       image_id TEXT,
       featured INTEGER NOT NULL DEFAULT 0,
+      -- 'event' is a one-off - John's River, a special service. 'activity' is
+      -- the regular rhythm - Tai Chi, Pickleball, JOY Club. Deliberately not
+      -- derived from `recurrence`: a six-week Advent series repeats but is
+      -- still an event, and a monthly lunch is still an activity.
+      kind TEXT NOT NULL DEFAULT 'event',
+      -- Activities only. Which of them earn a place in the home page strip;
+      -- the page itself lists them all. Same name as the flag on feature/post.
+      show_on_home INTEGER NOT NULL DEFAULT 0,
       published INTEGER NOT NULL DEFAULT 1,
       status TEXT,
       published_at INTEGER,

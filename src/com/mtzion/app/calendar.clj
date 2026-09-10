@@ -182,6 +182,9 @@
 ;; Editor
 ;; ---------------------------------------------------------------------------
 
+(def ^:private kinds
+  [["event" "Event — a one-off"] ["activity" "Activity — part of the regular rhythm"]])
+
 (def ^:private recurrences
   [["none" "Does not repeat"] ["daily" "Every day"] ["weekly" "Every week"]
    ["biweekly" "Every two weeks"] ["monthly" "Every month"] ["yearly" "Every year"]])
@@ -208,6 +211,9 @@
                :value (or (:title ev) "") :placeholder "Event name" :autocomplete "off"}]
 
       [:div {:class "con-details-grid con-details-grid--open"}
+       (con/field {:label "Kind"
+                   :hint "Activities also list under Week by Week on /activities"}
+                  (con/select-input {:name "kind"} kinds (:kind ev "event")))
        (con/field {:label "Starts"}
                   [:input {:type "datetime-local" :name "start_at" :class "con-input" :required "true"
                            :value (or (normalize/epoch->local-datetime-str (:start_at ev)) "")}])
@@ -228,7 +234,13 @@
                             :checked (= 1 (:all_day ev))}] "All day"]
                   [:label {:class "con-check"}
                    [:input {:type "checkbox" :name "featured" :value "1"
-                            :checked (= 1 (:featured ev))}] "Feature on the home page"])]
+                            :checked (= 1 (:featured ev))}] "Feature on the home page"]
+                  ;; Activities only. The strip has room for a handful; the
+                  ;; /activities page lists every published one regardless.
+                  [:label {:class "con-check"}
+                   [:input {:type "checkbox" :name "show_on_home" :value "1"
+                            :checked (= 1 (:show_on_home ev))}]
+                   "Show in the home page strip (activities — needs an image)"])]
 
       [:details {:class "con-details"}
        [:summary {:class "con-details-summary"} "Description & image"]
@@ -310,8 +322,10 @@
    :all_day     (if (:all_day params) 1 0)
    :recurrence  (or (not-empty (:recurrence params)) "none")
    :recur_until (normalize/local-date->epoch (:recur_until params))
-   :image_id    (not-empty (:image_id params))
-   :featured    (if (:featured params) 1 0)})
+   :image_id     (not-empty (:image_id params))
+   :featured     (if (:featured params) 1 0)
+   :kind         (if (= "activity" (:kind params)) "activity" "event")
+   :show_on_home (if (:show_on_home params) 1 0)})
 
 (defn calendar-create [ctx]
   (let [cols (event-cols ctx)

@@ -1,6 +1,7 @@
 (ns com.mtzion.app.activities
   (:require [com.biffweb.sqlite :as biff.sqlite]
             [com.mtzion.app.home-sections :as home-sections]
+            [com.mtzion.model.event :as event]
             [com.mtzion.model.normalize :as norm]
             [com.mtzion.ui.base :as base]
             [com.mtzion.ui.sections :as sections]
@@ -17,7 +18,7 @@
      [:div {:style "color: var(--mtz-ink-soft); margin: 0; font-size: 15px;"}
       [::hiccup/unsafe-html (:body f)]])])
 
-(defn- page-content [ctx cards]
+(defn- page-content [ctx cards weekly]
   (list
    [:section {:class "mtz-section"}
     [:p {:class "mtz-kicker"} "Open to All · No Membership Required"]
@@ -28,6 +29,25 @@
     [:hr {:class "mtz-rule"}]]
 
    (home-sections/always-at-mtz-section)
+
+   ;; The weekly rhythm, from `event` rows marked kind = activity. Every
+   ;; published one appears here; the home strip shows only those also ticked
+   ;; "Show in the home page strip".
+   (when (seq weekly)
+     [:section {:class "mtz-section"}
+      [:div {:class "mtz-section-inner"}
+       [:h2 {:class "mtz-h2" :style "margin-bottom: 8px;"} "Week by Week"]
+       [:p {:class "mtz-mute" :style "font-size: 18px; margin: 0 0 36px; font-family: var(--mtz-serif-body);"}
+        "Regular gatherings you can drop into — no sign-up needed."]
+       [:div {:class "mtz-grid mtz-grid--2" :style "gap: 32px;"}
+        (for [a weekly]
+          [:article {:class "mtz-card"}
+           [:p {:class "mtz-kicker"} (event/describe a)]
+           [:h3 {:class "mtz-h3"} (:title a)]
+           (when (not-empty (:location a))
+             [:p {:class "mtz-mute" :style "margin: 4px 0 0;"} (:location a)])
+           (when (not-empty (:description a))
+             [::hiccup/unsafe-html (:description a)])])]]])
 
    (when (seq cards)
      [:section {:class "mtz-section--cream"}
@@ -51,12 +71,18 @@
 (defn activities [ctx]
   ;; snake-keys is required — activity-card reads :subtitle/:title/:body, but
   ;; execute returns :feature/subtitle etc.
-  (let [cards (norm/snake-keys-all
+  (let [weekly (norm/snake-keys-all
+                (biff.sqlite/execute ctx {:select   :*
+                                          :from     :event
+                                          :where    [:and [:= :kind "activity"]
+                                                     [:= :status "published"]]
+                                          :order-by [[:title :asc]]}))
+        cards (norm/snake-keys-all
                (biff.sqlite/execute ctx {:select   :*
                                          :from     :feature
                                          :where    [:and [:= :page_slug "activities"] [:= :status "published"]]
                                          :order-by [[:sort_order :asc]]}))]
-    (base/page ctx "Activities — Mount Zion UCC" (page-content ctx cards))))
+    (base/page ctx "Activities — Mount Zion UCC" (page-content ctx cards weekly))))
 
 (def module
   {:biff.ring/routes

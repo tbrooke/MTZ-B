@@ -111,12 +111,25 @@
                                                       [:= :page_slug "home-worship"]
                                                       [:= :status "published"]]
                                            :limit    1}))
-        activity-cards   (exec ctx {:select   :*
-                                    :from     :feature
-                                    :where    [:and
-                                               [:= :page_slug "home-activities"]
-                                               [:= :status "published"]]
-                                    :order-by [[:sort_order :asc] [:title :asc]]})
+        ;; The strip is fed by activities ticked "Show in the home page strip",
+        ;; so adding Tai Chi in the Calendar pane puts it here and on
+        ;; /activities at once. The hand-made `home-activities` feature rows are
+        ;; still honoured and come first, so nothing that was placed by hand
+        ;; disappears the day this ships - they simply stop being the only way.
+        activity-cards   (concat
+                          (exec ctx {:select   :*
+                                     :from     :feature
+                                     :where    [:and
+                                                [:= :page_slug "home-activities"]
+                                                [:= :status "published"]]
+                                     :order-by [[:sort_order :asc] [:title :asc]]})
+                          (exec ctx {:select   :*
+                                     :from     :event
+                                     :where    [:and
+                                                [:= :kind "activity"]
+                                                [:= :show_on_home 1]
+                                                [:= :status "published"]]
+                                     :order-by [[:title :asc]]}))
         hero-feature     (first (exec ctx {:select :*
                                            :from   :feature
                                            :where  [:and
