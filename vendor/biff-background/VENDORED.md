@@ -18,6 +18,12 @@ The project had kept building only because these SHAs were cached in
 not CI, not the container — which is why production sat on the 14 August image
 for a month without an obvious reason.
 
+The cause, confirmed afterwards: Jacob Bryant released **Biff v2.0.0** and
+folded the split prerelease repositories back into the `jacobobryant/biff`
+monorepo under `libs/`; the standalone repos went with them. So this is a
+deleted *prerelease*, not abandoned code — the released equivalent exists,
+one migration away.
+
 This copy is byte-identical to the SHA the app is tested against.
 
 Do not edit. To update, migrate to the `jacobobryant/biff` monorepo
