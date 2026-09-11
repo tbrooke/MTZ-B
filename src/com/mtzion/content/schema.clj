@@ -43,6 +43,14 @@
 (def Recurrence
   [:enum :none :daily :weekly :biweekly :monthly :yearly])
 
+(def EventKind
+  "One-off vs. the regular rhythm. Deliberately not derived from :recurrence —
+  a six-week Advent series repeats and is still an event, a monthly fellowship
+  lunch is still an activity. Same distinction `event.kind` holds in the
+  database, and it decides which list a row lands in: /events, or Activities
+  and the home page's \"Always at Mt. Zion\" strip."
+  [:enum :event :activity])
+
 (def PostCategory
   [:enum :news :blog :reflection])
 
@@ -63,6 +71,7 @@
    [:type [:= :event]]
    [:key ImportKey]
    [:title [:string {:min 1 :max 200}]]
+   [:kind {:optional true} EventKind]
    [:starts-at LocalDateTime]
    [:ends-at {:optional true} [:maybe LocalDateTime]]
    [:all-day {:optional true} :boolean]

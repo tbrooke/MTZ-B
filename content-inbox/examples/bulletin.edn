@@ -28,6 +28,20 @@
    :featured false
    :description [[:p "New ringers welcome — no experience necessary."]]}
 
+  ;; An activity: part of the regular rhythm, no end date, so it belongs under
+  ;; Activities rather than in the one-off list on /events.
+  {:type :event
+   :kind :activity
+   :key "tai-chi-tuesdays"
+   :title "Tai Chi"
+   :starts-at "2026-08-11T10:00"
+   :ends-at "2026-08-11T11:00"
+   :all-day false
+   :location "Fellowship Hall"
+   :recurrence :weekly
+   :featured false
+   :description [[:p "A gentle class open to the community. Wear comfortable shoes."]]}
+
   {:type :event
    :key "back-to-school-blessing-2026"
    :title "Back-to-School Blessing"

@@ -93,6 +93,17 @@
   (testing "non-recurring events need nothing extra"
     (is (:ok? (cs/validate (env (assoc an-event :recurrence :none)))))))
 
+(deftest event-kind-is-a-closed-set
+  (testing ":activity and :event are the only values"
+    (is (:ok? (cs/validate (env (assoc an-event :kind :activity)))))
+    (is (:ok? (cs/validate (env (assoc an-event :kind :event))))))
+  (testing "a plausible-sounding third value is rejected, not coerced"
+    (doseq [bad [:recurring :weekly :program "activity"]]
+      (is (not (:ok? (cs/validate (env (assoc an-event :kind bad)))))
+          (pr-str bad))))
+  (testing "omitting it is fine — that is how an agent says \"not provided\""
+    (is (:ok? (cs/validate (env an-event))))))
+
 (deftest end-must-follow-start
   (is (not (:ok? (cs/validate (env (assoc an-event :ends-at "2026-08-16T09:00"))))))
   (is (:ok? (cs/validate (env (assoc an-event :ends-at "2026-08-16T11:30"))))))

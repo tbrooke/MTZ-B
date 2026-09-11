@@ -36,11 +36,16 @@ markdown fence, no commentary.
 
 Anything with a date and time.
 
+`:kind` decides where it lands. `:event` is a one-off — a concert, a work day, a special service — and shows on /events. `:activity` is part of the regular rhythm of the church, like Tai Chi, pickleball or the JOY Club; it shows under Activities and can be lifted onto the home page. Judge it by whether the church would still be doing it next season, **not** by whether it repeats: a six-week Advent study repeats and is still an `:event`, a monthly fellowship lunch is an `:activity`.
+
+Leave `:kind` out if the bulletin does not make it obvious. Omitted, it imports as an event and stays whatever an editor has already set it to — a guess would overwrite that.
+
 | field | required | accepts |
 |---|---|---|
 | `:type` | **yes** | always `:event` |
 | `:key` | **yes** | must be a stable lowercase identifier, 3-64 chars, e.g. "vbs-2026" |
 | `:title` | **yes** | text, 1–200 chars |
+| `:kind` |  | one of `:event`, `:activity` |
 | `:starts-at` | **yes** | must be a date and time like "2026-08-09T18:30" (Mount Zion local time, 24-hour) |
 | `:ends-at` |  | must be a date and time like "2026-08-09T18:30" (Mount Zion local time, 24-hour) |
 | `:all-day` |  | `true` or `false` |
@@ -180,6 +185,8 @@ These are the failures that actually happen. Read them before writing anything.
 | `:published true` | omit it — everything imports as a draft |
 | `:image-id "abc"` | omit it — images are attached by hand afterwards |
 | twelve items for a weekly event | **one** item with `:recurrence :weekly` |
+| `:kind :recurring` | `:kind` is `:event` or `:activity` — nothing else |
+| `:kind :event` on the weekly Tai Chi class | `:kind :activity` |
 
 **If you are unsure about a value, leave the field out.** A missing field is easy
 to add in the admin panel; a confidently wrong date is not.
@@ -230,6 +237,20 @@ bad one because a corrected date makes it look like a different event.
    :featured false
    :description [[:p "New ringers welcome — no experience necessary."]]}
 
+  ;; An activity: part of the regular rhythm, no end date, so it belongs under
+  ;; Activities rather than in the one-off list on /events.
+  {:type :event
+   :kind :activity
+   :key "tai-chi-tuesdays"
+   :title "Tai Chi"
+   :starts-at "2026-08-11T10:00"
+   :ends-at "2026-08-11T11:00"
+   :all-day false
+   :location "Fellowship Hall"
+   :recurrence :weekly
+   :featured false
+   :description [[:p "A gentle class open to the community. Wear comfortable shoes."]]}
+
   {:type :event
    :key "back-to-school-blessing-2026"
    :title "Back-to-School Blessing"
@@ -270,4 +291,4 @@ bad one because a corrected date makes it look like a different event.
 
 ---
 
-contract-sha: `7c96e4de`
+contract-sha: `83876794`

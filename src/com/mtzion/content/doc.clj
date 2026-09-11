@@ -75,7 +75,19 @@
 ;; ---------------------------------------------------------------------------
 
 (def ^:private item-schemas
-  [["event"   cs/Event   "Anything with a date and time."]
+  [["event"   cs/Event
+    (str "Anything with a date and time.\n\n"
+         "`:kind` decides where it lands. `:event` is a one-off — a concert, a "
+         "work day, a special service — and shows on /events. `:activity` is part "
+         "of the regular rhythm of the church, like Tai Chi, pickleball or the "
+         "JOY Club; it shows under Activities and can be lifted onto the home "
+         "page. Judge it by whether the church would still be doing it next "
+         "season, **not** by whether it repeats: a six-week Advent study repeats "
+         "and is still an `:event`, a monthly fellowship lunch is an "
+         "`:activity`.\n\n"
+         "Leave `:kind` out if the bulletin does not make it obvious. Omitted, it "
+         "imports as an event and stays whatever an editor has already set it to "
+         "— a guess would overwrite that.")]
    ["post"    cs/Post    "News items and reflections. Appears under /news."]
    ["page"    cs/Page    "A standalone page, optionally filed under a menu section."]
    ["feature" cs/Feature "Editorial content in a named slot on an existing page."]
@@ -121,7 +133,9 @@
        "| `:body \"<p>text</p>\"` | `:body [[:p \"text\"]]` |\n"
        "| `:published true` | omit it — everything imports as a draft |\n"
        "| `:image-id \"abc\"` | omit it — images are attached by hand afterwards |\n"
-       "| twelve items for a weekly event | **one** item with `:recurrence :weekly` |\n\n"
+       "| twelve items for a weekly event | **one** item with `:recurrence :weekly` |\n"
+       "| `:kind :recurring` | `:kind` is `:event` or `:activity` — nothing else |\n"
+       "| `:kind :event` on the weekly Tai Chi class | `:kind :activity` |\n\n"
        "**If you are unsure about a value, leave the field out.** A missing field is easy\n"
        "to add in the admin panel; a confidently wrong date is not.\n\n"
        "**Recurring events are one item.** A bulletin lists choir practice every week;\n"

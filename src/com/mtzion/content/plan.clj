@@ -58,15 +58,22 @@
   [{:keys [type] :as item} opts]
   (case type
     :event
-    {:title       (:title item)
-     :description (or (hiccup->html (:description item) opts) "")
-     :location    (or (:location item) "")
-     :start_at    (norm/local-datetime->epoch (:starts-at item))
-     :end_at      (norm/local-datetime->epoch (:ends-at item))
-     :all_day     (norm/edn-bool->int (:all-day item))
-     :recurrence  (or (kw->str (:recurrence item)) "none")
-     :recur_until (norm/local-date->epoch (:recur-until item))
-     :featured    (norm/edn-bool->int (:featured item))}
+    (cond-> {:title       (:title item)
+             :description (or (hiccup->html (:description item) opts) "")
+             :location    (or (:location item) "")
+             :start_at    (norm/local-datetime->epoch (:starts-at item))
+             :end_at      (norm/local-datetime->epoch (:ends-at item))
+             :all_day     (norm/edn-bool->int (:all-day item))
+             :recurrence  (or (kw->str (:recurrence item)) "none")
+             :recur_until (norm/local-date->epoch (:recur-until item))
+             :featured    (norm/edn-bool->int (:featured item))}
+      ;; Only when the agent actually said so. Every other key here is written
+      ;; unconditionally, which is fine for fields the bulletin is the source of
+      ;; — but kind is one an editor changes in the Calendar pane, and a row map
+      ;; carrying a defaulted "event" would reset that choice on the next
+      ;; re-import. Omitted, INSERT takes the column default and UPDATE leaves
+      ;; the column alone.
+      (:kind item) (assoc :kind (kw->str (:kind item))))
 
     :post
     {:title        (:title item)

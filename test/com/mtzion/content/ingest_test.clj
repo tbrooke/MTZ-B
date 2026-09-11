@@ -85,12 +85,31 @@
         (is (= "2026-12-17" (norm/epoch->date-str (:recur_until hb))))
         (is (zero? (mod (:recur_until hb) 86400))))
       (testing "recurrence enum is stored as a string"
-        (is (= "weekly" (:recurrence hb)))))
+        (is (= "weekly" (:recurrence hb))))
+      (testing "an item with no :kind takes the column default"
+        (is (= "event" (:kind hb)))))
+    (testing ":kind :activity files the row under Activities, not /events"
+      (is (= "activity" (:kind (row ctx :event "tai-chi-tuesdays")))))
     (testing "hiccup bodies are rendered to the HTML the editor would store"
       (is (= "<p>New ringers welcome — no experience necessary.</p>"
              (:description (row ctx :event "handbell-rehearsal-fall-2026"))))
       (is (str/includes? (:body (row ctx :post "council-notes-2026-08"))
                          "<li><strong>Roof project.</strong>")))))
+
+(deftest an-editors-kind-survives-re-import
+  ;; Same rule as publishing: a human's decision in the console outranks a
+  ;; re-drop of the file. An agent that omits :kind is saying "not provided",
+  ;; so a defaulted "event" must not be written over an editor's "activity".
+  (with-temp-ctx [ctx]
+    (apply-file! ctx example-file)
+    (let [hb (row ctx :event "handbell-rehearsal-fall-2026")]
+      (is (= "event" (:kind hb)))
+      (biff.sqlite/execute ctx {:update :event
+                                :set    {:kind "activity"}
+                                :where  [:= :id (:id hb)]})
+      (testing "a re-import leaves it alone"
+        (apply-file! ctx example-file)
+        (is (= "activity" (:kind (row ctx :event "handbell-rehearsal-fall-2026"))))))))
 
 (deftest re-import-is-idempotent
   (with-temp-ctx [ctx]

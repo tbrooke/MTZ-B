@@ -35,6 +35,12 @@
     (.delete f)
     res))
 
+(def ^:private example-items
+  "How many items the committed example carries — derived, not typed in. The
+  example grows whenever the contract gains a field worth demonstrating, and
+  these counts should follow it rather than fail."
+  (count (:items (:envelope (ingest/read-envelope example-file)))))
+
 (defn- q [ctx honey] (norm/snake-keys-all (biff.sqlite/execute ctx honey)))
 
 (defn- row-by-key [ctx k]
@@ -52,7 +58,7 @@
       (is (str/includes? output "/console/inbox"))
 
       (testing "five items are waiting"
-        (is (= 5 (inbox/pending-count ctx))))
+        (is (= example-items (inbox/pending-count ctx))))
 
       (testing "and not one content row was written"
         (doseq [table [:event :post :feature :sermon :page]]
@@ -96,7 +102,7 @@
             "accepting is not publishing — that stays a separate decision"))
 
       (testing "and the item leaves the queue with a record of what it became"
-        (is (= 4 (inbox/pending-count ctx)))
+        (is (= (dec example-items) (inbox/pending-count ctx)))
         (let [after (inbox/get-one ctx (:id row))]
           (is (= inbox/accepted-state (:state after)))
           (is (= (:id op) (:target_id after)))
@@ -117,7 +123,7 @@
     (let [row (row-by-key ctx "back-to-school-blessing-2026")]
       (inbox/dismiss! ctx row)
       (is (zero? (count (q ctx {:select :* :from :event}))))
-      (is (= 4 (inbox/pending-count ctx)))
+      (is (= (dec example-items) (inbox/pending-count ctx)))
       (is (= inbox/dismissed-state (:state (inbox/get-one ctx (:id row))))
           "'we looked at that and said no' stays on the record"))))
 
@@ -125,10 +131,10 @@
   (with-temp-ctx [ctx]
     (stage-example! ctx)
     (let [batch (:batch_id (first (inbox/pending ctx)))]
-      (is (= 5 (inbox/accept-batch! ctx batch nil)))
+      (is (= example-items (inbox/accept-batch! ctx batch nil)))
       (is (zero? (inbox/pending-count ctx)))
       (is (= 1 (count (q ctx {:select :* :from :post}))))
-      (is (= 2 (count (q ctx {:select :* :from :event}))))
+      (is (= 3 (count (q ctx {:select :* :from :event}))))
       (testing "everything it created is a draft"
         (is (every? #(= content/draft (:status %)) (content/ls ctx :event)))
         (is (every? #(= content/draft (:status %)) (content/ls ctx :post)))))))
@@ -137,7 +143,7 @@
   (with-temp-ctx [ctx]
     (stage-example! ctx)
     (let [batch (:batch_id (first (inbox/pending ctx)))]
-      (is (= 5 (inbox/dismiss-batch! ctx batch)))
+      (is (= example-items (inbox/dismiss-batch! ctx batch)))
       (is (zero? (inbox/pending-count ctx)))
       (is (zero? (count (q ctx {:select :* :from :event})))))))
 
@@ -220,7 +226,7 @@
     (let [html (str (:body (pane/inbox ctx)))]
       (is (str/includes? html "From the bulletin"))
       (is (str/includes? html "Back-to-School Blessing"))
-      (is (str/includes? html "Accept all 5"))
+      (is (str/includes? html (str "Accept all " example-items)))
       (is (str/includes? html "con-inbox-action--create")))))
 
 (deftest an-empty-queue-explains-the-workflow
@@ -233,7 +239,7 @@
   (with-temp-ctx [ctx]
     (is (zero? (inbox/pending-count ctx)))
     (stage-example! ctx)
-    (is (= 5 (inbox/pending-count ctx)))
+    (is (= example-items (inbox/pending-count ctx)))
     (is (str/includes? (str (:body (pane/inbox ctx))) "con-bar-count"))))
 
 (deftest payloads-round-trip
