@@ -8,7 +8,8 @@
             [com.mtzion.model.event :as event]
             [com.mtzion.model.nav :as model.nav]
             [com.mtzion.model.normalize :as normalize]
-            [com.mtzion.ui.admin :as adm]))
+            [com.mtzion.ui.admin :as adm]
+            [com.mtzion.ui.nav :as ui.nav]))
 
 ;; ---------------------------------------------------------------------------
 ;; Helpers
@@ -786,7 +787,10 @@
                :hint  "Text shown in the menu — leave blank to keep the page off the menu entirely"}
               (adm/text-input {:name "nav_label" :value (or (:nav_label p) "")}))
    (adm/field {:label "Parent Menu"
-               :hint  "Which top-level menu this page appears under. Top level gives it its own menu item."}
+               :hint  (str "Which top-level menu this page appears under. The top row is full at "
+                           ui.nav/max-top-level " items — the header is a grid, not a wrap — so a "
+                           "page left at top level when there is no room stays off the menu. "
+                           "File it under a parent and it becomes a dropdown item there.")}
               (adm/select-input {:name "parent_slug"} parent-options (or (:parent_slug p) "")))
    (adm/field {:label "Position"
                :hint  "Order within that menu — 1 is first. Leave blank to put it last."}

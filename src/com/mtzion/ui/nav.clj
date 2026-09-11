@@ -90,6 +90,17 @@
 (defn- page-path [{:keys [slug parent_slug]}]
   (if (seq parent_slug) (str "/" parent_slug "/" slug) (str "/" slug)))
 
+(def max-top-level
+  "The header is a four-column grid either side of the wordmark, with the
+  Preschool chip pinned after it. A ninth item does not wrap - it shifts
+  everything and the chip collides with the last link. So top-level CMS pages
+  are capped, and anything beyond the cap is filed under its parent instead of
+  silently breaking the header.
+
+  Raise this only alongside the grid in tailwind.css that places
+  nth-child(1..4) left and (5..8) right."
+  (count church-fallback-nav))
+
 (defn build-nav
   "Merge CMS pages into the static nav skeleton.
 
@@ -116,12 +127,17 @@
                                                             kids))))))
                            church-fallback-nav)]
        ;; top-level CMS pages slot in by nav_order, after the static items that
-       ;; share or precede that position.
+       ;; share or precede that position - but only while there is room. The
+       ;; header cannot show more than max-top-level without breaking its grid,
+       ;; and a page quietly missing from the menu is a far smaller failure than
+       ;; a menu that overlaps the Preschool chip.
        (reduce (fn [acc p]
-                 (let [item {:label (:nav_label p) :slug (:slug p)
-                             :path (page-path p) :has-children? false :scroll? false}
-                       pos  (min (count acc) (max 0 (dec (or (:nav_order p) 9999))))]
-                   (vec (concat (take pos acc) [item] (drop pos acc)))))
+                 (if (>= (count acc) max-top-level)
+                   acc
+                   (let [item {:label (:nav_label p) :slug (:slug p)
+                               :path (page-path p) :has-children? false :scroll? false}
+                         pos  (min (count acc) (max 0 (dec (or (:nav_order p) 9999))))]
+                     (vec (concat (take pos acc) [item] (drop pos acc))))))
                with-kids
                (sort-by #(or (:nav_order %) 9999) roots))))))
 
