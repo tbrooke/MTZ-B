@@ -181,3 +181,44 @@
       (let [resp (site/leaf (assoc ctx :path-params {:page pk :section (:key s)}))]
         (is (= 200 (:status resp))
             (str pk "/" (:key s) " did not render"))))))
+
+;; ---------------------------------------------------------------------------
+;; A narrow form must not blank the columns it never showed
+;; ---------------------------------------------------------------------------
+
+(deftest saving-a-leaf-preserves-fields-it-does-not-render
+  (testing "home-worship renders [:subtitle :body :cta] — a save must leave the
+          heading and image alone rather than writing empties over them"
+    (with-temp-ctx [ctx]
+      (let [sec (outline/find-section "home" "worship")]
+        ;; the leaf really does omit these, which is what makes the bug possible
+        (is (not (contains? (set (:fields sec)) :title)))
+        (is (not (contains? (set (:fields sec)) :image)))
+
+        ;; a row carrying a heading and an image, as the live one did
+        (content/save! ctx :feature "wshp"
+                       {:page_slug  "home-worship"
+                        :title      "Gather in the Sanctuary."
+                        :subtitle   "10:30 AM"
+                        :body       "One service."
+                        :image_id   "a4556107-0b82-41fc-3559-0836d069a200"
+                        :cta_label  "Plan a visit"
+                        :cta_url    "/contact"
+                        :sort_order 0
+                        :created_at 0
+                        :updated_at 0})
+
+        ;; save exactly what that form posts — no title, no image_id
+        (save! ctx "home" "worship" nil
+               {:subtitle "10:30 AM · Every Sunday"
+                :body "<p>One service.</p>"
+                :cta_label "Plan a visit" :cta_url "/contact"})
+
+        (let [row (slot-row ctx sec)]
+          (is (= "Gather in the Sanctuary." (:title row))
+              "the heading survived a form that never showed it")
+          (is (= "a4556107-0b82-41fc-3559-0836d069a200" (:image_id row))
+              "the stained-glass window survived too")
+          (is (= "10:30 AM · Every Sunday" (:subtitle row))
+              "and the fields the form DID show were written")
+        (is (= "<p>One service.</p>" (:body row))))))))

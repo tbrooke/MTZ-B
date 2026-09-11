@@ -218,17 +218,42 @@
 ;; Column builders
 ;; ---------------------------------------------------------------------------
 
-(defn- feature-cols [{:keys [params]} page-slug]
-  {:page_slug  page-slug
-   :title      (str/trim (or (:title params) ""))
-   :subtitle   (or (:subtitle params) "")
-   :body       (or (:body params) "")
-   :image_id   (not-empty (:image_id params))
-   :cta_label  (or (:cta_label params) "")
-   :cta_url    (or (:cta_url params) "")
-   :meta       (or (:meta params) "")
-   :album      (not-empty (str/trim (or (:album params) "")))
-   :updated_at (normalize/now-epoch)})
+(def ^:private field->cols
+  "Which columns each :fields key owns. leaf-fields renders exactly these, so
+  these are the only ones a save from that leaf may touch."
+  {:title    [:title]
+   :subtitle [:subtitle]
+   :body     [:body]
+   :image    [:image_id]
+   :album    [:album]
+   :meta     [:meta]
+   :cta      [:cta_label :cta_url]})
+
+(defn- feature-cols
+  "Only the columns this leaf actually renders, so a save cannot blank a column
+  the form never showed.
+
+  This is not hypothetical. home-worship declares [:subtitle :body :cta]; the
+  form therefore has no Heading or Image input, those params arrive nil, and the
+  old version wrote every column unconditionally - so one save through the Site
+  pane silently emptied the section's heading and the stained-glass window,
+  leaving a grey box on the home page. The narrower the form, the more it could
+  destroy."
+  [{:keys [params]} page-slug fields existing]
+  (let [writable (into #{} (mapcat field->cols) fields)
+        proposed {:title     (str/trim (or (:title params) ""))
+                  :subtitle  (or (:subtitle params) "")
+                  :body      (or (:body params) "")
+                  :image_id  (not-empty (:image_id params))
+                  :cta_label (or (:cta_label params) "")
+                  :cta_url   (or (:cta_url params) "")
+                  :meta      (or (:meta params) "")
+                  :album     (not-empty (str/trim (or (:album params) "")))}]
+    (-> (reduce-kv (fn [m k v]
+                     (assoc m k (if (contains? writable k) v (get existing k))))
+                   {} proposed)
+        (assoc :page_slug page-slug
+               :updated_at (normalize/now-epoch)))))
 
 (defn- page-cols [{:keys [params]} slug existing]
   {:slug        slug
@@ -421,7 +446,7 @@
 
 (defn- save-feature! [ctx section id]
   (let [existing (when id (content/get-one ctx :feature id))
-        cols     (feature-cols ctx (:slug section))]
+        cols     (feature-cols ctx (:slug section) (:fields section) existing)]
     (if existing
       (content/save! ctx :feature id cols)
       (content/save! ctx :feature (or id (new-id))
