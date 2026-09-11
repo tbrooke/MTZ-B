@@ -38,3 +38,7 @@ access_token*
 
 # Design handoff archives — the extracted folder is what's useful, not the zip
 *.zip
+
+# Production snapshots pulled by `make backup-prod`. Real content, and the
+# offsite copy is R2 — not something to carry in git history.
+/backups/
