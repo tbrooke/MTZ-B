@@ -75,7 +75,24 @@
          [::hiccup/unsafe-html (:description ev)]])
       [:a {:class "mtz-arrow-link" :href "/contact"} "Get in Touch →"]]]))
 
-(defn- page-content [ctx events featured-events]
+(def ^:private views
+  "The three ways to read this page. `kind` is the column; nil means both.
+
+  \"What is on this Saturday\" and \"what happens every week\" are different
+  questions, and before `kind` existed the page could only answer the first by
+  drowning it in the second."
+  [{:key nil :label "Everything"}
+   {:key "event" :label "One-off events"}
+   {:key "activity" :label "Regular activities"}])
+
+(defn- view-chips [current]
+  [:div {:class "mtz-filter"}
+   (for [{:keys [key label]} views]
+     [:a {:class (str "mtz-filter-chip" (when (= key current) " is-on"))
+          :href  (if key (str "/events?show=" key) "/events")}
+      label])])
+
+(defn- page-content [ctx events featured-events current-view]
   (list
    [:section {:class "mtz-section"}
     [:p {:class "mtz-kicker"} "What's Coming Up"]
@@ -100,13 +117,18 @@
    [:section {:class "mtz-section"}
     [:div {:class "mtz-row"
            :style "justify-content: space-between; align-items: baseline; margin-bottom: 32px;"}
-     [:h2 {:class "mtz-h2" :style "margin: 0;"} "Upcoming Events"]
+     [:h2 {:class "mtz-h2" :style "margin: 0;"}
+       (if (= "activity" current-view) "Week by Week" "Upcoming Events")]
      [:a {:class "mtz-arrow-link" :href "/calendar.ics"} "Subscribe to calendar →"]]
+     (view-chips current-view)
     (if (seq events)
       [:div {:style "border-top: 1px solid var(--mtz-ink);"}
        (map #(event-row % ctx) events)]
       [:p {:class "mtz-mute" :style "padding: 32px 0;"}
-       "No upcoming events at the moment. Check back soon."])]
+       (case current-view
+         "activity" "No regular activities listed yet."
+         "event"    "No one-off events coming up — try Regular activities."
+         "No upcoming events at the moment. Check back soon.")])]
 
    ;; Sections added in the console — unlimited, in the editor's order.
    (sections/region ctx "events")
@@ -118,17 +140,24 @@
       "Subscribe to our calendar to get Mt. Zion events right in your calendar app."]
      [:a {:class "mtz-btn mtz-btn--ghost" :href "/calendar.ics"} "Subscribe (.ics)"]]]))
 
-(defn events [ctx]
+(defn events [{:keys [query-params] :as ctx}]
   (let [n-ep            (now-epoch)
+        ;; Only the two real values steer the query; anything else falls back to
+        ;; Everything rather than showing nothing for a mistyped URL.
+        current-view    (#{"event" "activity"} (get query-params "show"))
         ;; upcoming-where keeps recurring events (whose start_at is in the past
         ;; by design) in the list; next-occurrences then dates each one correctly.
         upcoming-src    (normalize (biff.sqlite/execute ctx {:select :*
                                                              :from   :event
-                                                             :where  [:and [:= :status "published"]
-                                                                      (event/upcoming-where n-ep)]}))
+                                                             :where  (cond-> [:and [:= :status "published"]
+                                                                              (event/upcoming-where n-ep)]
+                                                                       current-view (conj [:= :kind current-view]))}))
         rows            (event/next-occurrences (event/with-skips ctx upcoming-src) n-ep)
-        featured-events (filter #(= 1 (:featured %)) rows)]
-    (base/page ctx "Events — Mount Zion UCC" (page-content ctx rows featured-events))))
+        ;; Featured is a front-of-page notion; repeating it above a filtered
+        ;; list would show the same item twice on one screen.
+        featured-events (when-not current-view (filter #(= 1 (:featured %)) rows))]
+    (base/page ctx "Events — Mount Zion UCC"
+               (page-content ctx rows featured-events current-view))))
 
 (def module
   {:biff.ring/routes

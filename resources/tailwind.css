@@ -441,6 +441,31 @@
   padding-top: 4px;
 }
 .mtz-outreach-row-go { color: var(--mtz-mint-dark); padding-top: 2px; }
+
+/* ---------- events: the one-off / regular filter ---------- */
+
+.mtz-filter { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 28px; }
+.mtz-filter-chip {
+  font-family: var(--mtz-sans-menu);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 7px 16px;
+  border: 1px solid var(--mtz-rule-firm, #d5dbda);
+  border-radius: 999px;
+  color: var(--mtz-ink-soft);
+  text-decoration: none;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease;
+}
+.mtz-filter-chip:hover { border-color: var(--mtz-ink); color: var(--mtz-ink); }
+/* The selected one is filled rather than merely darker - at this size a border
+   change alone is easy to miss, and which view you are in is the whole point. */
+.mtz-filter-chip.is-on {
+  background: var(--mtz-ink);
+  border-color: var(--mtz-ink);
+  color: #fff;
+}
 @media (max-width: 700px) {
   .mtz-outreach-row { grid-template-columns: 1fr; gap: 8px; }
   .mtz-outreach-row-go { display: none; }
