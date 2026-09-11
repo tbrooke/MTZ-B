@@ -5,7 +5,11 @@
   are honest placeholders that point at the /admin screens still doing the job.
   /admin keeps working untouched throughout; both read and write the same rows."
   (:require [clojure.string :as str]
+            [com.biffweb.sqlite :as biff.sqlite]
+            [com.mtzion.content.inbox :as inbox]
             [com.mtzion.lib.middleware :refer [wrap-signed-in]]
+            [com.mtzion.model.media :as media]
+            [com.mtzion.model.outline :as outline]
             [com.mtzion.lib.ui :as ui]
             [com.mtzion.model.content :as content]
             [com.mtzion.model.event :as event]
@@ -329,15 +333,91 @@
    [:div {:class "con-card-rows"} rows]
    [:div {:class "con-card-foot"} footer]])
 
+(defn- ago
+  "Relative time, because on a dashboard \"2 days ago\" is read faster than a date
+  and the exact minute never matters."
+  [epoch]
+  (when epoch
+    (let [mins (quot (- (now-epoch) epoch) 60)]
+      (cond
+        (< mins 2)     "just now"
+        (< mins 60)    (str mins " min ago")
+        (< mins 1440)  (str (quot mins 60) "h ago")
+        (< mins 2880)  "yesterday"
+        (< mins 43200) (str (quot mins 1440) " days ago")
+        :else          (epoch->date epoch)))))
+
+(defn- recent-changes
+  "One list across every kind of content, newest first.
+
+  Each row is labelled with what actually happened, not a generic \"edited\",
+  because the tables carry different timestamps and pretending otherwise would
+  be a lie: post and event have created/published/archived but no updated_at, so
+  a re-worded post does NOT bubble to the top here. feature has updated_at, so
+  a section edit does. Adding updated_at to post and event is the fix when that
+  starts to matter."
+  [ctx]
+  (let [rows (fn [table what]
+               (for [r (normalize/snake-keys-all
+                        (biff.sqlite/execute
+                         ctx {:select :* :from table :limit 40
+                              :order-by [[(case table
+                                            :feature :updated_at
+                                            :image   :uploaded_at
+                                            :created_at) :desc]]}))]
+                 (what r)))]
+    (->> (concat
+          (rows :post (fn [r]
+                        (let [[at verb] (cond (:archived_at r)  [(:archived_at r) "archived"]
+                                              (:published_at r) [(:published_at r) "published"]
+                                              :else             [(:created_at r) "drafted"])]
+                          {:at at :verb verb :kind "post"
+                           :title (or (not-empty (:title r)) "Untitled")
+                           :href (str "/console/writing/" (:id r))})))
+          (rows :event (fn [r]
+                         (let [[at verb] (cond (:archived_at r)  [(:archived_at r) "archived"]
+                                               (:published_at r) [(:published_at r) "published"]
+                                               :else             [(:created_at r) "added"])]
+                           {:at at :verb (if (= "activity" (:kind r)) (str verb " · activity") verb)
+                            :kind "event" :title (:title r)
+                            :href (str "/console/calendar?id=" (:id r))})))
+          (rows :feature (fn [r]
+                           {:at (:updated_at r) :verb "edited" :kind "section"
+                            :title (or (not-empty (:title r))
+                                       (not-empty (:subtitle r))
+                                       (str "section on " (:page_slug r)))
+                            :href "/console/site"}))
+          (rows :image (fn [r]
+                         {:at (:uploaded_at r) :verb (if (seq (:album r))
+                                                       (str "added · " (:album r))
+                                                       "added")
+                          :kind "image"
+                          :title (or (not-empty (:label r)) (:id r))
+                          :href "/console/media"})))
+         (filter :at)
+         (sort-by :at >)
+         (take 12))))
+
 (defn dashboard [ctx]
-  (let [counts   (content/counts-by-status ctx :post)
-        recent   (take 5 (content/ls ctx :post {:status #{content/draft content/published}}))
-        n-ep     (now-epoch)
-        upcoming (take 5 (event/next-occurrences
-                          (event/with-skips
-                           ctx (content/live ctx :event {:where (event/upcoming-where n-ep)
-                                                         :order [[:start_at :asc]]}))
-                          n-ep))]
+  (let [post-counts  (content/counts-by-status ctx :post)
+        event-counts (content/counts-by-status ctx :event)
+        recent-posts (take 3 (content/ls ctx :post {:status #{content/draft content/published}}))
+        n-ep         (now-epoch)
+        upcoming     (take 3 (event/next-occurrences
+                              (event/with-skips
+                               ctx (content/live ctx :event {:where (event/upcoming-where n-ep)
+                                                             :order [[:start_at :asc]]}))
+                              n-ep))
+        activities   (count (content/live ctx :event {:where [:= :kind "activity"]}))
+        sections     (content/counts-by-status ctx :feature)
+        n-pages      (count outline/tree)
+        waiting      (inbox/pending-count ctx)
+        n-images     (media/total ctx)
+        n-albums     (count (media/albums ctx))
+        unfiled      (media/unfiled-count ctx)
+        archived     (reduce + (for [t [:post :event :feature :page :sermon]]
+                                 (get (content/counts-by-status ctx t) content/archived 0)))
+        changes      (recent-changes ctx)]
     (con/page "Console" (con/nav ctx nil)
               [:div {:class "con-dash"}
                [:div {:class "con-dash-head"}
@@ -345,14 +425,15 @@
                 [:span {:class "con-dash-date"}
                  (.format (java.time.LocalDate/now normalize/eastern)
                           (java.time.format.DateTimeFormatter/ofPattern "EEEE · MMM d"))]]
+
                [:div {:class "con-dash-grid"}
                 (pane-card
                  {:title "Writing" :href "/console/writing"
-                  :sub   (str (get counts content/published 0) " live · "
-                              (get counts content/draft 0) " draft")
-                  :rows  (if (empty? recent)
+                  :sub   (str (get post-counts content/published 0) " live · "
+                              (get post-counts content/draft 0) " draft")
+                  :rows  (if (empty? recent-posts)
                            [:p {:class "con-rows-empty"} "Nothing written yet."]
-                           (for [p recent]
+                           (for [p recent-posts]
                              [:a {:href (str "/console/writing/" (:id p)) :class "con-card-row"}
                               (con/status-dot (:status p))
                               [:span {:class "con-row-title"} (or (not-empty (:title p)) "Untitled")]]))
@@ -360,23 +441,80 @@
                            "+ New post"]})
 
                 (pane-card
-                 {:title "Site" :href "/console/site" :sub "Pages & sections"
-                  :rows  [:p {:class "con-rows-empty"}
-                          "The page outline is the next thing being built."]
-                  :footer [:a {:href "/admin/pages" :class "con-btn con-btn--ghost"}
-                           "Edit pages in /admin"]})
+                 {:title "Site" :href "/console/site"
+                  :sub   (str n-pages " pages")
+                  :rows  [:div
+                          [:span {:class "con-card-row"}
+                           [:span {:class "con-row-title"}
+                            (str (get sections content/published 0) " sections live")]]
+                          [:span {:class "con-card-row"}
+                           [:span {:class "con-row-title"}
+                            (str (get sections content/draft 0) " in draft")]]
+                          [:span {:class "con-card-row"}
+                           [:span {:class "con-row-title"} "Church & Preschool"]]]
+                  :footer [:a {:href "/console/site" :class "con-btn con-btn--ghost"}
+                           "Open the outline"]})
 
                 (pane-card
-                 {:title "Calendar" :href "/console/calendar" :sub "Events"
+                 {:title "Calendar" :href "/console/calendar"
+                  :sub   (str (get event-counts content/published 0) " live · " activities " regular")
                   :rows  (if (empty? upcoming)
                            [:p {:class "con-rows-empty"} "No upcoming events."]
                            (for [e upcoming]
                              [:span {:class "con-card-row"}
-                              [:span {:class "con-card-date"}
-                               (or (event-day (:start_at e)) "")]
+                              [:span {:class "con-card-date"} (or (event-day (:start_at e)) "")]
                               [:span {:class "con-row-title"} (:title e)]]))
-                  :footer [:a {:href "/admin/events" :class "con-btn con-btn--ghost"}
-                           "Edit events in /admin"]})]])))
+                  :footer [:a {:href "/console/calendar/new" :class "con-btn con-btn--primary"}
+                           "+ New event"]})
+
+                (pane-card
+                 {:title "Media" :href "/console/media"
+                  :sub   (str n-images " images")
+                  :rows  [:div
+                          [:span {:class "con-card-row"}
+                           [:span {:class "con-row-title"} (str n-albums " albums")]]
+                          [:span {:class "con-card-row"}
+                           [:span {:class "con-row-title"}
+                            (if (pos? unfiled) (str unfiled " unfiled") "all filed")]]]
+                  :footer [:a {:href "/console/media" :class "con-btn con-btn--ghost"} "Open media"]})
+
+                (pane-card
+                 ;; The only card that can be urgent, so it says so rather than
+                 ;; showing a zero that reads the same as every other count.
+                 {:title "Inbox" :href "/console/inbox"
+                  :sub   (if (pos? waiting) (str waiting " waiting") "clear")
+                  :rows  [:p {:class "con-rows-empty"}
+                          (if (pos? waiting)
+                            (str waiting " item" (when (> waiting 1) "s")
+                                 " from a bulletin drop need a decision.")
+                            "Nothing waiting. Drop a bulletin to stage content.")]
+                  :footer [:a {:href "/console/inbox"
+                               :class (if (pos? waiting) "con-btn con-btn--primary" "con-btn con-btn--ghost")}
+                           (if (pos? waiting) "Review now" "Open inbox")]})
+
+                (pane-card
+                 {:title "Archive" :href "/console/archive"
+                  :sub   (str archived " items")
+                  :rows  [:p {:class "con-rows-empty"}
+                          (if (pos? archived)
+                            "Everything taken off the site, across all types. Restorable."
+                            "Nothing archived.")]
+                  :footer [:a {:href "/console/archive" :class "con-btn con-btn--ghost"}
+                           "Open archive"]})]
+
+               ;; What happened lately, across everything. The panes answer "what
+               ;; is there"; nothing answered "what changed" until now.
+               [:section {:class "con-dash-recent"}
+                [:h2 {:class "con-dash-recent-title"} "Recent changes"]
+                (if (empty? changes)
+                  [:p {:class "con-rows-empty"} "Nothing yet."]
+                  [:div {:class "con-recent-list"}
+                   (for [c changes]
+                     [:a {:href (:href c) :class "con-recent-row"}
+                      [:span {:class "con-recent-when"} (ago (:at c))]
+                      [:span {:class "con-recent-kind"} (:kind c)]
+                      [:span {:class "con-recent-title"} (:title c)]
+                      [:span {:class "con-recent-verb"} (:verb c)]])])]])))
 
 ;; ---------------------------------------------------------------------------
 ;; Panes not built yet

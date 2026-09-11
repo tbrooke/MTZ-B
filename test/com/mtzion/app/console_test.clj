@@ -178,3 +178,36 @@
     (let [id (create! ctx {:title "Only one"})]
       (is (= "only-one" (unique-slug ctx "only-one" id)))
       (is (= "only-one-2" (unique-slug ctx "only-one" nil))))))
+
+;; ---------------------------------------------------------------------------
+;; The dashboard — every pane, and what changed lately
+;; ---------------------------------------------------------------------------
+
+(deftest dashboard-shows-a-card-for-every-pane
+  (testing "the console home must not go stale as panes get built — it once still
+            said the Site pane was 'the next thing being built' and linked to
+            /admin, months after the pane existed"
+    (with-temp-ctx [ctx]
+      (let [html (str (:body (console/dashboard ctx)))]
+        (doseq [pane ["Writing" "Site" "Calendar" "Media" "Inbox" "Archive"]]
+          (is (str/includes? html pane) (str "no card for " pane)))
+        (doseq [href ["/console/writing" "/console/site" "/console/calendar"
+                      "/console/media" "/console/inbox" "/console/archive"]]
+          (is (str/includes? html href) (str "nothing links to " href)))
+        (is (not (str/includes? html "/admin/pages"))
+            "the Site card still points at the old admin")
+        (is (not (str/includes? html "next thing being built"))
+            "the placeholder copy is still there")))))
+
+(deftest dashboard-recent-changes-lists-real-work
+  (testing "a post and an event appear in Recent changes, newest first, each
+            labelled with what actually happened to it"
+    (with-temp-ctx [ctx]
+      (let [id (create! ctx {:title "Dashboard Probe" :category "news"})]
+        (content/publish! ctx :post id)
+        (let [html (str (:body (console/dashboard ctx)))]
+          (is (str/includes? html "Recent changes"))
+          (is (str/includes? html "Dashboard Probe")
+              "a published post is not in the feed")
+          (is (str/includes? html "published")
+              "the feed does not say what happened"))))))

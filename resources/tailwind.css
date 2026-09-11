@@ -1577,7 +1577,52 @@ body {
 .con-dash-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
 .con-dash-title { font-family: var(--adm-serif); font-size: 30px; font-weight: 600; letter-spacing: -0.022em; margin: 0; }
 .con-dash-date { font-family: var(--adm-mono); font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--con-ink-mute); }
+/* Capped at three so six cards read as two rows of three rather than whatever
+   auto-fit makes of the viewport — 4+2 looks like something went wrong. */
 .con-dash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+@media (min-width: 980px) { .con-dash-grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* ---------- console: recent changes ---------- */
+
+.con-dash-recent { margin-top: 28px; }
+.con-dash-recent-title {
+  font-family: var(--adm-serif); font-size: 19px; font-weight: 600;
+  margin: 0 0 12px; color: var(--con-ink);
+}
+.con-recent-list { border-top: 1px solid var(--con-rule); }
+.con-recent-row {
+  display: grid;
+  grid-template-columns: 92px 64px 1fr auto;
+  gap: 14px;
+  align-items: baseline;
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--con-rule);
+  text-decoration: none;
+  color: inherit;
+  font-size: 13px;
+}
+.con-recent-row:hover { background: var(--con-draft-bg); }
+.con-recent-when {
+  font-family: var(--adm-mono); font-size: 11px; color: var(--con-ink-mute);
+  white-space: nowrap;
+}
+/* The type is a fixed-width column so the eye can filter by it while scanning,
+   which is most of what this list is for. */
+.con-recent-kind {
+  font-family: var(--adm-mono); font-size: 10px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--con-ink-mute);
+}
+.con-recent-title {
+  color: var(--con-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.con-recent-verb {
+  font-family: var(--adm-mono); font-size: 10px; letter-spacing: 0.06em;
+  color: var(--con-ink-mute); white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .con-recent-row { grid-template-columns: 1fr auto; }
+  .con-recent-kind, .con-recent-when { grid-row: 2; }
+}
 
 .con-card {
   background: var(--con-panel); border: 1px solid var(--con-rule);
