@@ -79,8 +79,15 @@
    {:label "Worship"    :slug "worship"    :path "/worship"    :has-children? true  :scroll? true
     :submenu [{:label "Sunday Worship" :path "/worship/sundays"}
               {:label "Current Theme"  :path "/worship/theme"}]}
-   {:label "Events"     :slug "events"     :path "/events"     :has-children? false :scroll? false}
-   {:label "Activities" :slug "activities" :path "/activities" :has-children? false :scroll? false}
+   ;; Activities used to sit here as a ninth-of-eight top-level item. They are
+   ;; the same records as events now - one table, told apart by `kind` - so two
+   ;; menu items for one thing filtered two ways was describing the old schema,
+   ;; not the current one. Filed under Events, which also buys the header a
+   ;; truly centred wordmark: seven items split 4/3, and the Preschool chip
+   ;; balances the shorter side.
+   {:label "Events"     :slug "events"     :path "/events"     :has-children? true  :scroll? false
+    :submenu [{:label "What's On"   :path "/events"}
+              {:label "Activities"  :path "/activities"}]}
    {:label "News"       :slug "news"       :path "/news"       :has-children? true  :scroll? true
     :submenu [{:label "Newsletter"    :path "/news"}
               {:label "Announcements" :path "/news"}]}

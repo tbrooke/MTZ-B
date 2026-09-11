@@ -6,6 +6,9 @@
    ============================================================= */
 
 :root {
+  /* Room the Preschool chip needs, reserved on both sides of the header so
+     the wordmark centres. Keep in step with .mtz-flip-chip's own width. */
+  --mtz-chip-w: 132px;
   --mtz-serif-display: 'EB Garamond', 'Source Serif 4', Georgia, serif;
   --mtz-serif-body:    'Source Serif 4', 'EB Garamond', Georgia, serif;
   --mtz-sans-menu:     'IBM Plex Sans', system-ui, -apple-system, Arial, sans-serif;
@@ -79,11 +82,30 @@
   transition: padding 200ms ease;
   max-width: var(--mtz-page-w);
   margin: 0 auto;
+  /* Symmetric padding reserves the chip's room on BOTH sides so the wordmark
+     lands on the true centre of the bar. It used to sit in a fourth grid column
+     of its own, which pushed the wordmark left by half the chip's width - a
+     skew you could see against the hero photo below it. */
   padding: 14px 36px;
+  padding-right: calc(36px + var(--mtz-chip-w));
+  padding-left: calc(36px + var(--mtz-chip-w));
   display: grid;
-  grid-template-columns: 1fr auto 1fr auto;
+  /* minmax(0,1fr), not 1fr: a bare 1fr is "at least min-content, then share the
+     rest", so the four-item left nav claimed a wider column than the three-item
+     right one and pulled the wordmark off centre by half the difference.
+     minmax(0,...) lets the tracks go narrower than their content and so makes
+     them genuinely equal. */
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
   gap: 24px;
+  position: relative;
+}
+/* Out of flow, so it cannot influence where the wordmark lands. */
+.mtz-header-inner > .mtz-flip-chip {
+  position: absolute;
+  right: 36px;
+  top: 50%;
+  transform: translateY(-50%);
 }
 .mtz-nav--left  { justify-content: flex-end; align-self: center; margin-top: 10px; }
 .mtz-wordmark   { align-self: center; }
@@ -94,7 +116,8 @@
 .mtz-nav-link {
   font-family: var(--mtz-sans-menu);
   font-weight: 600;
-  font-size: 15px;
+  /* 15px when the bar carried eight items. Seven leaves room to breathe. */
+  font-size: 16px;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--mtz-ink);
