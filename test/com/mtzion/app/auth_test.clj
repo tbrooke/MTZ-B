@@ -22,10 +22,10 @@
         (is (= :done (auth/create-admin! ctx "Admin@Example.com" "pass1"))))
       (testing "create-admin! upserts on repeat call (normalises email)"
         (is (= :done (auth/create-admin! ctx "admin@example.com" "pass2"))))
-      (testing "correct password redirects to /admin and sets :uid"
+      (testing "correct password lands on the console and sets :uid"
         (let [resp (auth/signin-post (req {:email "admin@example.com" :password "pass2"}))]
           (is (= 303 (:status resp)))
-          (is (= "/admin" (get-in resp [:headers "location"])))
+          (is (= "/console" (get-in resp [:headers "location"])))
           (is (uuid? (get-in resp [:session :uid])))))
       (testing "wrong password redirects to error page, no :uid"
         (let [resp (auth/signin-post (req {:email "admin@example.com" :password "wrong"}))]
@@ -34,7 +34,34 @@
           (is (nil? (get-in resp [:session :uid])))))
       (testing "email matching is case-insensitive"
         (let [resp (auth/signin-post (req {:email "ADMIN@EXAMPLE.COM" :password "pass2"}))]
-          (is (= "/admin" (get-in resp [:headers "location"])))))
+          (is (= "/console" (get-in resp [:headers "location"])))))
       (testing "unknown email redirects to error page"
         (let [resp (auth/signin-post (req {:email "nobody@example.com" :password "pass2"}))]
-          (is (= "/admin/signin?error=1" (get-in resp [:headers "location"]))))))))
+          (is (= "/admin/signin?error=1" (get-in resp [:headers "location"])))))
+
+      (testing "a `next` sends you where you were headed, not to the console"
+        (let [resp (auth/signin-post
+                    (req {:email "admin@example.com" :password "pass2"
+                          :next "/console/writing?id=abc"}))]
+          (is (= "/console/writing?id=abc" (get-in resp [:headers "location"])))))
+
+      (testing "a failed attempt keeps the destination"
+        (let [resp (auth/signin-post
+                    (req {:email "admin@example.com" :password "wrong"
+                          :next "/console/calendar"}))]
+          (is (= "/admin/signin?error=1&next=%2Fconsole%2Fcalendar"
+                 (get-in resp [:headers "location"])))))
+
+      ;; The destination is attacker-supplied — it arrives in a query string, so
+      ;; anyone can mail a link. Each of these must fall back to the console
+      ;; rather than forward a signed-in visitor off the site.
+      (testing "an off-site `next` is refused"
+        (doseq [evil ["//evil.example/phish"
+                      "https://evil.example/phish"
+                      "/\\evil.example/phish"
+                      "javascript:alert(1)"
+                      "evil.example"]]
+          (let [resp (auth/signin-post
+                      (req {:email "admin@example.com" :password "pass2" :next evil}))]
+            (is (= "/console" (get-in resp [:headers "location"]))
+                (str "should not follow " evil))))))))
