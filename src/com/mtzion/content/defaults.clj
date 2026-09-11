@@ -91,7 +91,30 @@
    "ps-enroll-facts"
    [{:title "Hours"    :meta "8:30 AM – 12:30 PM"}
     {:title "Calendar" :meta "September – May"}
-    {:title "License"  :meta "NC 5-Star Center"}]})
+    {:title "License"  :meta "NC 5-Star Center"}]
+
+
+   ;; --- Outreach partners ------------------------------------------------
+   ;; Mirrors model.outreach/partners so the console can adopt them. The
+   ;; structure - slug, external URL, submenu entry - stays in model.outreach
+   ;; because it is addressing, not copy. What an editor would ever want to
+   ;; change is the wording, and that is what lands here.
+   "outreach-partners"
+   [{:title "Rowan Helping Ministries" :subtitle "Food, shelter & crisis help"
+     :meta  "Salisbury"
+     :body  "Food, shelter and crisis assistance for neighbours across Rowan County."}
+    {:title "Main Street Marketplace" :subtitle "Affordable groceries · China Grove"
+     :meta  "306 S. Main Street, China Grove"
+     :body  "A non-profit market on Main Street selling fresh food on a sliding scale."}
+    {:title "Meals on Wheels Rowan" :subtitle "Weekday meals for homebound seniors"
+     :meta  "Rowan County"
+     :body  "Hot meals delivered each weekday to homebound seniors across the county."}
+    {:title "Habitat for Humanity" :subtitle "Building homes in Rowan County"
+     :meta  "1707 S. Main Street, Salisbury"
+     :body  "Building and improving homes alongside families who need them."}
+    {:title "South Side Church of God" :subtitle "Neighbourhood food pantry"
+     :meta  "China Grove"
+     :body  "A neighbouring congregation running a food pantry in China Grove."}]})
 
 (def by-slug preschool)
 

@@ -102,6 +102,14 @@
     [{:key "body" :label "Page body" :kind :body :slug "outreach"
       :note (str "A body here REPLACES the whole designed Outreach page. Leave it "
                  "empty to keep the designed one and add Sections below instead.")}
+     {:key "partners" :label "The partners" :kind :list :slug "outreach-partners"
+      :fields [:title :subtitle :meta :body] :defaults? true
+      :note (str "The five organisations, shown on this page AND as the tiles on "
+                 "the home page AND in the Outreach menu. Take these over to "
+                 "reword them. Heading is the name, Kicker the line above it, "
+                 "Meta the location, Body the one-line summary. The longer text "
+                 "on each partner's own page, and their website link, stay in "
+                 "the design.")}
      {:key "sections" :label "Sections" :kind :list :slug "outreach"
       :fields all-fields}]}
 

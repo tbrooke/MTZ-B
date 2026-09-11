@@ -2,6 +2,7 @@
   (:require [clojure.string :as str]
             [com.biffweb.sqlite :as biff.sqlite]
             [com.mtzion.app.home-sections :as home-sections]
+            [com.mtzion.ui.sections :as sections]
             [com.mtzion.model.church :as church]
             [com.mtzion.model.event :as event]
             [com.mtzion.model.normalize :as norm]
@@ -173,6 +174,7 @@
                                               :image-url (cf-img-url ctx (:image_id f) "public")})
                                            activity-cards)
                                :blurb activity-blurb}
+                  :outreach (sections/rows ctx "outreach-partners")
                   :news     (when (seq latest-posts)
                               (map (fn [p]
                                      {:tag       "News"

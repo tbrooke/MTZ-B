@@ -343,7 +343,9 @@
   ([ministries]
    ;; model.outreach is the one list: this grid, the /outreach page and the
    ;; Outreach submenu all read it, so they cannot drift apart.
-   (let [items (concat (or (seq ministries) outreach/partners) [outreach-cta])]
+   ;; `ministries` is whatever the console has adopted, layered over the shipped
+   ;; list by model.outreach/merge-cms - same rule the /outreach page follows.
+   (let [items (concat (outreach/merge-cms ministries) [outreach-cta])]
      [:section {:id "outreach" :class "mtz-section--tint"}
       [:div {:class "mtz-section-inner"}
        [:div {:class "mtz-row"

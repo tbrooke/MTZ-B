@@ -122,3 +122,50 @@
 
 (defn by-slug [slug]
   (first (filter #(= slug (:slug %)) partners)))
+
+(defn- slugify [s]
+  (-> (or s "") clojure.string/lower-case clojure.string/trim
+      (clojure.string/replace #"[^a-z0-9]+" "-")
+      (clojure.string/replace #"^-+|-+$" "")))
+
+(defn merge-cms
+  "Partner list with the console's rows layered over it.
+
+  A row whose Heading matches a shipped partner rewords that partner - name,
+  kicker, location and one-line summary. The rest of that partner (slug, website
+  link, the long body on its own page) stays in this file, because it is
+  addressing and research rather than copy anyone would retype.
+
+  A row whose Heading matches nothing is a NEW partner, kept with a slug derived
+  from its title. Dropping it instead would mean the console offering an Add
+  button that silently does nothing - which is exactly what outline_test's drift
+  guard exists to catch, and did.
+
+  Shipped partners keep their order; new ones follow, in the editor's order."
+  [rows]
+  (if-not (seq rows)
+    partners
+    (let [by-title (into {} (map (juxt :title identity)) rows)
+          known    (into #{} (map :name) partners)
+          reworded (mapv (fn [p]
+                           (if-let [r (get by-title (:name p))]
+                             (cond-> p
+                               (seq (:title r))    (assoc :name (:title r))
+                               (seq (:subtitle r)) (assoc :note (:subtitle r))
+                               (seq (:meta r))     (assoc :where (:meta r))
+                               (seq (:body r))     (assoc :summary (:body r)))
+                             p))
+                         partners)
+          added    (for [r rows
+                         :when (and (seq (:title r)) (not (known (:title r))))]
+                     {:slug    (slugify (:title r))
+                      :name    (:title r)
+                      :note    (or (not-empty (:subtitle r)) "Outreach partner")
+                      :where   (or (not-empty (:meta r)) "")
+                      :url     nil
+                      :summary (or (not-empty (:body r)) "")
+                      ;; No researched paragraphs for a partner added here, so the
+                      ;; detail page shows its summary rather than a blank column.
+                      :body    [(or (not-empty (:body r)) "")]
+                      :involve "Ask the church office how to get involved."})]
+      (into reworded added))))

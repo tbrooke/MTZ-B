@@ -21,6 +21,12 @@
     [:p {:style "color: var(--mtz-ink-soft); margin: 0; font-size: 15px;"} (:summary p)]]
    [:span {:class "mtz-outreach-row-go" :aria-hidden "true"} "→"]])
 
+(defn- partners
+  "Adopted rows if the console has any, the shipped list otherwise. Same rule as
+  the preschool page: the moment a row exists the defaults stop applying."
+  [ctx]
+  (outreach/merge-cms (sections/rows ctx "outreach-partners")))
+
 (defn- page-content [ctx]
   (list
    [:section {:class "mtz-section"}
@@ -36,7 +42,7 @@
    [:section {:class "mtz-section"}
     [:div {:class "mtz-section-inner"}
      [:div {:class "mtz-outreach-list"}
-      (map partner-row outreach/partners)]]]
+      (map partner-row (partners ctx))]]]
 
    [:section {:class "mtz-section--cream"}
     [:div {:class "mtz-section-inner"}
@@ -114,7 +120,7 @@
                  (page-content ctx)))))
 
 (defn partner [{:keys [path-params] :as ctx}]
-  (if-let [p (outreach/by-slug (:slug path-params))]
+  (if-let [p (first (filter #(= (:slug path-params) (:slug %)) (partners ctx)))]
     (base/page ctx (str (:name p) " — Mount Zion UCC") (partner-page p))
     {:status 404 :headers {"content-type" "text/html"}
      :body "Not found"}))
