@@ -1,5 +1,6 @@
 (ns com.mtzion.ui.nav
-  "Navigation and footer components for the public site.")
+  "Navigation and footer components for the public site."
+  (:require [com.mtzion.model.outreach :as outreach]))
 
 ;; --- SVGs ---
 
@@ -91,7 +92,13 @@
    {:label "News"       :slug "news"       :path "/news"       :has-children? true  :scroll? true
     :submenu [{:label "Newsletter"    :path "/news"}
               {:label "Announcements" :path "/news"}]}
-   {:label "Outreach"   :slug "outreach"   :path "/outreach"   :has-children? false :scroll? true}
+   ;; Built from model.outreach, so adding a partner there puts it in the menu
+   ;; without editing this list - the same vector the home tiles and the
+   ;; /outreach page read.
+   {:label "Outreach"   :slug "outreach"   :path "/outreach"   :has-children? true  :scroll? true
+    :submenu (into [{:label "All Outreach" :path "/outreach"}]
+                   (map (fn [p] {:label (:name p) :path (outreach/path p)})
+                        outreach/partners))}
    {:label "Contact"    :slug "contact"    :path "/contact"    :has-children? false :scroll? true}])
 
 (defn- page-path [{:keys [slug parent_slug]}]

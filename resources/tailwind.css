@@ -398,6 +398,53 @@
   border-radius: var(--mtz-radius-lg);
   overflow: hidden;
 }
+
+/* ---------- outreach: linked cards and the overview list ---------- */
+
+/* A card that is a link. The whole tile is the target rather than a small
+   "read more" — a 28px card with one sentence in it has no room for a second
+   affordance, and the tile is already the thing people aim at. */
+.mtz-card--link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+.mtz-card--link:hover {
+  transform: translateY(-2px);
+  border-color: var(--mtz-ink);
+  box-shadow: 0 10px 28px -20px rgba(0,0,0,0.35);
+}
+.mtz-card--link:hover .mtz-h3 { color: var(--mtz-mint-dark); }
+/* The sixth tile is a way onward, not a ministry — tinted so it does not read
+   as a partner with a missing description. */
+.mtz-card--cta { background: var(--mtz-bg-tint); }
+
+.mtz-outreach-list { border-top: 1px solid var(--mtz-ink); }
+.mtz-outreach-row {
+  display: grid;
+  grid-template-columns: 200px 1fr 24px;
+  gap: 32px;
+  align-items: start;
+  padding: 26px 0;
+  border-bottom: 1px solid var(--mtz-rule);
+  text-decoration: none;
+  color: inherit;
+  transition: background 160ms ease;
+}
+.mtz-outreach-row:hover { background: var(--mtz-bg-tint); }
+.mtz-outreach-row:hover .mtz-h3 { color: var(--mtz-mint-dark); }
+.mtz-outreach-row-meta {
+  font-family: var(--mtz-mono, ui-monospace, monospace);
+  font-size: 13px;
+  color: var(--mtz-mint-dark);
+  padding-top: 4px;
+}
+.mtz-outreach-row-go { color: var(--mtz-mint-dark); padding-top: 2px; }
+@media (max-width: 700px) {
+  .mtz-outreach-row { grid-template-columns: 1fr; gap: 8px; }
+  .mtz-outreach-row-go { display: none; }
+}
 .mtz-card-body { padding: 24px; }
 .mtz-card-meta {
   font-family: var(--mtz-sans-menu);

@@ -3,6 +3,7 @@
   back to the static defaults below, so the page never renders empty."
   (:require [clojure.string :as str]
             [com.mtzion.model.church :as church]
+            [com.mtzion.model.outreach :as outreach]
             [lambdaisland.hiccup :as hiccup]))
 
 ;; ---------------------------------------------------------------------------
@@ -329,21 +330,20 @@
 ;; OUTREACH PREVIEW
 ;; ---------------------------------------------------------------------------
 
-(def ^:private default-outreach
-  [{:name "Rowan Helping Ministries"
-    :note "Monthly food sort · first Saturday"
-    :body "Sorting and distributing donations for our neighbors in need across Rowan County."}
-   {:name "Habitat for Humanity"
-    :note "Spring & fall builds"
-    :body "Mt Zion volunteers join two builds each year, with lunch provided on site."}
-   {:name "China Grove Backpack"
-    :note "Weekly · school year"
-    :body "Packing weekend meals for elementary students who need food at home."}])
+(def ^:private outreach-cta
+  "The sixth tile. Five partners fill a three-across grid awkwardly, and the
+  honest filler is the way through to the rest rather than a sixth ministry
+  invented to square the layout."
+  {:cta? true :name "All our outreach" :note "Overview"
+   :summary "How Mt. Zion works with each partner, and how to get involved."
+   :href "/outreach"})
 
 (defn outreach-section
   ([] (outreach-section nil))
   ([ministries]
-   (let [items (or (seq ministries) default-outreach)]
+   ;; model.outreach is the one list: this grid, the /outreach page and the
+   ;; Outreach submenu all read it, so they cannot drift apart.
+   (let [items (concat (or (seq ministries) outreach/partners) [outreach-cta])]
      [:section {:id "outreach" :class "mtz-section--tint"}
       [:div {:class "mtz-section-inner"}
        [:div {:class "mtz-row"
@@ -354,10 +354,13 @@
         [:a {:class "mtz-arrow-link" :href "/outreach"} "All ministries →"]]
        [:div {:class "mtz-grid mtz-grid--3"}
         (for [o items]
-          [:article {:class "mtz-card" :style "padding: 28px;"}
+          [:a {:class (str "mtz-card mtz-card--link" (when (:cta? o) " mtz-card--cta"))
+               :style "padding: 28px;"
+               :href  (or (:href o) (outreach/path o))}
            [:p {:class "mtz-card-meta"} (:note o)]
            [:h3 {:class "mtz-h3" :style "font-size: 22px;"} (:name o)]
-           [:p {:style "color: var(--mtz-ink-soft); margin: 0; font-size: 15px;"} (:body o)]])]]])))
+           [:p {:style "color: var(--mtz-ink-soft); margin: 0; font-size: 15px;"}
+            (:summary o)]])]]])))
 
 ;; ---------------------------------------------------------------------------
 ;; COMPOSED HOME PAGE
