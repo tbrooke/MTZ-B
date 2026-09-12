@@ -43,8 +43,15 @@ push-content:
 	scp $(FILE) $(REMOTE):$(APP_DIR)/content-inbox/
 	@# content-inbox is bind-mounted and the container runs as uid 10001, so a
 	@# file owned by the ssh user cannot be archived by --apply.
+	@#
+	@# Just the one file. This was `chown -R ... /c`, which also took CONTRACT.md
+	@# and examples/ away from the deploy user — both are tracked, so the next
+	@# `git pull` could not rewrite them and every deploy died on
+	@# "unable to unlink old 'content-inbox/CONTRACT.md': Permission denied".
+	@# The directory itself stays owner 10001, group 1000, mode 775 so that the
+	@# container can archive into it and git can still update the tracked files.
 	ssh $(REMOTE) "docker run --rm -v $(APP_DIR)/content-inbox:/c alpine:3.20 \
-	  chown -R 10001:10001 /c"
+	  chown 10001:1000 /c/$(notdir $(FILE))"
 	@echo "Dropped. Next: make import-prod"
 
 import-prod:
@@ -67,11 +74,16 @@ push:
 
 ## deploy: pull + rebuild + restart the container (does NOT change what is public)
 deploy:
-	ssh $(REMOTE) 'set -e; cd $(APP_DIR) && \
-	  git pull --ff-only && \
-	  $(COMPOSE) build && \
-	  $(COMPOSE) up -d && \
-	  echo "--- waiting for health ---" && \
+	@# Separated by `;`, not `&&`, on purpose. Chained with `&&`, a failing
+	@# git pull or build short-circuited to the trailing statements and the
+	@# deploy reported "did not become healthy in 120s" — a health timeout that
+	@# never happened — while the real error scrolled past 40 lines of logs.
+	@# With `;` and set -e, each step fails where it fails.
+	ssh $(REMOTE) 'set -e; cd $(APP_DIR); \
+	  git pull --ff-only; \
+	  $(COMPOSE) build; \
+	  $(COMPOSE) up -d; \
+	  echo "--- waiting for health ---"; \
 	  for i in $$(seq 1 40); do \
 	    if curl -fsS -o /dev/null http://127.0.0.1:3100/_biff/admin/health; then echo "healthy"; exit 0; fi; \
 	    sleep 3; \
