@@ -8,6 +8,7 @@
             [com.mtzion.app.about :as about]
             [com.mtzion.app.activities :as activities]
             [com.mtzion.app.admin :as content-admin]
+            [com.mtzion.app.mcp :as mcp]
             [com.mtzion.app.media :as media]
             [com.mtzion.app.auth :as auth]
             [com.mtzion.app.calendar :as calendar]
@@ -56,6 +57,7 @@
    site/module
    calendar/module
    inbox/module
+   mcp/module
    library/module
    media/module
    landing/module

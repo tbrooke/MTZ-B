@@ -41,6 +41,10 @@
  ;; Falls back to :mailersend/reply-to when unset.
  :mtz/contact-to #biff/env CONTACT_TO
 
+ ;; Shared secret for the MCP endpoint at /mcp. UNSET MEANS THE ENDPOINT IS
+ ;; OFF — it answers 503 rather than serving the calendar to anyone who asks.
+ :mtz/mcp-token #biff/secret MCP_TOKEN
+
  ;; Cloudflare Web Analytics site token. NOT a secret — it is visible in the
  ;; page source by design. Unset means no beacon is emitted at all, so local
  ;; development and tests never report traffic.
