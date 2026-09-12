@@ -16,6 +16,48 @@
             [com.mtzion.model.media :as media]
             [lambdaisland.hiccup :as hiccup]))
 
+(defn prose
+  "A stored body, rendered as what it is.
+
+  Every `:body` field in the Site pane is a Tiptap editor, so the moment anyone
+  touches one it holds HTML — `<p>One service…</p>`. But the shipped default for
+  the same slot is a plain sentence, and a slot's default is what renders until
+  somebody adopts it. Both have to work through one call site.
+
+  Putting HTML in a hiccup text position escapes it, which is how an editor came
+  to see the literal `</p>` they had just typed sitting on the home page.
+
+  app/preschool met this first and grew a private `para`; this is that function,
+  lifted so there is one of it, with an attrs arity because the designed slots
+  carry their typography inline. Block content gets a div — a <p> inside a <p>
+  is unnested by the browser and takes the surrounding styling with it."
+  ([s] (prose nil s))
+  ([attrs s]
+   (when (seq s)
+     (if (str/starts-with? (str/trim s) "<")
+       [:div (update (or attrs {}) :class #(str/trim (str % " mtz-rich")))
+        [::hiccup/unsafe-html s]]
+       [:p (or attrs {}) s]))))
+
+(defn plain
+  "The same body flattened to one line of text, for the few places the design
+  really is a single line — a card summary beside a heading. Tags are dropped
+  rather than escaped, so an edited field degrades to its words instead of
+  showing markup."
+  [s]
+  (when (seq s)
+    (-> (str s)
+        (str/replace #"<[^>]*>" " ")
+        (str/replace "&nbsp;" " ")
+        (str/replace "&amp;" "&")
+        (str/replace "&lt;" "<")
+        (str/replace "&gt;" ">")
+        (str/replace "&quot;" "\"")
+        (str/replace "&#39;" "'")
+        (str/replace #"\s+" " ")
+        str/trim
+        not-empty)))
+
 (defn image-url
   "Cloudflare delivery URL. The account hash segment is required — without it
   the URL 404s, which is why images silently never appeared."

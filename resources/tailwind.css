@@ -2021,3 +2021,12 @@ a.con-card-row:hover { color: var(--con-terra); }
   display: block; border-radius: 6px;
   border: 1px solid var(--mtz-rule);
 }
+
+/* A stored Tiptap body dropped into a designed slot. The slot styles the
+   wrapper; these keep the paragraphs Tiptap emits from adding a browser
+   default margin on top of it, and stop a trailing empty <p> — which Tiptap
+   writes for a blank line — from opening a gap at the end of the block. */
+.mtz-rich > p { margin: 0 0 0.85em; }
+.mtz-rich > :first-child { margin-top: 0; }
+.mtz-rich > :last-child { margin-bottom: 0; }
+.mtz-rich > p:empty:last-child { display: none; }

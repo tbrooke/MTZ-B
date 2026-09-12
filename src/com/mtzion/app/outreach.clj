@@ -18,7 +18,8 @@
    [:div {:class "mtz-outreach-row-meta"} (:note p)]
    [:div {:class "mtz-outreach-row-main"}
     [:h3 {:class "mtz-h3" :style "font-size: 21px; margin: 0 0 6px;"} (:name p)]
-    [:p {:style "color: var(--mtz-ink-soft); margin: 0; font-size: 15px;"} (:summary p)]]
+    [:p {:style "color: var(--mtz-ink-soft); margin: 0; font-size: 15px;"}
+     (sections/plain (:summary p))]]
    [:span {:class "mtz-outreach-row-go" :aria-hidden "true"} "→"]])
 
 (defn- partners
@@ -74,15 +75,17 @@
      [:a {:href "/outreach" :style "color: inherit; text-decoration: none;"} "Outreach"]
      " · " (:where p)]
     [:h1 {:class "mtz-h1" :style "max-width: 760px;"} (:name p)]
-    [:p {:class "mtz-lede" :style "max-width: 640px;"} (:summary p)]
+    [:p {:class "mtz-lede" :style "max-width: 640px;"} (sections/plain (:summary p))]
     [:hr {:class "mtz-rule"}]]
 
    [:section {:class "mtz-section"}
     [:div {:class "mtz-section-inner"}
      [:div {:class "mtz-grid mtz-grid--2" :style "gap: 64px; align-items: start;"}
       [:div {:class "mtz-prose" :style "color: var(--mtz-ink-soft);"}
+       ;; Shipped partners carry a vector of plain paragraphs; a partner reworded
+       ;; in the console carries one Tiptap string. prose renders either.
        (for [para (:body p)]
-         [:p {:style "margin: 0 0 18px;"} para])]
+         (sections/prose {:style "margin: 0 0 18px;"} para))]
       [:aside {:class "mtz-card" :style "padding: 28px;"}
        [:p {:class "mtz-card-meta"} "How Mt. Zion helps"]
        [:p {:style "color: var(--mtz-ink-soft); margin: 0 0 20px; font-size: 15px;"}

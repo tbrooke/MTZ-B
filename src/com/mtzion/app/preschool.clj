@@ -30,14 +30,9 @@
 
 (defn- html [s] (when (seq s) [::hiccup/unsafe-html s]))
 
-(defn- para
-  "Body copy is Tiptap HTML once edited, but the shipped defaults for short
-  fields are plain text. Either renders."
-  [s]
-  (when (seq s)
-    (if (str/starts-with? (str/trim s) "<")
-      [::hiccup/unsafe-html s]
-      [:p s])))
+;; Was a private copy here. Lifted to ui.sections when the home page hit the
+;; same thing and showed an editor the </p> they had typed.
+(def ^:private para sections/prose)
 
 ;; ---------------------------------------------------------------------------
 ;; Sections

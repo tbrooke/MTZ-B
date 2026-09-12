@@ -4,6 +4,7 @@
   (:require [clojure.string :as str]
             [com.mtzion.model.church :as church]
             [com.mtzion.model.outreach :as outreach]
+            [com.mtzion.ui.sections :as sections]
             [lambdaisland.hiccup :as hiccup]))
 
 ;; ---------------------------------------------------------------------------
@@ -207,9 +208,10 @@
                            " letter-spacing: -0.01em; color: var(--mtz-ink); margin: 0 0 22px;")}
           "Gather in the" [:br]
           [:em {:style (str "font-style: italic; color: " worship-green ";")} "Sanctuary."]]
-         [:p {:style (str "font-family: var(--mtz-serif-body); font-size: 18px; line-height: 1.55;"
-                          " color: var(--mtz-ink-soft); max-width: 480px; margin: 0 0 22px;")}
-          body-text]
+         (sections/prose
+          {:style (str "font-family: var(--mtz-serif-body); font-size: 18px; line-height: 1.55;"
+                       " color: var(--mtz-ink-soft); max-width: 480px; margin: 0 0 22px;")}
+          body-text)
          [:p {:style (str "font-family: var(--mtz-serif-body); font-size: 14px;"
                           " color: var(--mtz-ink-mute); margin: 0 0 36px;")}
           "Sanctuary · ≈60 min · Nursery provided"]
@@ -362,7 +364,7 @@
            [:p {:class "mtz-card-meta"} (:note o)]
            [:h3 {:class "mtz-h3" :style "font-size: 22px;"} (:name o)]
            [:p {:style "color: var(--mtz-ink-soft); margin: 0; font-size: 15px;"}
-            (:summary o)]])]]])))
+            (sections/plain (:summary o))]])]]])))
 
 ;; ---------------------------------------------------------------------------
 ;; COMPOSED HOME PAGE
