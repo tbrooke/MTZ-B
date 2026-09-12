@@ -74,6 +74,19 @@
 ;; Protocol
 ;; ---------------------------------------------------------------------------
 
+(deftest reads-the-body-muuntaja-already-parsed
+  ;; api-defaults parses JSON into :body-params and consumes the stream. Reading
+  ;; :body there gave every request a nil method — which is what the live
+  ;; endpoint did on its first deploy.
+  (with-temp-ctx [ctx]
+    (let [resp (mcp/handler (assoc (ctx+token ctx)
+                                   :headers {"authorization" (str "Bearer " token)}
+                                   :query-params {}
+                                   :body-params {:jsonrpc "2.0" :id 7 :method "ping"}
+                                   :body (java.io.ByteArrayInputStream. (.getBytes "" "UTF-8"))))]
+      (is (= 200 (:status resp)))
+      (is (= 7 (:id (json/parse-string (:body resp) true)))))))
+
 (deftest speaks-json-rpc
   (with-temp-ctx [ctx]
     (testing "initialize advertises tools"

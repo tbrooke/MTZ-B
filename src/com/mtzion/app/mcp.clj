@@ -365,7 +365,19 @@
    :headers {"Content-Type" "application/json"}
    :body (json/generate-string body)})
 
-(defn handler [{:keys [body] :as ctx}]
+(defn- request-payload
+  "The JSON-RPC message. api-defaults runs muuntaja's wrap-format, which has
+  already parsed the body into :body-params and consumed the stream — slurping
+  :body there yields \"\" and every method reads as nil. Falls back to parsing
+  the stream so the handler is still callable on a bare Ring map, which is how
+  the tests drive it."
+  [{:keys [body-params body]}]
+  (if (coll? body-params)
+    body-params
+    (try (json/parse-string (slurp body) true)
+         (catch Exception _ ::bad-json))))
+
+(defn handler [ctx]
   (let [expected (configured-token ctx)]
     (cond
       ;; No token configured means the endpoint is off, not open. An MCP server
@@ -380,8 +392,7 @@
        :body (json/generate-string {:error "Unauthorized."})}
 
       :else
-      (let [payload (try (json/parse-string (slurp body) true)
-                         (catch Exception _ ::bad-json))]
+      (let [payload (request-payload ctx)]
         (cond
           (= ::bad-json payload)
           (json-response 400 (rpc-error nil -32700 "Parse error"))
