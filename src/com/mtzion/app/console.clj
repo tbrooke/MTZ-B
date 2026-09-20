@@ -208,7 +208,7 @@
                                 [:p "Or start a new one — a reflection, a news item, an announcement."]
                                 [:a {:href "/console/writing/new" :class "con-btn con-btn--primary"}
                                  "+ New post"]))]
-            [:script {:src "/js/console.js" :defer "true"}]))
+            [:script {:src (ui/asset-path "js/console.js") :defer "true"}]))
 
 (defn writing
   "The pane. With an :id in the path that post is open in the editor; without

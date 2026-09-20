@@ -69,7 +69,7 @@
       [:link {:rel "icon" :href "data:,"}]
       (fonts)
       [:link {:rel "stylesheet" :href (ui/css-path)}]
-      [:script {:src "/js/admin.js" :defer "true"}]
+      [:script {:src (ui/asset-path "js/admin.js") :defer "true"}]
       [:script {:src "/js/htmx.min.js" :defer "true"}]]
      [:body {:class "con-body"}
       (top-bar opts)

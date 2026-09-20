@@ -416,7 +416,7 @@
             [:div {:class "con-pane"}
              (tree ctx sel site)
              content]
-            [:script {:src "/js/console.js" :defer "true"}]))
+            [:script {:src (ui/asset-path "js/console.js") :defer "true"}]))
 
 (defn site [ctx]
   (render ctx nil (site-param ctx)

@@ -22,7 +22,7 @@
       [:link {:rel "icon" :href "data:,"}]
       (cms-fonts)
       [:link {:rel "stylesheet" :href (ui/css-path)}]
-      [:script {:src "/js/admin.js" :defer "true"}]
+      [:script {:src (ui/asset-path "js/admin.js") :defer "true"}]
       [:script {:src "/js/htmx.min.js" :defer "true"}]]
      [:body {:style "margin:0; background:#fafaf8;"}
       body]])})

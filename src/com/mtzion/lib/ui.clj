@@ -10,14 +10,21 @@
              :name "__anti-forgery-token"
              :value csrf/*anti-forgery-token*}]))
 
-(defn css-path []
+(defn asset-path
+  "A static asset's URL with its build time as a query string, so a deploy is
+  not served the previous version out of Cloudflare's cache (max-age is four
+  hours at the edge). `path` is the resource path under public/, e.g.
+  \"js/console.js\"."
+  [path]
   (if-some [last-modified
-            (some-> (io/resource "public/css/main.css")
+            (some-> (io/resource (str "public/" path))
                     ring-response/resource-data
                     :last-modified
                     (.getTime))]
-    (str "/css/main.css?t=" last-modified)
-    "/css/main.css"))
+    (str "/" path "?t=" last-modified)
+    (str "/" path)))
+
+(defn css-path [] (asset-path "css/main.css"))
 
 (defn page
   [title & body]

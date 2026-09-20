@@ -271,7 +271,7 @@
                 (when sel-day
                   (day-list sel-day (occurrences-on-day ctx sel-day) ym sel-id))]
                right]
-              [:script {:src "/js/console.js" :defer "true"}])))
+              [:script {:src (ui/asset-path "js/console.js") :defer "true"}])))
 
 (defn- qs-of [{:keys [query-params]}]
   (let [m (get query-params "month") d (get query-params "day")]
