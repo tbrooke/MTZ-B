@@ -132,7 +132,7 @@
              (category-label (:category p))
              (when-let [d (epoch->date (:published_at p))] (str " · " d))]]]))]]))
 
-(defn- details-strip [p]
+(defn- details-strip [ctx p]
   [:details {:class "con-details"}
    [:summary {:class "con-details-summary"} "Details"]
    [:div {:class "con-details-grid"}
@@ -146,8 +146,8 @@
                         :value (or (epoch->date (:published_at p)) "")}])
     (con/field {:label "URL slug" :hint "Leave blank to build it from the title"}
                (con/text-input {:name "slug" :value (or (:slug p) "")}))
-    (con/field {:label "Image" :hint "Cloudflare image ID — shown on the news card"}
-               (con/text-input {:name "image_id" :value (or (:image_id p) "")}))
+    (con/field {:label "Image" :hint "Shown on the news card"}
+               (con/image-field ctx {:name "image_id" :value (:image_id p)}))
     (con/field {:label "Home page"}
                [:label {:class "con-check"}
                 [:input {:type "checkbox" :name "show_on_home" :value "1"
@@ -157,7 +157,7 @@
                [:textarea {:name "excerpt" :class "con-input con-textarea"}
                 (or (:excerpt p) "")])]])
 
-(defn- editor [p]
+(defn- editor [ctx p]
   (let [new?   (nil? (:id p))
         action (if new? "/console/writing" (str "/console/writing/" (:id p)))]
     [:section {:class "con-editor"}
@@ -188,7 +188,7 @@
        [:div {:data-tiptap "body" :class "tiptap-wrapper"}]
        [:input {:type "hidden" :name "body" :value (or (:body p) "")}]]
 
-      (details-strip p)]
+      (details-strip ctx p)]
 
      (when-not new?
        [:p {:class "con-editor-foot"}
@@ -203,7 +203,7 @@
             [:div {:class "con-pane"}
              (writing-list ctx posts (:id p) filters)
              (if p
-               (editor p)
+               (editor ctx p)
                (con/empty-state "Pick something to edit"
                                 [:p "Or start a new one — a reflection, a news item, an announcement."]
                                 [:a {:href "/console/writing/new" :class "con-btn con-btn--primary"}

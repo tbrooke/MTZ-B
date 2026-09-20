@@ -85,3 +85,104 @@
     });
   });
 })();
+
+// Image field — see con/image-field.
+//
+// The hidden input is the only thing the form submits; everything else here
+// is the picture of it. Setting the value also fires an `input` event on the
+// input so the autosave above notices — a programmatic .value= does not.
+
+(function () {
+  'use strict';
+
+  function csrf() {
+    var el = document.querySelector('input[name="__anti-forgery-token"]');
+    return el ? el.value : '';
+  }
+
+  function setImage(field, id, url) {
+    var input   = field.querySelector('input[type="hidden"]');
+    var preview = field.querySelector('.con-imgpick-preview');
+    var clear   = field.querySelector('[data-pick="clear"]');
+    input.value = id || '';
+    preview.innerHTML = id
+      ? '<img src="' + url + '" alt="">'
+      : '<span class="con-imgpick-empty">No image</span>';
+    if (clear) clear.hidden = !id;
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  var dialog = null;
+  var target = null; // the field the open dialog is choosing for
+
+  function openChooser(field) {
+    target = field;
+    if (!dialog) {
+      dialog = document.createElement('dialog');
+      dialog.id = 'con-imgpick';
+      dialog.className = 'con-imgpick-modal';
+      document.body.appendChild(dialog);
+      dialog.addEventListener('click', function (e) {
+        var tile = e.target.closest('[data-pick-id]');
+        if (tile) {
+          setImage(target, tile.dataset.pickId, tile.dataset.pickUrl);
+          dialog.close();
+          return;
+        }
+        if (e.target.closest('[data-pick="close"]') || e.target === dialog) dialog.close();
+      });
+    }
+    dialog.innerHTML = '<div class="con-imgpick-dialog"><p class="con-imgpick-none">Loading…</p></div>';
+    dialog.showModal();
+    fetch('/console/media/pick', { credentials: 'same-origin' })
+      .then(function (r) { return r.text(); })
+      .then(function (html) {
+        dialog.innerHTML = html;
+        if (window.htmx) window.htmx.process(dialog);
+        var q = dialog.querySelector('input[name="q"]');
+        if (q) q.focus();
+      })
+      .catch(function () {
+        dialog.innerHTML = '<div class="con-imgpick-dialog"><p class="con-imgpick-none">Could not load Media.</p>' +
+          '<button type="button" class="con-btn con-btn--quiet" data-pick="close">Close</button></div>';
+      });
+  }
+
+  function uploadInto(field) {
+    var picker = document.createElement('input');
+    picker.type = 'file';
+    picker.accept = 'image/*';
+    picker.addEventListener('change', function () {
+      var file = picker.files[0];
+      if (!file) return;
+      var preview = field.querySelector('.con-imgpick-preview');
+      preview.innerHTML = '<span class="con-imgpick-empty">Uploading…</span>';
+      var fd = new FormData();
+      fd.append('file', file);
+      fd.append('__anti-forgery-token', csrf());
+      fetch('/console/media/pick/upload', { method: 'POST', body: fd, credentials: 'same-origin' })
+        .then(function (r) {
+          if (r.status === 413) throw new Error('too large for the server (' + Math.round(file.size / 1024 / 1024 * 10) / 10 + ' MB)');
+          return r.json().then(function (data) {
+            if (!r.ok || !data.id) throw new Error(data.error || ('HTTP ' + r.status));
+            return data;
+          });
+        })
+        .then(function (data) { setImage(field, data.id, data.url); })
+        .catch(function (e) {
+          preview.innerHTML = '<span class="con-imgpick-empty is-error">Upload failed: ' + e.message + '</span>';
+        });
+    });
+    picker.click();
+  }
+
+  document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-image-field] [data-pick]');
+    if (!btn) return;
+    var field = btn.closest('[data-image-field]');
+    var what  = btn.dataset.pick;
+    if (what === 'choose') openChooser(field);
+    else if (what === 'upload') uploadInto(field);
+    else if (what === 'clear') setImage(field, null, null);
+  });
+})();

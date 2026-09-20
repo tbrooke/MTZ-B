@@ -8,13 +8,15 @@
   already decided what to write about them. And there was no local record of an
   image at all — the screen called Cloudflare on every render — so nothing could
   be searched, grouped, or made into a gallery."
-  (:require [clojure.string :as str]
+  (:require [cheshire.core :as json]
+            [clojure.string :as str]
             [com.mtzion.lib.cloudflare :as cf]
             [com.mtzion.lib.middleware :refer [wrap-signed-in]]
             [com.mtzion.lib.ui :as ui]
             [com.mtzion.model.media :as media]
             [com.mtzion.model.normalize :as normalize]
-            [com.mtzion.ui.console :as con]))
+            [com.mtzion.ui.console :as con]
+            [lambdaisland.hiccup :as hiccup]))
 
 (defn- date-str [epoch] (normalize/epoch->date-str epoch))
 
@@ -256,6 +258,67 @@
   {:status 303 :headers {"location" "/console/media"}})
 
 ;; ---------------------------------------------------------------------------
+;; The picker — what an editor's Image field opens
+;; ---------------------------------------------------------------------------
+
+(defn- fragment [form]
+  {:status  200
+   :headers {"Content-Type" "text/html; charset=utf-8"}
+   :body    (hiccup/render form {:doctype? false})})
+
+(defn- pick-grid [ctx q]
+  (let [imgs (media/ls ctx {:q (not-empty q) :limit 120})]
+    [:div {:id "con-imgpick-grid" :class "con-grid"}
+     (if (seq imgs)
+       (for [img imgs]
+         [:button {:type "button" :class "con-tile"
+                   :data-pick-id  (:id img)
+                   :data-pick-url (media/url ctx (:id img) "public")
+                   :title (or (not-empty (:label img)) (:id img))}
+          [:img {:src (media/url ctx (:id img) "public") :alt "" :loading "lazy"
+                 :class "con-tile-img"}]
+          [:span {:class "con-tile-label"} (or (not-empty (:label img)) "Untitled")]])
+       [:p {:class "con-imgpick-none"}
+        (if (seq q) "Nothing matches." "No images yet — upload one.")])]))
+
+(defn pick
+  "The chooser's contents. Search is a live filter on the label: the input
+  re-requests this fragment and swaps just the grid."
+  [{:keys [query-params] :as ctx}]
+  (let [q (get query-params "q")]
+    (fragment
+     (if (get query-params "grid")
+       (pick-grid ctx q)
+       [:div {:class "con-imgpick-dialog"}
+        [:div {:class "con-imgpick-head"}
+         [:input {:type "search" :name "q" :class "con-input" :placeholder "Search by label"
+                  :autofocus "true" :autocomplete "off"
+                  :hx-get "/console/media/pick?grid=1" :hx-trigger "input changed delay:250ms"
+                  :hx-target "#con-imgpick-grid" :hx-swap "outerHTML"}]
+         [:button {:type "button" :class "con-btn con-btn--quiet" :data-pick "close"} "Close"]]
+        (pick-grid ctx q)]))))
+
+(defn pick-upload
+  "One file straight from an editor's Image field. Answers JSON — the field's
+  script sets the hidden id and the preview from it, and the picture is indexed
+  so it also turns up in Media and in the next chooser."
+  [{:keys [params] :as ctx}]
+  (let [file   (:file params)
+        json   (fn [status m] {:status status
+                               :headers {"Content-Type" "application/json"}
+                               :body (json/generate-string m)})]
+    (if-not (:tempfile file)
+      (json 400 {:error "No file was sent"})
+      (let [label  (or (not-empty (:filename file)) "")
+            result (try (cf/upload! ctx file {:category "graphic" :label label})
+                        (catch Exception e {:error (.getMessage e)}))
+            id     (:id result)]
+        (if id
+          (do (media/record! ctx {:id id :label label :category "graphic"})
+              (json 200 {:id id :url (media/url ctx id "public")}))
+          (json 502 {:error (or (:error result) "Cloudflare did not accept the image")}))))))
+
+;; ---------------------------------------------------------------------------
 
 (def module
   {:biff.ring/routes
@@ -263,5 +326,7 @@
      ["" {:get media :name ::media}]
      ["/upload" {:get upload-form :post upload :name ::upload :conflicting true}]
      ["/sync" {:post sync-now :name ::sync :conflicting true}]
+     ["/pick" {:get pick :name ::pick :conflicting true}]
+     ["/pick/upload" {:post pick-upload :name ::pick-upload :conflicting true}]
      ["/:id" {:get media :post save :name ::one :conflicting true}]
      ["/:id/delete" {:post delete :name ::delete}]]]})

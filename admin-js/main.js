@@ -25,6 +25,14 @@ function uploadImage(editor) {
     fd.append('__anti-forgery-token', csrfToken())
     try {
       const resp = await fetch('/admin/upload', { method: 'POST', body: fd })
+      if (resp.status === 413) {
+        alert('Image upload failed: file too large for the server (' + Math.round(file.size / 1024 / 1024 * 10) / 10 + ' MB)')
+        return
+      }
+      if (!resp.ok) {
+        alert('Image upload failed (HTTP ' + resp.status + ')')
+        return
+      }
       const data = await resp.json()
       if (data.url) {
         editor.chain().focus().setImage({ src: data.url }).run()
@@ -32,7 +40,7 @@ function uploadImage(editor) {
         alert('Upload failed: ' + (data.error || 'unknown error'))
       }
     } catch (e) {
-      alert('Image upload failed')
+      alert('Image upload failed: ' + e.message)
     }
   })
   picker.click()

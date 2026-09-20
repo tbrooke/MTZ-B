@@ -245,8 +245,8 @@
       [:details {:class "con-details"}
        [:summary {:class "con-details-summary"} "Description & image"]
        [:div {:class "con-details-grid"}
-        (con/field {:label "Image" :hint "Cloudflare image ID" :wide? true}
-                   (con/text-input {:name "image_id" :value (or (:image_id ev) "")}))
+        (con/field {:label "Image" :hint "Shown on the home page card and the events list" :wide? true}
+                   (con/image-field ctx {:name "image_id" :value (:image_id ev)}))
         [:div {:class "con-field con-field--wide"}
          [:label {:class "con-label"} "Description"]
          [:div {:class "con-body-editor"}

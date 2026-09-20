@@ -5,6 +5,7 @@
   Every pane is the same shape: a listing on the left, an editor on the right.
   One interaction to learn, three places to use it."
   (:require [com.mtzion.content.inbox :as inbox]
+            [com.mtzion.lib.cloudflare :as cf]
             [com.mtzion.lib.ui :as ui]
             [com.mtzion.model.content :as content]
             [lambdaisland.hiccup :as hiccup]))
@@ -116,6 +117,33 @@
 
 (defn text-input [attrs]
   [:input (merge {:class "con-input" :type "text"} attrs)])
+
+(defn image-field
+  "An image chooser standing in for what used to be a text box labelled
+  'Cloudflare image ID'. Nobody knows their image's id, so the natural thing to
+  type was the picture's name — which stored cleanly and rendered as a broken
+  URL on the home page. The id now travels in a hidden input that only the
+  picker writes to; the editor sees a preview and three buttons.
+
+  The behaviour is in console.js (`[data-image-field]`), the media grid it
+  opens is `/console/media/pick`."
+  [ctx {:keys [name value]}]
+  (let [id  (not-empty value)
+        url (cf/delivery-url ctx id "public")]
+    [:div {:class "con-imgpick" :data-image-field "true"}
+     [:input {:type "hidden" :name name :value (or id "")}]
+     [:div {:class "con-imgpick-preview"}
+      (if url
+        [:img {:src url :alt ""}]
+        [:span {:class "con-imgpick-empty"} "No image"])]
+     [:div {:class "con-imgpick-actions"}
+      [:button {:type "button" :class "con-btn con-btn--ghost" :data-pick "choose"}
+       "Choose from Media"]
+      [:button {:type "button" :class "con-btn con-btn--ghost" :data-pick "upload"}
+       "Upload…"]
+      [:button {:type "button" :class "con-btn con-btn--quiet" :data-pick "clear"
+                :hidden (nil? id)}
+       "Remove"]]]))
 
 (defn select-input [attrs options current]
   [:select (merge {:class "con-input con-select"} attrs)

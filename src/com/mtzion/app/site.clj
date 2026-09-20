@@ -148,7 +148,7 @@
   "Only the fields this leaf's template actually reads. A universal form is what
   made /admin/features confusing — it offered Image and Sort Order for a slot
   that renders neither."
-  [fields row]
+  [ctx fields row]
   (let [has? (set fields)]
     (list
      (when (has? :title)
@@ -158,9 +158,8 @@
        (con/field {:label "Kicker" :hint "The small line above the heading"}
                   (con/text-input {:name "subtitle" :value (or (:subtitle row) "")})))
      (when (has? :image)
-       (con/field {:label "Image" :hint "Cloudflare image ID — copy it from Media"}
-                  (con/text-input {:name "image_id" :value (or (:image_id row) "")
-                                   :placeholder "a4df1d13-4c92-…"})))
+       (con/field {:label "Image"}
+                  (con/image-field ctx {:name "image_id" :value (:image_id row)})))
      (when (has? :album)
        (con/field {:label "Photo album"
                    :hint  "Names an album from Media — the section then shows every photo in it"}
@@ -365,7 +364,7 @@
       :row        prefill
       :status-url (when row (str base "/status"))
       :preview    (:path entry)
-      :fields     (field-inputs (:fields section) prefill)
+      :fields     (field-inputs ctx (:fields section) prefill)
       :body?      (some #{:body} (:fields section))
       :album-list (album-datalist ctx)})))
 
@@ -395,7 +394,7 @@
         :row        row
         :status-url (str base "/" id "/status")
         :preview    (:path entry)
-        :fields     (field-inputs (:fields section) row)
+        :fields     (field-inputs ctx (:fields section) row)
         :body?      true
         :album-list (album-datalist ctx)
         :extra-actions

@@ -6,6 +6,7 @@
             [com.mtzion.lib.r2 :as r2]
             [com.mtzion.lib.ui :as ui]
             [com.mtzion.model.content :as content]
+            [com.mtzion.model.media :as media]
             [com.mtzion.model.normalize :as norm]
             [com.mtzion.ui.admin :as adm]
             [hato.client :as http]
@@ -43,11 +44,14 @@
                                           :content (json/generate-string {:category "content"})}]
                              :as        :string})
             body (json/parse-string (:body resp) true)]
-        (if (get-in body [:result :id])
-          {:status  200
-           :headers {"Content-Type" "application/json"}
-           :body    (json/generate-string
-                     {:url (image-delivery-url ctx (get-in body [:result :id]) "public")})}
+        (if-let [id (get-in body [:result :id])]
+          (do
+            ;; Index it too, so a picture dropped into a body is findable in
+            ;; Media and offered by the console's image picker.
+            (media/record! ctx {:id id :label (or (:filename upload) "") :category "content"})
+            {:status  200
+             :headers {"Content-Type" "application/json"}
+             :body    (json/generate-string {:url (image-delivery-url ctx id "public")})})
           {:status 500
            :headers {"Content-Type" "application/json"}
            :body (json/generate-string {:error "Cloudflare upload failed"

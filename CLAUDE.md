@@ -174,6 +174,22 @@ account hash).
   unlike content, which archives. A file in a CDN costs storage and an
   unreferenced one is not history worth keeping.
 
+### The Image field is a picker, not a text box
+
+`con/image-field` — every editor that stores an `image_id` (event, post, site
+section) renders a preview plus **Choose from Media / Upload… / Remove**; the id
+travels in a hidden input only the picker writes. It replaced a text input
+hinting "Cloudflare image ID": the natural thing to type there was the picture's
+name, which stored cleanly and rendered as a broken `imagedelivery.net/…/Churchwide
+Yard Sale/public` on the home page while the events page (which renders the
+description's `<img>`) looked fine. Chooser is `GET /console/media/pick`,
+one-file upload is `POST /console/media/pick/upload` (JSON); behaviour in
+`console.js`. `/admin/upload` (the Tiptap image button) now indexes what it
+uploads too, so body images turn up in the chooser.
+
+nginx must carry `client_max_body_size 100M;` in the `mtzcg.com` `location /`
+block — without it every image over 1 MB is a 413 before the app sees it.
+
 ### Galleries are ordinary sections
 
 `feature.album` — a section that names an album renders every image in it, in
